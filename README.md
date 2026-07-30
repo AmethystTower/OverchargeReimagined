@@ -13,6 +13,8 @@ Requires UE4SS to be installed in your game folder: https://github.com/UE4SS-RE/
 Then simply download and put the mod's folder into this path: `Expedition 33\Sandfall\Binaries\Win64\ue4ss\Mods\OverchargeReimagined`
  - The mod will load automatically thanks to the `enabled.txt` file included in the folder.
  - If you want to customize the mod, you can find the `config.lua` file in the folder: `OverchargeReimagined\Scripts`
+ 
+Download the latest release version [here](https://github.com/AmethystTower/OverchargeReimagined/releases/tag/v1.0).
 
 ## Features
 
