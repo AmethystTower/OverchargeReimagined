@@ -1,8 +1,8 @@
-# Overcharge Reimagined v1.0.0.0
+# Overcharge Reimagined v1.0
 
 This is an UE4SS mod for Expedition 33 that expands upon the Overcharge mechanic and adds a lot of customization options to the power.
 
-The mod is written in LUA and simply adds our own modifications to the game's runtime functions as an addition to existing mechanics rather than replacing them.
+The mod is written in LUA and simply adds our own modifications to the game's runtime functions as an addition to existing mechanics rather than replacing them.\
 Being a simple UE4SS script mod has the advantage that it is less prone to break in future updates, should the game receive any more.
 
 ## Features
@@ -56,8 +56,8 @@ You can do all of that and more!
 
 ## Notes
 
-Since this is a LUA script mod the in-game charge counter will still show 10 max charges because the in-game counter only displays the rounded-down vanilla charge values.
-For example, an actual charge count of 30–39 will appear as 3 charges in-game.
+Since this is a LUA script mod the in-game charge counter will still show 10 max charges because the in-game counter only displays the rounded-down vanilla charge values.\
+For example, an actual charge count of 30–39 will appear as 3 charges in-game.\
 If you have 39 charges and use the ability, you will still do the full damage of 39 charges!
 
 ### Example table of the in-game vs. the actual Overcharge counter:
