@@ -6,6 +6,14 @@ The mod is written in LUA and simply adds our own modifications to the game's ru
 
 Being a simple UE4SS script mod has the advantage that it is less prone to break in future updates, should the game receive any more.
 
+### INSTALLATION:
+
+Requires UE4SS to be installed in your game folder: https://github.com/UE4SS-RE/RE-UE4SS
+
+Then simply download and put the mod's folder into this path: `Expedition 33\Sandfall\Binaries\Win64\ue4ss\Mods\OverchargeReimagined`
+ - The mod will load automatically thanks to the `enabled.txt` file included in the folder.
+ - If you want to customize the mod, you can find the `config.lua` file in the folder: `OverchargeReimagined\Scripts`
+
 ## Features
 
 - [x] Supports custom maximum charge count
