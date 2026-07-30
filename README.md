@@ -21,8 +21,7 @@ Download the latest release version [here](https://github.com/AmethystTower/Over
 - [x] Passive charge generation
 - [x] Negative charge generation (lose charges)
 - [x] Shatter fully sets charges to max no matter what limit was set
-- [x] Runtime hooking (doesn't replace game files and is designed to be compatible with other mods)
-- [x] Open source
+- [x] Runtime hooking (doesn't replace game files and should be compatible with most other mods)
 
 ## Customization Options
 
