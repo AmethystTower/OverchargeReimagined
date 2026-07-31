@@ -1,6 +1,6 @@
 
 --[[
-------- Overcharge Reimagined v1.0 - By Killera -------
+------- Overcharge Reimagined v1.1 - By Killera -------
 
 ------- NOTE:
         I am part of the Call of Duty modding community - specifically the MW2 client community.
