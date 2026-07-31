@@ -117,7 +117,6 @@ end
 
 -- Booleans that we need to monitor states.
 local battleHookRegistered = false
-local hooksRegistered = false
 local abilityHooksRegistered = false
 local updatingNativeCharge = false
 local restoreMaxCharges = false
