@@ -1,4 +1,4 @@
-# Overcharge Reimagined v1.0
+# Overcharge Reimagined v1.1
 
 This is an UE4SS mod for Expedition 33 that expands upon the Overcharge mechanic and adds a lot of customization options to the power.
 
