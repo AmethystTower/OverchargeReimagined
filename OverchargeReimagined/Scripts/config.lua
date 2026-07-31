@@ -19,7 +19,8 @@ return
 
     -- IMPORTANT NOTE: ALL SETTINGS ACCEPT BOTH POSITIVE AND NEGATIVE VALUES.
     -- This means that depending on the settings, they can ADD OR REMOVE charges.
-    -- For example: If 'ChargesOnReceivedHit' is -1, then your character loses a charge when getting hit by an enemy.
+    -- For example: If 'ChargesOnReceivedHit' is -5, then your character loses 5 charges when getting hit by an enemy.
+    -- However, the settings DO NOT accept comma values (e.g. 1.75, 2.25, 3.5 etc.) - this will break charge generation.
     ------------------------------------------------------------------------
 
     ------------------------------------------------------------------------
