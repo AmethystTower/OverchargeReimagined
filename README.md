@@ -8,7 +8,7 @@ Being a simple UE4SS script mod has the advantage that it is less prone to break
 
 ### INSTALLATION:
 
-Download the latest release version [here](https://github.com/AmethystTower/OverchargeReimagined/releases/tag/v1.0).
+Download the latest release version [here](https://github.com/AmethystTower/OverchargeReimagined/releases).
 
 ## Features
 
