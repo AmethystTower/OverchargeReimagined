@@ -1302,6 +1302,10 @@ RegisterHook(CLIENT_RESTART, function()
     clientHookRegistered = true
 
     RegisterHook(GET_ATTACK_MULTIPLIER, function(param)
+        if not IsValidChargeComponent() then
+            return
+        end
+
         local modifier = unwrap(param)
 
         -- Return if the modifier somehow doesn't exist or the damage isn't caused by a skill.
