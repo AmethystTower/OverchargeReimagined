@@ -1,6 +1,7 @@
 
--- Overcharge Reimagined configuration file.
+-- Overcharge Reimagined v2.0 configuration file.
 -- If you created a cool template with this config that offers unique gameplay, feel free to suggest it and maybe it will get added to this mod's official repository!
+-- It would have your name on it and others could find it useful!
 
 return
 {
@@ -71,7 +72,7 @@ return
     ChargesOnBuffDamage = 0,
 
     -- Charges per critical hit. Default: 0
-    -- NOTE: This does NOT affect free aim shots by default and is independent from Lumiere Assault, Strike Storm, Light Holder and From Fire.
+    -- NOTE: This does NOT affect free aim shots by default and is independent from abilities that generate bonus charges on criticals as their feature.
     ChargesOnCritical = 0,
 
     -- Charges when taking a hit from an enemy. Default: 0
@@ -96,31 +97,31 @@ return
     OverchargeDamagePerCharge = 0.05,
 
     -- This adds ontop of Overcharge's default 0.25 "fully charged" bonus from the base game.
-    OverchargeMaxChargesBonus = 0.05,
+    OverchargeMaxChargesBonus = 0.1,
 
-    -- AP cost of this ability. Default: 7 / Default in Vanilla: 4
+    -- AP cost of this ability. Default: 6 / Default in Vanilla: 4
     -- Since Overcharge is quite a bit stronger in this mod, a higher AP cost is only fair.
-    OverchargeAPCost = 7,
+    OverchargeAPCost = 6,
 
     ------------------------------------------------------------------------
 
     -- Shatter: These are the settings for Shatter.
 
-    -- Percentage amount of charges refilled when breaking an enemy with Shatter. Default: 0.15 (15%)
+    -- Percentage amount of charges refilled when breaking an enemy with Shatter. Default: 0.2 (20%)
     -- NOTE: The value works like this: 0.15 = 15% of max. charges, 0.33 = 33% of max. charges, 1.00 = 100% of max charges aka. complete refill.
-    ShatterChargesPercentage = 0.15,
+    ShatterChargesPercentage = 0.2,
 
-    -- Additional damage multiplier that Shatter gets for each charge it consumes.
+    -- Additional damage multiplier that Shatter gets for each charge it consumes. Default: 0.3 (30%)
     -- Overcharge gets 0.2 in the base game.
-    ShatterDamagePerCharge = 0.2,
+    ShatterDamagePerCharge = 0.3,
 
-    -- The extra amount of damage that Shatter gets if the charges are full. Default: 0.25 (25%)
+    -- The extra amount of damage that Shatter gets if the charges are full. Default: 0.35 (30%)
     -- Overcharge uses 0.25.
-    ShatterMaxChargesBonus = 0.25,
+    ShatterMaxChargesBonus = 0.35,
 
-    -- AP cost of this ability. Default: 8 / Default in Vanilla: 5
+    -- AP cost of this ability. Default: 6 / Default in Vanilla: 5
     -- Shatter is basically like Overcharge that hits all enemies so it is VERY strong in this mod, a higher AP cost is only fair.
-    ShatterAPCost = 8,
+    ShatterAPCost = 6,
 
     ------------------------------------------------------------------------
 
@@ -149,8 +150,8 @@ return
 
     -- Strike Storm: These are the settings for Strike Storm.
 
-    -- Charges per critical hit with this ability. Default: 2
-    StrikeStormChargesPerCritical = 2,
+    -- Charges per critical hit with this ability. Default: 3 / Default in Vanilla: 2
+    StrikeStormChargesPerCritical = 3,
 
     -- AP cost of this ability. Default: 7
     StrikeStormAPCost = 7,
@@ -248,7 +249,7 @@ return
 
     -- Steeled Strike: These are the settings for Steeled Strike.
 
-    -- Percentage amount of charges refilled when using the ability "Overload". Default: 0.5 (50%)
+    -- Maximum amount of charges this ability can consume for bonus damage. Default: 50
     SteeledStrikeChargesConsumed = 50,
 
     -- Additional damage multiplier per consumed charge. Default: 0.2 (20%)
@@ -266,4 +267,138 @@ return
 
     -- AP cost of this ability. Default: 9
     EndbringerAPCost = 9,
+
+    ------------------------------------------------------------------------
+
+    -- Berserk Slash: These are the settings for Berserk Slash.
+
+    -- Maximum amount of charges this ability can consume for bonus damage. Default: 10
+    BerserkSlashChargesConsumed = 10,
+
+    -- Additional damage multiplier per consumed charge. Default: 0.2 (20%)
+    BerserkSlashDamagePerCharge = 0.2,
+
+    -- AP cost of this ability. Default: 4
+    BerserkSlashAPCost = 4,
+
+    ------------------------------------------------------------------------
+
+    -- Defiant Strike: These are the settings for Defiant Strike.
+
+    -- Maximum amount of charges this ability can consume for bonus damage. Default: 15
+    DefiantStrikeChargesConsumed = 15,
+
+    -- Additional damage multiplier per consumed charge. Default: 0.2 (20%)
+    DefiantStrikeDamagePerCharge = 0.2,
+
+    -- AP cost of this ability. Default: 3
+    DefiantStrikeAPCost = 3,
+
+    ------------------------------------------------------------------------
+
+    -- Blitz: These are the settings for Blitz.
+
+    -- Maximum amount of charges this ability can consume for bonus damage. Default: 5
+    BlitzChargesConsumed = 5,
+
+    -- Additional damage multiplier per consumed charge. Default: 0.2 (20%)
+    BlitzDamagePerCharge = 0.2,
+
+    -- AP cost of this ability. Default: 3
+    BlitzAPCost = 3,
+
+    ------------------------------------------------------------------------
+
+    -- Follow Up: These are the settings for Follow Up.
+
+    -- Maximum amount of charges this ability can consume for bonus damage. Default: 15
+    FollowUpChargesConsumed = 15,
+
+    -- Additional damage multiplier per consumed charge. Default: 0.2 (20%)
+    FollowUpDamagePerCharge = 0.2,
+
+    -- AP cost of this ability. Default: 5
+    FollowUpAPCost = 5,
+
+    -- Reduced AP cost of this ability. Default: 2
+    -- NOTE: This value is used when all required charges from FollowUpChargesConsumed are available.
+    FollowUpAPReducedCost = 2,
+
+    ------------------------------------------------------------------------
+
+    -- Ascending Assault: These are the settings for Ascending Assault.
+
+    -- Maximum amount of charges this ability can consume for bonus damage. Default: 20
+    AscendingAssaultChargesConsumed = 20,
+
+    -- Additional damage multiplier per consumed charge. Default: 0.2 (20%)
+    AscendingAssaultDamagePerCharge = 0.2,
+
+    -- AP cost of this ability. Default: 5
+    AscendingAssaultAPCost = 5,
+
+    -- Reduced AP cost of this ability. Default: 2
+    -- NOTE: This value is used when all required charges from AscendingAssaultChargesConsumed are available.
+    AscendingAssaultAPReducedCost = 2,
+
+    ------------------------------------------------------------------------
+
+    -- Speed Burst: These are the settings for Speed Burst.
+
+    -- Maximum amount of charges this ability can consume for bonus damage. Default: 35
+    SpeedBurstChargesConsumed = 25,
+
+    -- Additional damage multiplier per consumed charge. Default: 0.2 (20%)
+    SpeedBurstDamagePerCharge = 0.2,
+
+    -- AP cost of this ability. Default: 6
+    SpeedBurstAPCost = 6,
+
+    ------------------------------------------------------------------------
+
+    -- Phantom Stars: These are the settings for Phantom Stars.
+
+    -- Percentage amount of charges refilled when breaking an enemy with Phantom Stars. Default: 0.1 (10%)
+    -- NOTE: The value works like this: 0.1 = 10% of max. charges, 0.33 = 33% of max. charges, 1.00 = 100% of max charges aka. complete refill.
+    PhantomStarsChargesPercentage = 0.1,
+
+    -- Maximum amount of charges this ability can consume for bonus damage. Default: 40
+    PhantomStarsChargesConsumed = 40,
+
+    -- Additional damage multiplier per consumed charge. Default: 0.2 (20%)
+    PhantomStarsDamagePerCharge = 0.2,
+
+    -- AP cost of this ability. Default: 9
+    PhantomStarsAPCost = 9,
+
+    -- Reduced AP cost of this ability. Default: 5
+    -- NOTE: This value is used when all required charges from PhantomStarsChargesConsumed are available.
+    PhantomStarsAPReducedCost = 5,
+
+    ------------------------------------------------------------------------
+
+    -- Paradigm Shift: These are the settings for Paradigm Shift.
+
+    --  Amount of charges this ability can consume for bonus AP. Default: 1
+    -- NOTE: This triggers with each hit which is 3 times. If set to 1, it will consume 3 charges total.
+    ParadigmShiftChargesConsumed = 1,
+
+    -- Amount of AP given per consumed charge. Default: 1
+    ParadigmShiftAPPerCharge = 1,
+
+    -- AP cost of this ability. Default: 1
+    ParadigmShiftAPCost = 1,
+
+    ------------------------------------------------------------------------
+
+    -- Purification: These are the settings for Purification.
+
+    -- Maximum amount of charges this ability can consume for bonus damage. Default: 10
+    PurificationChargesConsumed = 10,
+
+    -- Additional damage multiplier per consumed charge. Default: 0.2 (20%)
+    PurificationDamagePerCharge = 0.2,
+
+    -- AP cost of this ability. Default: 4
+    PurificationAPCost = 4,
 }

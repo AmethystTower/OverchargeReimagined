@@ -120,12 +120,20 @@ local fromFireChargesPerCritical = config.FromFireChargesPerCritical or 2
 local fromFireHealPerCharge = config.FromFireHealPerCharge or 0.01
 local recoveryChargesPercentage = config.RecoveryChargesPercentage or 0.1
 local endbringerChargesPerStunnedHit = config.EndbringerChargesPerStunnedHit or 5
+local followUpAPReducedCost = config.FollowUpAPReducedCost or 2
+local followUpChargesConsumed = config.FollowUpChargesConsumed or 15
+local ascendingAssaultAPReducedCost = config.AscendingAssaultAPReducedCost or 2
+local ascendingAssaultChargesConsumed = config.AscendingAssaultChargesConsumed or 20
+local phantomStarsAPReducedCost = config.PhantomStarsAPReducedCost or 5
+local phantomStarsChargesConsumed = config.PhantomStarsChargesConsumed or 40
+local phantomStarsChargesPercentage = config.PhantomStarsChargesPercentage or 0.1
+local paradigmShiftAPPerCharge = config.ParadigmShiftAPPerCharge or 1
 
 ----------------------- CHARGE GENERATION DEFAULT SETTINGS END -----------------------
 
 -- These values SHOULD NOT BE MODIFIED.
-local virtualCurrentCharges = 0
-local MAX_INGAME_CHARGES = 10
+local virtualCurrentCharges = 0 -- Our own charge counter.
+local MAX_INGAME_CHARGES = 10 -- I suppose one could modifiy this to 100 for compatibility with Overcharge Unleashed?
 
 -- This makes sure the in-game charges are always within 10 independent to how many actual charges we can have.
 local CHARGE_MULTIPLIER
@@ -143,7 +151,7 @@ else
 end
 
 -- These booleans that tell us if a hook is now in place or not.
-local battleHookRegistered = false
+local clientHookRegistered = false
 local abilityHooksRegistered = false
 local unleashHookRegistered = false
 local shatterHookRegistered = false
@@ -158,6 +166,15 @@ local powerfulHookRegistered = false
 local overloadHookRegistered = false
 local steeledStrikeHookRegistered = false
 local endbringerHookRegistered = false
+local berserkSlashHookRegistered = false
+local defiantStrikeHookRegistered = false
+local blitzHookRegistered = false
+local followUpHookRegistered = false
+local ascendingAssaultHookRegistered = false
+local speedBurstHookRegistered = false
+local phantomStarsHookRegistered = false
+local paradigmShiftHookRegistered = false
+local purificationHookRegistered = false
 
 -- Booleans that we need to monitor states.
 local updatingNativeCharge = false
@@ -167,7 +184,7 @@ local overchargeCharacterTurn = false
 local fullChargeBonus = false
 local steeledStrikeExecuted = false
 
--- Booleans that we use to monitor when a specific skill was used.
+-- Booleans that we use to monitor when a specific skill was used or triggers.
 local usedShatter = false
 local usedOvercharge = false
 local usedLightHolder = false
@@ -179,11 +196,22 @@ local usedFromFire = false
 local usedPowerful = false
 local usedSteeledStrike = false
 local usedEndbringer = false
+local usedBerserkSlash = false
+local usedDefiantStrike = false
+local usedBlitz = false
+local usedFollowUp = false
+local usedAscendingAssault = false
+local usedSpeedBurst = false
+local usedPhantomStars = false
+local usedPurification = false
 
 -- This tells if we have consumed some charges this turn with any ability that isn't Overcharge.
 local consumedChargesFromAbility = 0
 
--- Our hook paths that allow us to modify the game.
+-- Here we will store the active charge component from our character during the battle so we can modify it from any of our hooks.
+local chargeComponent = nil
+
+-- Our general hook paths that allow us to modify the game.
 local CLIENT_RESTART = "/Script/Engine.PlayerController:ClientRestart"
 local RECEIVE_BEGIN_PLAY = "/Game/Gameplay/Battle/UniqueMechanics/Charge/BP_UniqueMechanic_Charge_Component.BP_UniqueMechanic_Charge_Component_C:ReceiveBeginPlay"
 local ON_TURN_START = "/Game/Gameplay/Battle/UniqueMechanics/Charge/BP_UniqueMechanic_Charge_Component.BP_UniqueMechanic_Charge_Component_C:OnTurnStart"
@@ -194,6 +222,7 @@ local PARRY_SUCCESSFUL = "/Game/Gameplay/Battle/UniqueMechanics/Charge/BP_Unique
 local ON_RECEIVED_DAMAGE = "/Game/Gameplay/Battle/UniqueMechanics/Charge/BP_UniqueMechanic_Charge_Component.BP_UniqueMechanic_Charge_Component_C:OnCharacterReceivedDamage"
 local ON_BREAK_STUN = "/Game/jRPGTemplate/Blueprints/Components/AC_jRPG_CharacterBattleStats.AC_jRPG_CharacterBattleStats_C:PerformBreakStun"
 
+-- These are all ability hooks that we use so that they can have additional effects as well as consume and generate charges.
 local UNLEASH_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Gustave/BP_Battle_SkillScript_Gustave_UnleashCharge.BP_Battle_SkillScript_Gustave_UnleashCharge_C:OnExecuteSkill"
 local SHATTER_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Gustave/BP_Battle_SkillScript_Gustave_PerfectBreak.BP_Battle_SkillScript_Gustave_PerfectBreak_C:OnExecuteSkill"
 local LIGHT_HOLDER_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_LightHolder.BP_Battle_SkillScript_LightHolder_C:OnExecuteSkill"
@@ -208,16 +237,22 @@ local POWERFUL_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Gustave/BP_Bat
 local POWERFUL_ON_EFFECT = "/Game/Gameplay/Battle/Skills/Content/Gustave/BP_Battle_SkillScript_Gustave_Powerful.BP_Battle_SkillScript_Gustave_Powerful_C:OnActionEffect"
 local STEELED_STRIKE_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_Verso_SteeledStrike.BP_Battle_SkillScript_Verso_SteeledStrike_C:OnExecuteSkill"
 local ENDBRINGER_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_Verso_EndBringer.BP_Battle_SkillScript_Verso_EndBringer_C:OnExecuteSkill"
+local BERSERK_SLASH_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_Verso_BerserkSlash.BP_Battle_SkillScript_Verso_BerserkSlash_C:OnExecuteSkill"
+local DEFIANT_STRIKE_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_Verso_DefiantStrike.BP_Battle_SkillScript_Verso_DefiantStrike_C:OnExecuteSkill"
+local BLITZ_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_Blitz.BP_Battle_SkillScript_Blitz_C:OnExecuteSkill"
+local FOLLOW_UP_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_Verso_Followup.BP_Battle_SkillScript_Verso_Followup_C:OnExecuteSkill"
+local FOLLOW_UP_COST_OVERRIDE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_Verso_Followup.BP_Battle_SkillScript_Verso_Followup_C:GetSkillCostOverride"
+local ASCENDING_ASSAULT_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_Verso_AscendingAssault.BP_Battle_SkillScript_Verso_AscendingAssault_C:OnExecuteSkill"
+local ASCENDING_ASSAULT_COST_OVERRIDE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_Verso_AscendingAssault.BP_Battle_SkillScript_Verso_AscendingAssault_C:GetSkillCostOverride"
+local SPEED_BURST_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_Verso_SpeedBurst.BP_Battle_SkillScript_Verso_SpeedBurst_C:OnExecuteSkill"
+local PHANTOM_STARS_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_Verso_PhantomStars.BP_Battle_SkillScript_Verso_PhantomStars_C:OnExecuteSkill"
+local PHANTOM_STARS_COST_OVERRIDE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_Verso_PhantomStars.BP_Battle_SkillScript_Verso_PhantomStars_C:GetSkillCostOverride"
+local PARADIGM_SHIFT_ON_EFFECT = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_Verso_ParadigmShift.BP_Battle_SkillScript_Verso_ParadigmShift_C:OnActionEffect"
+local PURIFICATION_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_NEW_15.BP_Battle_SkillScript_NEW_15_C:OnExecuteSkill"
 
+-- Our modifier hooks that allow us to manipulate the cost and damage multiplier of abilities on the fly.
 local GET_BASE_COST = "/Game/Gameplay/SkillTree/BP_DataAsset_Skill.BP_DataAsset_Skill_C:GetSkillBaseCost"
 local GET_ATTACK_MULTIPLIER = "/Game/Gameplay/Battle/BP_BattleDamageBuilder.BP_BattleDamageBuilder_C:GetAttackPowerMultiplier"
-
--- This hook path is inconsistent and our other hooks don't need it to register properly, can be removed.
--- It seems like a rare issue since only I had it so far and very suddenly too, other mods using this hook also did not work for me properly.
---local BATTLE_DEPENDENCIES_LOADED = "/Game/jRPGTemplate/Blueprints/Components/AC_jRPG_BattleManager.AC_jRPG_BattleManager_C:OnBattleDependenciesFullyLoaded"
-
--- Here we will store the active charge component from our character during the battle so we can modify it from any of our hooks.
-local chargeComponent = nil
 
 -- This function lets us unwrap UE4 objects as proper values.
 local function unwrap(param)
@@ -317,16 +352,30 @@ local function ModifyAbilityCostAndDescription(param)
 
     self.APCost = abilityValues.APCost
 
+    -- Set the skill's long description which is shown in the character menu and at the top left window during target selection in battle.
     if self.Description ~= abilityValues.Description then
         self.Description = FText(abilityValues.Description)
     end
 
-    -- Show the current charge count for any abilities that consume charges and specifically Overcharge and Shatter since they consume all charges.
-    if abilityValues.ChargesConsumed or abilityNameID == "UnleashCharge" or abilityNameID == "PerfectBreak_Gustave" then
-        self.ShortDescription = FText(abilityValues.ShortDescription .. "\nCharges: " .. virtualCurrentCharges .. " of " .. virtualMaxCharges .. " <keyword id=\"Gustave_Charges\">Charges</> available.")
-    elseif self.ShortDescription ~= abilityValues.ShortDescription then
-        self.ShortDescription = FText(abilityValues.ShortDescription)
+    -- Build the string for the short description dynamically.
+    local assembledShortDescription = abilityValues.ShortDescription
+
+    -- We currently have the Overcharge character's turn and are selecting his abilities, show Overcharge effect strings if they exist.
+    if overchargeCharacterTurn and abilityValues.OverchargeDescription then
+        assembledShortDescription = assembledShortDescription .. abilityValues.OverchargeDescription
+    -- We have a different character's turn, show Perfection effect strings, if they exist.
+    elseif abilityValues.PerfectionDescription then
+        assembledShortDescription = assembledShortDescription .. abilityValues.PerfectionDescription
     end
+
+    -- Show the current charge count for any abilities that consume charges and specifically Overcharge and Shatter since they consume all charges.
+    -- Of course we make sure that the count only gets shown if it's the turn of the Overcharge character.
+    if (abilityValues.ChargesConsumed or abilityNameID == "UnleashCharge" or abilityNameID == "PerfectBreak_Gustave") and overchargeCharacterTurn then
+        assembledShortDescription = assembledShortDescription .. ("\nCharges: " .. virtualCurrentCharges .. " of " .. virtualMaxCharges .. " <keyword id=\"Gustave_Charges\">Charges</> available.")
+    end
+
+    -- Set the skill's short description to what we just assembled on the fly.
+    self.ShortDescription = FText(assembledShortDescription)
     
     -- Set the value of TargetingType to what it originally was.
     self.TargetingType = targetingType
@@ -465,7 +514,7 @@ local function TryRegisterAbilityHooks()
     -- Try to register Marking Shot's hooks.
     if not markingShotHookRegistered then
         local ok = pcall(function()
-            -- This hook runs whenever someone uses the unused ability Light Holder.
+            -- This hook runs whenever someone uses Marking Shot.
             RegisterHook(MARKING_SHOT_EXECUTE, function(param)
                 if not IsValidChargeComponent() then
                     return
@@ -493,7 +542,7 @@ local function TryRegisterAbilityHooks()
     -- Try to register Lumiere Assault's hooks.
     if not lumiereAssaultHookRegistered then
         local ok = pcall(function()
-            -- This hook runs whenever someone uses the unused ability Light Holder.
+            -- This hook runs whenever someone uses Lumiere Assault.
             RegisterHook(LUMIERE_ASSAULT_EXECUTE, function(param)
                 if not IsValidChargeComponent() then
                     return
@@ -519,7 +568,7 @@ local function TryRegisterAbilityHooks()
     -- Try to register Strike Storm's hooks.
     if not strikeStormHookRegistered then
         local ok = pcall(function()
-            -- This hook runs whenever someone uses the unused ability Light Holder.
+            -- This hook runs whenever someone uses Strike Storm.
             RegisterHook(STRIKE_STORM_EXECUTE, function(param)
                 if not IsValidChargeComponent() then
                     return
@@ -545,7 +594,7 @@ local function TryRegisterAbilityHooks()
     -- Try to register From Fire's hooks.
     if not fromFireHookRegistered then
         local ok = pcall(function()
-            -- This hook runs whenever someone uses the unused ability Light Holder.
+            -- This hook runs whenever someone uses From Fire.
             RegisterHook(FROM_FIRE_EXECUTE, function(param)
                 if not IsValidChargeComponent() then
                     return
@@ -573,7 +622,7 @@ local function TryRegisterAbilityHooks()
     -- Try to register Recovery's hooks.
     if not recoveryHookRegistered then
         local ok = pcall(function()
-            -- This hook runs whenever someone uses the unused ability Light Holder.
+            -- This hook runs whenever someone uses Recovery.
             RegisterHook(RECOVERY_ON_EFFECT, function(param)
                 if not IsValidChargeComponent() then
                     return
@@ -617,8 +666,7 @@ local function TryRegisterAbilityHooks()
     -- Try to register Powerful's hooks.
     if not powerfulHookRegistered then
         local ok = pcall(function()
-            -- This hook runs whenever someone uses the unused ability Light Holder.
-            -- This hook runs whenever someone uses the unused ability Light Holder.
+            -- This hook runs whenever someone uses Powerful.
             RegisterHook(POWERFUL_ON_EXECUTE, function(param)
                 if not IsValidChargeComponent() then
                     return
@@ -635,6 +683,7 @@ local function TryRegisterAbilityHooks()
                 usedPowerful = true
             end)
 
+            -- This hook runs when Powerful's effects trigger.
             RegisterHook(POWERFUL_ON_EFFECT, function(param)
                 if not IsValidChargeComponent() then
                     return
@@ -651,7 +700,7 @@ local function TryRegisterAbilityHooks()
                     return
                 end
 
-                -- The buff and character classes we need for ApplyBuff().
+                -- The character class we need for ApplyBuff().
                 local statsClass = StaticFindObject("/Game/jRPGTemplate/Blueprints/Components/AC_jRPG_CharacterBattleStats.AC_jRPG_CharacterBattleStats_C")
 
                 -- Get the character who's casting Powerful.
@@ -712,7 +761,7 @@ local function TryRegisterAbilityHooks()
 
                     -- We consumed 4/5 of the required charges, increase turn duration by +2.
                     if consumedChargesFromAbility >= consumedChargesChunk * 4 then
-                        turnDuration = turnDuration + 2
+                        turnDuration = turnDuration + 3
                         Log("Powerful: Increasing duration by +2.")
                     end
 
@@ -795,7 +844,7 @@ local function TryRegisterAbilityHooks()
     -- Try to register Radiant Strike's hooks.
     if not radiantStrikeHookRegistered then
         local ok = pcall(function()
-            -- This hook runs whenever someone uses the unused ability Light Holder.
+            -- This hook runs whenever someone uses the unused ability Radiant Strike.
             RegisterHook(RADIANT_STRIKE_EXECUTE, function(param)
                 if not IsValidChargeComponent() then
                     return
@@ -823,7 +872,7 @@ local function TryRegisterAbilityHooks()
     -- Try to register Overload's hooks.
     if not overloadHookRegistered then
         local ok = pcall(function()
-            -- This hook runs whenever someone uses the unused ability Light Holder.
+            -- This hook runs whenever someone uses Overload.
             RegisterHook(OVERLOAD_ON_EFFECT, function(param)
                 if not IsValidChargeComponent() then
                     return
@@ -856,7 +905,7 @@ local function TryRegisterAbilityHooks()
     -- Try to register Steeled Strike's hooks.
     if not steeledStrikeHookRegistered then
         local ok = pcall(function()
-            -- This hook runs whenever someone uses the unused ability Light Holder.
+            -- This hook runs whenever someone uses Steeled Strike.
             RegisterHook(STEELED_STRIKE_EXECUTE, function(param)
                 if not IsValidChargeComponent() then
                     return
@@ -884,7 +933,7 @@ local function TryRegisterAbilityHooks()
     -- Try to register Endbringer's hooks.
     if not endbringerHookRegistered then
         local ok = pcall(function()
-            -- This hook runs whenever someone uses the unused ability Light Holder.
+            -- This hook runs whenever someone uses Endbringer.
             RegisterHook(ENDBRINGER_ON_EXECUTE, function(param)
                 if not IsValidChargeComponent() then
                     return
@@ -903,18 +952,354 @@ local function TryRegisterAbilityHooks()
         -- If it was successful, mark the hooks registrations as true.
         if ok then
             endbringerHookRegistered = true
-            Log("Successfully registered Steeled Strike ability execution hooks.")
+            Log("Successfully registered Endbringer ability execution hooks.")
+        end
+    end
+
+    -- Try to register Berserk Slash's hooks.
+    if not berserkSlashHookRegistered then
+        local ok = pcall(function()
+            -- This hook runs whenever someone uses Berserk Slash.
+            RegisterHook(BERSERK_SLASH_ON_EXECUTE, function(param)
+                if not IsValidChargeComponent() then
+                    return
+                end
+
+                -- A different character used this ability, do nothing.
+                if not overchargeCharacterTurn then
+                    return
+                end
+
+                Log("Berserk Slash used this turn.")
+                usedBerserkSlash = true
+
+                CalculateAmountOfConsumedCharges("BerserkSlash", "Berserk Slash")
+            end)
+        end)
+
+        -- If it was successful, mark the hooks registrations as true.
+        if ok then
+            berserkSlashHookRegistered = true
+            Log("Successfully registered Berserk Slash ability execution hooks.")
+        end
+    end
+
+    -- Try to register Defiant Strike's hooks.
+    if not defiantStrikeHookRegistered then
+        local ok = pcall(function()
+            -- This hook runs whenever someone uses Defiant Strike.
+            RegisterHook(DEFIANT_STRIKE_ON_EXECUTE, function(param)
+                if not IsValidChargeComponent() then
+                    return
+                end
+
+                -- A different character used this ability, do nothing.
+                if not overchargeCharacterTurn then
+                    return
+                end
+
+                Log("Defiant Strike used this turn.")
+                usedDefiantStrike = true
+
+                CalculateAmountOfConsumedCharges("DefiantStrike", "Defiant Strike")
+            end)
+        end)
+
+        -- If it was successful, mark the hooks registrations as true.
+        if ok then
+            defiantStrikeHookRegistered = true
+            Log("Successfully registered Defiant Strike ability execution hooks.")
+        end
+    end
+
+    -- Try to register Blitz's hooks.
+    if not blitzHookRegistered then
+        local ok = pcall(function()
+            -- This hook runs whenever someone uses Blitz.
+            RegisterHook(BLITZ_ON_EXECUTE, function(param)
+                if not IsValidChargeComponent() then
+                    return
+                end
+
+                -- A different character used this ability, do nothing.
+                if not overchargeCharacterTurn then
+                    return
+                end
+
+                Log("Blitz used this turn.")
+                usedBlitz = true
+
+                CalculateAmountOfConsumedCharges("Blitz", "Blitz")
+            end)
+        end)
+
+        -- If it was successful, mark the hooks registrations as true.
+        if ok then
+            blitzHookRegistered = true
+            Log("Successfully registered Blitz ability execution hooks.")
+        end
+    end
+
+    -- Try to register Follow Up's hooks.
+    if not followUpHookRegistered then
+        local ok = pcall(function()
+            -- This hook runs whenever someone uses Follow Up.
+            RegisterHook(FOLLOW_UP_ON_EXECUTE, function(param)
+                if not IsValidChargeComponent() then
+                    return
+                end
+
+                -- A different character used this ability, do nothing.
+                if not overchargeCharacterTurn then
+                    return
+                end
+
+                Log("Follow Up used this turn.")
+                usedFollowUp = true
+
+                CalculateAmountOfConsumedCharges("FollowUp", "Follow Up")
+            end)
+
+            -- This hook runs whenever Follow Up checks its requirement for reduced AP cost.
+            RegisterHook(FOLLOW_UP_COST_OVERRIDE, function(param, override, newValue)
+                if not IsValidChargeComponent() then
+                    return
+                end
+
+                -- It's a different character's turn so do nothing.
+                if not overchargeCharacterTurn then
+                    return
+                end
+
+                -- Check if we have the required charge consumption amount for Follow Up.
+                -- If yes, override its usual AP cost to the new value.
+                if virtualCurrentCharges >= followUpChargesConsumed then
+                    override:set(true)
+                    newValue:set(followUpAPReducedCost)
+                end
+            end)
+        end)
+
+        -- If it was successful, mark the hooks registrations as true.
+        if ok then
+            followUpHookRegistered = true
+            Log("Successfully registered Follow Up ability execution hooks.")
+        end
+    end
+
+    -- Try to register Ascending Assault's hooks.
+    if not ascendingAssaultHookRegistered then
+        local ok = pcall(function()
+            -- This hook runs whenever someone uses Ascending Assault.
+            RegisterHook(ASCENDING_ASSAULT_ON_EXECUTE, function(param)
+                if not IsValidChargeComponent() then
+                    return
+                end
+
+                -- A different character used this ability, do nothing.
+                if not overchargeCharacterTurn then
+                    return
+                end
+
+                Log("Ascending Assault used this turn.")
+                usedAscendingAssault = true
+
+                CalculateAmountOfConsumedCharges("AscendingAssault", "Ascending Assault")
+            end)
+
+            -- This hook runs whenever Ascending Assault checks its requirement for reduced AP cost.
+            RegisterHook(ASCENDING_ASSAULT_COST_OVERRIDE, function(param, override, newValue)
+                if not IsValidChargeComponent() then
+                    return
+                end
+
+                -- It's a different character's turn so do nothing.
+                if not overchargeCharacterTurn then
+                    return
+                end
+
+                -- Check if we have the required charge consumption amount for Ascending Assault.
+                -- If yes, override its usual AP cost to the new value.
+                if virtualCurrentCharges >= ascendingAssaultChargesConsumed then
+                    override:set(true)
+                    newValue:set(ascendingAssaultAPReducedCost)
+                end
+            end)
+        end)
+
+        -- If it was successful, mark the hooks registrations as true.
+        if ok then
+            ascendingAssaultHookRegistered = true
+            Log("Successfully registered Ascending Assault ability execution hooks.")
+        end
+    end
+
+    -- Try to register Speed Burst's hooks.
+    if not speedBurstHookRegistered then
+        local ok = pcall(function()
+            -- This hook runs whenever someone uses Speed Burst.
+            RegisterHook(SPEED_BURST_ON_EXECUTE, function(param)
+                if not IsValidChargeComponent() then
+                    return
+                end
+
+                -- A different character used this ability, do nothing.
+                if not overchargeCharacterTurn then
+                    return
+                end
+
+                Log("Speed Burst used this turn.")
+                usedSpeedBurst = true
+
+                CalculateAmountOfConsumedCharges("SpeedBurst", "Speed Burst")
+            end)
+        end)
+
+        -- If it was successful, mark the hooks registrations as true.
+        if ok then
+            speedBurstHookRegistered = true
+            Log("Successfully registered Speed Burst ability execution hooks.")
+        end
+    end
+
+    -- Try to register Phantom Stars' hooks.
+    if not phantomStarsHookRegistered then
+        local ok = pcall(function()
+            -- This hook runs whenever someone uses Phantom Stars.
+            RegisterHook(PHANTOM_STARS_ON_EXECUTE, function(param)
+                if not IsValidChargeComponent() then
+                    return
+                end
+
+                -- A different character used this ability, do nothing.
+                if not overchargeCharacterTurn then
+                    return
+                end
+
+                Log("Phantom Stars used this turn.")
+                usedPhantomStars = true
+
+                CalculateAmountOfConsumedCharges("PhantomStars", "Phantom Stars")
+            end)
+
+            -- This hook runs whenever Phantom Stars checks its requirement for reduced AP cost.
+            RegisterHook(PHANTOM_STARS_COST_OVERRIDE, function(param, override, newValue)
+                if not IsValidChargeComponent() then
+                    return
+                end
+
+                -- It's a different character's turn so do nothing.
+                if not overchargeCharacterTurn then
+                    return
+                end
+
+                -- Check if we have the required charge consumption amount for Phantom Stars.
+                -- If yes, override its usual AP cost to the new value.
+                if virtualCurrentCharges >= phantomStarsChargesConsumed then
+                    override:set(true)
+                    newValue:set(phantomStarsAPReducedCost)
+                end
+            end)
+        end)
+
+        -- If it was successful, mark the hooks registrations as true.
+        if ok then
+            phantomStarsHookRegistered = true
+            Log("Successfully registered Phantom Stars ability execution hooks.")
+        end
+    end
+
+    -- Try to register Paradigm Shift's hooks.
+    if not paradigmShiftHookRegistered then
+        local ok = pcall(function()
+            -- This hook runs whenever someone uses Paradigm Shift.
+            RegisterHook(PARADIGM_SHIFT_ON_EFFECT, function(param)
+                if not IsValidChargeComponent() then
+                    return
+                end
+
+                -- A different character used this ability, do nothing.
+                if not overchargeCharacterTurn then
+                    return
+                end
+
+                Log("Paradigm Shift used this turn.")
+
+                local skillScript = unwrap(param)
+
+                if not skillScript then
+                    return
+                end
+
+                -- Get the character who's casting Paradigm Shift.
+                local castingChar = {}
+                skillScript:GetCurrentCharacter(castingChar)
+
+                if not castingChar or not castingChar.CurrentCharacter then
+                    return
+                end
+
+                local statsClass = StaticFindObject("/Game/jRPGTemplate/Blueprints/Components/AC_jRPG_CharacterBattleStats.AC_jRPG_CharacterBattleStats_C")
+
+                -- Retrieve the character's class component.
+                local castingCharacterClass = castingChar.CurrentCharacter:GetComponentByClass(statsClass)
+
+                if not castingCharacterClass then
+                    return
+                end
+
+                -- Calculate consumed charges.
+                CalculateAmountOfConsumedCharges("ParadigmShift", "Paradigm Shift")
+
+                -- Give us an AP value equal to the consumed charge amount with reason 1: AP restored through skill.
+                castingCharacterClass:GainAP(consumedChargesFromAbility, 1)
+                Log("Restored " .. paradigmShiftAPPerCharge .. " extra AP from consumed charges.")
+            end)
+        end)
+
+        -- If it was successful, mark the hooks registrations as true.
+        if ok then
+            paradigmShiftHookRegistered = true
+            Log("Successfully registered Paradigm Shift ability execution hooks.")
+        end
+    end
+
+    -- Try to register Purification's hooks.
+    if not purificationHookRegistered then
+        local ok = pcall(function()
+            -- This hook runs whenever someone uses Purification.
+            RegisterHook(PURIFICATION_ON_EXECUTE, function(param)
+                if not IsValidChargeComponent() then
+                    return
+                end
+
+                -- A different character used this ability, do nothing.
+                if not overchargeCharacterTurn then
+                    return
+                end
+
+                Log("Purification used this turn.")
+                usedPurification = true
+
+                CalculateAmountOfConsumedCharges("Purification", "Purification")
+            end)
+        end)
+
+        -- If it was successful, mark the hooks registrations as true.
+        if ok then
+            purificationHookRegistered = true
+            Log("Successfully registered Purification ability execution hooks.")
         end
     end
 end
 
 -- This hook runs when loading a save.
 RegisterHook(CLIENT_RESTART, function()
-    if battleHookRegistered then
+    if clientHookRegistered then
         return 
     end
 
-    battleHookRegistered = true
+    clientHookRegistered = true
 
     RegisterHook(GET_ATTACK_MULTIPLIER, function(param)
         local modifier = unwrap(param)
@@ -996,9 +1381,42 @@ RegisterHook(CLIENT_RESTART, function()
         -- We used Steeled strike.
         elseif usedSteeledStrike then
             modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "SteeledStrike", consumedChargesFromAbility)
+
+        -- We used Berserk Slash
+        elseif usedBerserkSlash then
+            modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "BerserkSlash", consumedChargesFromAbility)
+
+        -- We used Defiant Strike
+        elseif usedDefiantStrike then
+            modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "DefiantStrike", consumedChargesFromAbility)
+
+        -- We used Blitz
+        elseif usedBlitz then
+            modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "Blitz", consumedChargesFromAbility)
+
+        -- We used Follow Up
+        elseif usedFollowUp then
+            modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "FollowUp", consumedChargesFromAbility)
+
+        -- We used Ascending Assault
+        elseif usedAscendingAssault then
+            modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "AscendingAssault", consumedChargesFromAbility)
+
+        -- We used Speed Burst
+        elseif usedSpeedBurst then
+            modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "SpeedBurst", consumedChargesFromAbility)
+
+        -- We used Phantom Stars
+        elseif usedPhantomStars then
+            modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "PhantomStars", consumedChargesFromAbility)
+
+        -- We used Purification
+        elseif usedPurification then
+            modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "Purification", consumedChargesFromAbility)
         end
     end)
 
+    -- This hook modifies the AP cost and description of abilities.
     RegisterHook(GET_BASE_COST, ModifyAbilityCostAndDescription)
 
     -- This hook runs on our character when the battle begins.
@@ -1100,6 +1518,14 @@ RegisterHook(CLIENT_RESTART, function()
         usedFromFire = false
         usedPowerful = false
         usedEndbringer = false
+        usedBerserkSlash = false
+        usedDefiantStrike = false
+        usedBlitz = false
+        usedFollowUp = false
+        usedAscendingAssault = false
+        usedSpeedBurst = false
+        usedPhantomStars = false
+        usedPurification = false
         fullChargeBonus = false
 
         -- Only reset it at the end of our turn if we actually executed the ability.
@@ -1197,14 +1623,19 @@ RegisterHook(CLIENT_RESTART, function()
 
         -- Reason 1: Broken by an ability.
         if isOwner and reason == 1 then
+            -- Broken by Shatter.
             if usedShatter then
                 -- We remove -10 from the calculated amount because Shatter is hardcoded to give 10 charges on a break.
                 Log("Player caused break using the ability Shatter, instantly refilling charges by " .. (shatterChargesPercentage * 100) .. "% of " .. virtualMaxCharges .. " total charges.")
                 chargeComponent.ChangeCharge(math.floor(virtualMaxCharges * shatterChargesPercentage) - 10)
-
+            -- Broken by Overcharge.
             elseif usedOvercharge then
                 Log("Player caused break using the ability Overcharge, instantly refilling charges by " .. (overchargeChargesPercentage * 100) .. "% of " .. virtualMaxCharges .. " total charges.")
                 chargeComponent.ChangeCharge(math.floor(virtualMaxCharges * overchargeChargesPercentage))
+            -- Broken by Phantom Stars.
+            elseif usedPhantomStars then
+                Log("Player caused break using the ability Phantom Stars, instantly refilling charges by " .. (phantomStarsChargesPercentage * 100) .. "% of " .. virtualMaxCharges .. " total charges.")
+                chargeComponent.ChangeCharge(math.floor(virtualMaxCharges * phantomStarsChargesPercentage))
             end
         end
     end)
