@@ -367,6 +367,22 @@ local function GetAbilityValues(config)
             PerfectionDescription = "<img id=\"Rank_B\"/>: Increased damage.",
             OverchargeDescription = "Consumes up to " .. (config.PurificationChargesConsumed or 10) .. " <keyword id=\"Gustave_Charges\">Charges</> for increased damage.",
         },
+
+        -- Angel's Eyes
+        ["AngelsEyes"] = 
+        {
+            APCost = 3,
+            ChargesConsumed = nil,
+            ChargesMultiplier = nil,
+            Description =       "Deals extreme <keyword id=\"Element_Physical\">Physical</> Damage. 8 hits.\n" ..
+                                "Applies Aureole to revive this character on death.\n" ..
+                                "<keyword id=\"Element_Light\">Perfection</>: Gain 1 additional <keyword id=\"Perfection\">Perfection</> per hit.\n" ..
+                                "<keyword id=\"Element_Lightning\">Overcharge</>: Gain " .. (config.AngelsEyesAdditionalChargesPerHit or 2) .. " additional <keyword id=\"Gustave_Charges\">Charge(s)</> per hit.",
+            ShortDescription =  "Extreme <keyword id=\"Element_Physical\">Physical</> Damage. 8 hits.\n" ..
+                                "Applies Aureole to revive this character on death.\n",
+            PerfectionDescription = "Gain 1 additional <keyword id=\"Perfection\">Perfection</> per hit.",
+            OverchargeDescription = "Gain " .. (config.AngelsEyesAdditionalChargesPerHit or 2) .. " additional <keyword id=\"Gustave_Charges\">Charge(s)</> per hit.",
+        },
     }
 
     return abilityValues

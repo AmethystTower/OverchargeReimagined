@@ -74,7 +74,7 @@ end
 -- This is our custom charge limit, can be set to any number but it should NOT be negative.
 local virtualMaxCharges = config.VirtualMaxCharges or 100
 
------------------------ CHARGE GENERATION DEFAULT SETTINGS START -----------------------
+-- Charge generation values.
 -- NOTE: All those settings can be negative as well, so our character loses charges instead when those events occur.
 -- If no config exists, then all values are set to what the base game does for charge generation.
 
@@ -128,14 +128,13 @@ local phantomStarsAPReducedCost = config.PhantomStarsAPReducedCost or 5
 local phantomStarsChargesConsumed = config.PhantomStarsChargesConsumed or 40
 local phantomStarsChargesPercentage = config.PhantomStarsChargesPercentage or 0.1
 local paradigmShiftAPPerCharge = config.ParadigmShiftAPPerCharge or 1
-
------------------------ CHARGE GENERATION DEFAULT SETTINGS END -----------------------
+local angelsEyesAdditionalChargesPerHit = config.AngelsEyesAdditionalChargesPerHit or 2
 
 -- These values SHOULD NOT BE MODIFIED.
 local virtualCurrentCharges = 0 -- Our own charge counter.
 local MAX_INGAME_CHARGES = 10 -- I suppose one could modifiy this to 100 for compatibility with Overcharge Unleashed?
 
--- This makes sure the in-game charges are always within 10 independent to how many actual charges we can have.
+-- This makes sure the in-game charges are always within the number of MAX_INGAME_CHARGES independent to how many actual charges we can have.
 local CHARGE_MULTIPLIER
 
 -- Check if virtual max charges has been set to 0 or even negative numbers, then create our multiplier accordingly.
@@ -175,6 +174,7 @@ local speedBurstHookRegistered = false
 local phantomStarsHookRegistered = false
 local paradigmShiftHookRegistered = false
 local purificationHookRegistered = false
+local angelsEyesHookRegistered = false
 
 -- Booleans that we need to monitor states.
 local updatingNativeCharge = false
@@ -204,6 +204,7 @@ local usedAscendingAssault = false
 local usedSpeedBurst = false
 local usedPhantomStars = false
 local usedPurification = false
+local usedAngelsEyes = false
 
 -- This tells if we have consumed some charges this turn with any ability that isn't Overcharge.
 local consumedChargesFromAbility = 0
@@ -249,6 +250,7 @@ local PHANTOM_STARS_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_
 local PHANTOM_STARS_COST_OVERRIDE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_Verso_PhantomStars.BP_Battle_SkillScript_Verso_PhantomStars_C:GetSkillCostOverride"
 local PARADIGM_SHIFT_ON_EFFECT = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_Verso_ParadigmShift.BP_Battle_SkillScript_Verso_ParadigmShift_C:OnActionEffect"
 local PURIFICATION_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_NEW_15.BP_Battle_SkillScript_NEW_15_C:OnExecuteSkill"
+local ANGELS_EYES_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_Verso_AngelsEyes.BP_Battle_SkillScript_Verso_AngelsEyes_C:OnExecuteSkill"
 
 -- Our modifier hooks that allow us to manipulate the cost and damage multiplier of abilities on the fly.
 local GET_BASE_COST = "/Game/Gameplay/SkillTree/BP_DataAsset_Skill.BP_DataAsset_Skill_C:GetSkillBaseCost"
@@ -323,7 +325,8 @@ local function ModifyAbilityCostAndDescription(param)
 
     -- Check if the skill type is 1 and if it isn't, do nothing.
     -- 2 are gradient abilities and 3 are items, we ignore those.
-    if self.SkillType ~= 1 then
+    -- UNLESS it is Angel's eyes, we want to modify the ability's description and add charges on criticals but not make its cost customizable.
+    if self.SkillType ~= 1 and self.NameID:ToString() ~= "AngelsEyes" then
         return
     end
 
@@ -1317,6 +1320,32 @@ local function TryRegisterAbilityHooks()
             Log("Successfully registered Purification ability execution hooks.")
         end
     end
+
+    -- Try to register Angel's Eyes' hooks.
+    if not angelsEyesHookRegistered then
+        local ok = pcall(function()
+            -- This hook runs whenever someone uses Angel's Eyes.
+            RegisterHook(ANGELS_EYES_ON_EXECUTE, function(param)
+                if not IsValidChargeComponent() then
+                    return
+                end
+
+                -- A different character used this ability, do nothing.
+                if not overchargeCharacterTurn then
+                    return
+                end
+
+                Log("Angel's Eyes used this turn.")
+                usedAngelsEyes = true
+            end)
+        end)
+
+        -- If it was successful, mark the hooks registrations as true.
+        if ok then
+            angelsEyesHookRegistered = true
+            Log("Successfully registered Angel's Eyes ability execution hooks.")
+        end
+    end
 end
 
 -- This hook runs when loading a save.
@@ -1452,6 +1481,15 @@ RegisterHook(CLIENT_RESTART, function()
     -- This hook runs when we're in battle and open the ability menu.
     -- We will use this function to decide if an ability should be highlighted in orange because we have the optimal charge counts for them.
     RegisterHook(GET_COST, function(param, RemoteSkillState)
+        if not IsValidChargeComponent() then
+            return
+        end
+
+        -- It's a different character's turn, do nothing.
+        if not overchargeCharacterTurn then
+            return
+        end
+
         local self = unwrap(param)
 
         if not self then
@@ -1606,6 +1644,7 @@ RegisterHook(CLIENT_RESTART, function()
         usedSpeedBurst = false
         usedPhantomStars = false
         usedPurification = false
+        usedAngelsEyes = false
         fullChargeBonus = false
 
         -- Only reset it at the end of our turn if we actually executed the ability.
@@ -1798,12 +1837,15 @@ RegisterHook(CLIENT_RESTART, function()
                 if usedEndbringer and damageObject.TargetCharacter.IsStun then
                     chargeComponent.ChangeCharge(endbringerChargesPerStunnedHit)
                     Log("Endbringer Stun Damage: +" .. endbringerChargesPerStunnedHit .. " charges added.")
-                end
 
                 -- The base game still adds charges from Shatter's hit, so remove these hits.
-                if usedShatter then
+                elseif usedShatter then
                     chargeComponent.ChangeCharge((-1))
-                    return
+
+                -- Add additional charges per hit from Angel's Eyes.
+                elseif usedAngelsEyes then
+                    chargeComponent.ChangeCharge(angelsEyesAdditionalChargesPerHit)
+                    Log("Angel's Eyes: +" .. angelsEyesAdditionalChargesPerHit .. " charges added.")
                 end
 
             -- Damage Reason 2: Buffs such as burn.
@@ -1859,7 +1901,7 @@ RegisterHook(CLIENT_RESTART, function()
                 Log("Damage Taken: +" .. chargesOnReceivedHit .. " charges added.")
             end
 
-            -- Incase Steeled Strike is enabled, disable it now since it was cancelled.
+            -- Incase Steeled Strike is enabled, disable it now since we got hit and it was cancelled.
             if usedSteeledStrike then
                 usedSteeledStrike = false
             end

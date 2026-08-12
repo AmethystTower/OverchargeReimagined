@@ -401,4 +401,13 @@ return
 
     -- AP cost of this ability. Default: 4
     PurificationAPCost = 4,
+
+    ------------------------------------------------------------------------
+
+    -- Angel's Eyes: These are the settings for Angel's Eyes.
+    -- This is a gradient ability and it's the only one that interacts with Perfection, so it will interact with Overcharge as well.
+    -- No cost settings though, there is no reason to modify it since gradients are special.
+
+    -- Charges per hit with this ability. Default: 2
+    AngelsEyesAdditionalChargesPerHit = 2,
 }
