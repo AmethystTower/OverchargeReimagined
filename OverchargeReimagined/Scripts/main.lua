@@ -252,6 +252,7 @@ local PURIFICATION_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_B
 
 -- Our modifier hooks that allow us to manipulate the cost and damage multiplier of abilities on the fly.
 local GET_BASE_COST = "/Game/Gameplay/SkillTree/BP_DataAsset_Skill.BP_DataAsset_Skill_C:GetSkillBaseCost"
+local GET_COST = "/Game/Gameplay/SkillTree/BP_DataAsset_Skill.BP_DataAsset_Skill_C:GetSkillCost"
 local GET_ATTACK_MULTIPLIER = "/Game/Gameplay/Battle/BP_BattleDamageBuilder.BP_BattleDamageBuilder_C:GetAttackPowerMultiplier"
 
 -- This function lets us unwrap UE4 objects as proper values.
@@ -1081,6 +1082,12 @@ local function TryRegisterAbilityHooks()
                 -- Check if we have the required charge consumption amount for Follow Up.
                 -- If yes, override its usual AP cost to the new value.
                 if virtualCurrentCharges >= followUpChargesConsumed then
+                    local skillScript = unwrap(param)
+
+                    if skillScript and skillScript.SkillState then
+                        skillScript.SkillState:SetOvercharge(true, true)
+                    end
+
                     override:set(true)
                     newValue:set(followUpAPReducedCost)
                 end
@@ -1128,6 +1135,12 @@ local function TryRegisterAbilityHooks()
                 -- Check if we have the required charge consumption amount for Ascending Assault.
                 -- If yes, override its usual AP cost to the new value.
                 if virtualCurrentCharges >= ascendingAssaultChargesConsumed then
+                    local skillScript = unwrap(param)
+
+                    if skillScript and skillScript.SkillState then
+                        skillScript.SkillState:SetOvercharge(true, true)
+                    end
+
                     override:set(true)
                     newValue:set(ascendingAssaultAPReducedCost)
                 end
@@ -1203,6 +1216,12 @@ local function TryRegisterAbilityHooks()
                 -- Check if we have the required charge consumption amount for Phantom Stars.
                 -- If yes, override its usual AP cost to the new value.
                 if virtualCurrentCharges >= phantomStarsChargesConsumed then
+                    local skillScript = unwrap(param)
+
+                    if skillScript and skillScript.SkillState then
+                        skillScript.SkillState:SetOvercharge(true, true)
+                    end
+
                     override:set(true)
                     newValue:set(phantomStarsAPReducedCost)
                 end
@@ -1430,6 +1449,55 @@ RegisterHook(CLIENT_RESTART, function()
     -- This hook modifies the AP cost and description of abilities.
     RegisterHook(GET_BASE_COST, ModifyAbilityCostAndDescription)
 
+    -- This hook runs when we're in battle and open the ability menu.
+    -- We will use this function to decide if an ability should be highlighted in orange because we have the optimal charge counts for them.
+    RegisterHook(GET_COST, function(param, RemoteSkillState)
+        local self = unwrap(param)
+
+        if not self then
+            return
+        end
+
+        local skillState = unwrap(RemoteSkillState)
+
+        if not skillState then
+            return
+        end
+
+        -- Check if the skill type is 1 and if it isn't, do nothing.
+        -- 2 are gradient abilities and 3 are items, we ignore those.
+        if self.SkillType ~= 1 then
+            return
+        end
+
+        local abilityNameID = self.NameID:ToString()
+
+        local abilityValues = GetAbilityOverrideValues(abilityNameID)
+
+        if not abilityValues then
+            return
+        end
+
+        -- Check if we are at max charges and the abilities are Overcharge or Shatter and highlight them.
+        if virtualCurrentCharges == virtualMaxCharges and (abilityNameID == "UnleashCharge" or abilityNameID == "PerfectBreak_Gustave") then
+            skillState:SetOvercharge(true, true)
+            return
+        end
+
+        -- Check if we have all charges available that this ability could consume and hightlight it.
+        if abilityValues.ChargesConsumed and virtualCurrentCharges >= abilityValues.ChargesConsumed then
+            skillState:SetOvercharge(true, true)
+            return
+        end
+
+        -- Check if we have 0 charges and this ability can generate bonus charges, highlight them.
+        -- Except it's Endbringer, that ability only generates charges on stunned enemies.
+        -- The game will automatically highlight it in orange for us when an enemy is stunned.
+        if not abilityValues.ChargesConsumed and virtualCurrentCharges == 0 and abilityNameID ~= "EndBringer" then
+            skillState:SetOvercharge(true, true)
+        end
+    end)
+
     -- This hook runs on our character when the battle begins.
     -- And it turns out this hook runs when he was eaten by an enemy and freed during battle as well.
     RegisterHook(RECEIVE_BEGIN_PLAY, function(param)
@@ -1438,6 +1506,7 @@ RegisterHook(CLIENT_RESTART, function()
         -- Check if the charge component exists, if yes then cache it.
         if self:IsValid() then
             virtualCurrentCharges = 0
+            consumedChargesFromAbility = 0
             firstTurn = true
             overchargeCharacterTurn = false
 
@@ -1683,12 +1752,6 @@ RegisterHook(CLIENT_RESTART, function()
                 return
             end
 
-            -- The base game still adds charges from Shatter's hit, so remove these hits.
-            if usedShatter then
-                chargeComponent.ChangeCharge((-1))
-                return
-            end
-
             -- Critical hits: Add or remove charges based on critical hits, if enabled.
             -- This is independent from Lumiere Assault and Strike Storm.
             if damageObject.IsCriticalHit and chargesOnCritical ~= 0 then
@@ -1735,6 +1798,12 @@ RegisterHook(CLIENT_RESTART, function()
                 if usedEndbringer and damageObject.TargetCharacter.IsStun then
                     chargeComponent.ChangeCharge(endbringerChargesPerStunnedHit)
                     Log("Endbringer Stun Damage: +" .. endbringerChargesPerStunnedHit .. " charges added.")
+                end
+
+                -- The base game still adds charges from Shatter's hit, so remove these hits.
+                if usedShatter then
+                    chargeComponent.ChangeCharge((-1))
+                    return
                 end
 
             -- Damage Reason 2: Buffs such as burn.
