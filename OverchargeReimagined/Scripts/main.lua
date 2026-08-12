@@ -677,10 +677,14 @@ local function TryRegisterAbilityHooks()
                     return
                 end
 
-                -- This lets us know when the base game generates charges upon casting the ability.
-                -- They this in a hacky way so I couldn't access the direct value like in Recovery, so have to make this hacky myself.
+                -- This lets us know we need to ignore the next instance added charges because they are added by the game's native code, which runs before our code does.
+                -- They did this in a hacky way so I couldn't access the direct value like in Recovery, so have to make this hacky myself.
                 -- I wish I would have used C++ but then this is harder for people to modify.
-                usedPowerful = true
+                -- IMPORTANT: ONLY do this if the charges are NOT full because the game's native code does not call ChangeCharge if the charges are already full.
+                -- Otherwise it would ignore our own call to ChangeCharge and not remove the charges properly.
+                if virtualCurrentCharges ~= virtualMaxCharges then
+                    usedPowerful = true
+                end
             end)
 
             -- This hook runs when Powerful's effects trigger.
