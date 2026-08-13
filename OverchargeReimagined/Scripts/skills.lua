@@ -48,7 +48,7 @@ local function GetAbilityValues(config)
         -- Marking Shot
         ["MarkingShot_Gustave"] = 
         {
-            APCost = config.MarkingShotAPCost or 4,
+            APCost = config.MarkingShotAPCost or 2,
             ChargesConsumed = config.MarkingShotChargesConsumed or 10,
             ChargesMultiplier = config.MarkingShotDamagePerCharge or 0.2,
             Description =       "Deals low single target <keyword id=\"Element_Lightning\">Lightning</> damage. 1 hit.\n" ..
@@ -126,7 +126,7 @@ local function GetAbilityValues(config)
         -- Powerful
         ["Powerful_Gustave"] = 
         {
-            APCost = config.PowerfulAPCost or 5,
+            APCost = config.PowerfulAPCost or 3,
             ChargesConsumed = config.PowerfulChargesConsumed or 50,
             ChargesMultiplier = nil,
             Description =       "Applies <keyword id=\"Buff_Powerful\">Powerful</> to 1-3 allies for 3 turns.\n" ..
@@ -377,11 +377,11 @@ local function GetAbilityValues(config)
             Description =       "Deals extreme <keyword id=\"Element_Physical\">Physical</> Damage. 8 hits.\n" ..
                                 "Applies Aureole to revive this character on death.\n" ..
                                 "<keyword id=\"Element_Light\">Perfection</>: Gain 1 additional <keyword id=\"Perfection\">Perfection</> per hit.\n" ..
-                                "<keyword id=\"Element_Lightning\">Overcharge</>: Gain " .. (config.AngelsEyesAdditionalChargesPerHit or 2) .. " additional <keyword id=\"Gustave_Charges\">Charge(s)</> per hit.",
+                                "<keyword id=\"Element_Lightning\">Overcharge</>: Gain " .. (config.AngelsEyesAdditionalChargesPerHit or 3) .. " additional <keyword id=\"Gustave_Charges\">Charge(s)</> per hit.",
             ShortDescription =  "Extreme <keyword id=\"Element_Physical\">Physical</> Damage. 8 hits.\n" ..
                                 "Applies Aureole to revive this character on death.\n",
             PerfectionDescription = "Gain 1 additional <keyword id=\"Perfection\">Perfection</> per hit.",
-            OverchargeDescription = "Gain " .. (config.AngelsEyesAdditionalChargesPerHit or 2) .. " additional <keyword id=\"Gustave_Charges\">Charge(s)</> per hit.",
+            OverchargeDescription = "Gain " .. (config.AngelsEyesAdditionalChargesPerHit or 3) .. " additional <keyword id=\"Gustave_Charges\">Charge(s)</> per hit.",
         },
     }
 

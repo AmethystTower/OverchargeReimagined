@@ -133,8 +133,8 @@ return
     -- Additional damage multiplier per consumed charge. Default: 0.2 (20%)
     MarkingShotDamagePerCharge = 0.2,
 
-    -- AP cost of this ability. Default: 4 / Default in Vanilla: 2
-    MarkingShotAPCost = 4,
+    -- AP cost of this ability. Default: 2
+    MarkingShotAPCost = 2,
 
     ------------------------------------------------------------------------
 
@@ -199,8 +199,8 @@ return
     -- Maximum amount of charges this ability can consume for extra buffs on the casting character. Default: 50
     PowerfulChargesConsumed = 50,
 
-    -- AP cost of this ability. Default: 5 / Default in Vanilla: 3
-    PowerfulAPCost = 5,
+    -- AP cost of this ability. Default: 3
+    PowerfulAPCost = 3,
 
     ------------------------------------------------------------------------
 
@@ -217,7 +217,7 @@ return
     -- Example: If the setting is 100 and our character has 1000 health, the damage multiplier will increase 10 times.
     LightHolderHealthChunkSize = 100,
 
-    -- AP cost of this ability. Default: 5 / Default in Vanilla: 5
+    -- AP cost of this ability. Default: 5 / Default in Vanilla: 4
     LightHolderAPCost = 5,
 
     ------------------------------------------------------------------------
@@ -345,7 +345,7 @@ return
 
     -- Speed Burst: These are the settings for Speed Burst.
 
-    -- Maximum amount of charges this ability can consume for bonus damage. Default: 35
+    -- Maximum amount of charges this ability can consume for bonus damage. Default: 25
     SpeedBurstChargesConsumed = 25,
 
     -- Additional damage multiplier per consumed charge. Default: 0.2 (20%)
@@ -408,6 +408,6 @@ return
     -- This is a gradient ability and it's the only one that interacts with Perfection, so it will interact with Overcharge as well.
     -- No cost settings though, there is no reason to modify it since gradients are special.
 
-    -- Charges per hit with this ability. Default: 2
-    AngelsEyesAdditionalChargesPerHit = 2,
+    -- Charges per hit with this ability. Default: 3
+    AngelsEyesAdditionalChargesPerHit = 3,
 }
