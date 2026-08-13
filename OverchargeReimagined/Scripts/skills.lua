@@ -126,20 +126,21 @@ local function GetAbilityValues(config)
         -- Powerful
         ["Powerful_Gustave"] = 
         {
-            APCost = config.PowerfulAPCost or 3,
+            APCost = config.PowerfulAPCost or 4,
             ChargesConsumed = config.PowerfulChargesConsumed or 50,
             ChargesMultiplier = nil,
             Description =       "Applies <keyword id=\"Buff_Powerful\">Powerful</> to 1-3 allies for 3 turns.\n" ..
-                                "Consumes " .. (config.PowerfulChargesConsumed or 50) .. " <keyword id=\"Gustave_Charges\">Charges</> to grant additional buffs to Gustave.\n" ..
+                                "Consumes <keyword id=\"Gustave_Charges\">Charges</> to grant additional buffs to Gustave.\n" ..
                                 string.format("%g", (config.PowerfulChargesConsumed or 50) * 0.2) .. " Charges: Apply <keyword id=\"Buff_Shell_Left\">Shell</> for 3 turns.\n" ..
                                 string.format("%g", (config.PowerfulChargesConsumed or 50) * 0.4) .. " Charges: Apply <keyword id=\"Buff_Rush_Left\">Rush</> for 3 turns.\n" ..
-                                string.format("%g", (config.PowerfulChargesConsumed or 50) * 0.6) .. " Charges: Apply <keyword id=\"Buff_Regen_Left\">Regen</> for 3 turns.\n" ..
+                                string.format("%g", (config.PowerfulChargesConsumed or 50) * 0.6) .. " Charges: Apply <keyword id=\"StatusEffect_Berserk_Left\">Berserk</> for 3 turns.\n" ..
                                 string.format("%g", (config.PowerfulChargesConsumed or 50) * 0.8) .. " Charges: Increase turn duration to 6.\n" ..
                                 (config.PowerfulChargesConsumed or 50) .. " Charges: Apply <keyword id=\"StatusEffect_Enraged_Left\">Rage</> for 1 turn.",
             ShortDescription =  "Applies <keyword id=\"Buff_Powerful\">Powerful</> to 1-3 allies for 3 turns.\n" ..
+                                "Consumes <keyword id=\"Gustave_Charges\">Charges</> to grant additional buffs to Gustave.\n" ..
                                 string.format("%g", (config.PowerfulChargesConsumed or 50) * 0.2) .. " Charges: Apply <keyword id=\"Buff_Shell_Left\">Shell</> for 3 turns.\n" ..
                                 string.format("%g", (config.PowerfulChargesConsumed or 50) * 0.4) .. " Charges: Apply <keyword id=\"Buff_Rush_Left\">Rush</> for 3 turns.\n" ..
-                                string.format("%g", (config.PowerfulChargesConsumed or 50) * 0.6) .. " Charges: Apply <keyword id=\"Buff_Regen_Left\">Regen</> for 3 turns.\n" ..
+                                string.format("%g", (config.PowerfulChargesConsumed or 50) * 0.6) .. " Charges: Apply <keyword id=\"StatusEffect_Berserk_Left\">Berserk</> for 3 turns.\n" ..
                                 string.format("%g", (config.PowerfulChargesConsumed or 50) * 0.8) .. " Charges: Increase turn duration to 6.\n" ..
                                 (config.PowerfulChargesConsumed or 50) .. " Charges: Apply <keyword id=\"StatusEffect_Enraged_Left\">Rage</> for 1 turn.",
             PerfectionDescription = nil,

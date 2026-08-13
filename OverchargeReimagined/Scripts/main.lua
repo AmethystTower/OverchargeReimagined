@@ -744,7 +744,7 @@ local function TryRegisterAbilityHooks()
                 if abilityValues.ChargesConsumed > 0 then
                     local applyShell = false
                     local applyRush = false
-                    local applyRegen = false
+                    local applyBerserk = false
                     local applyEnraged = false
                     local turnDuration = 3
 
@@ -767,16 +767,16 @@ local function TryRegisterAbilityHooks()
                         Log("Powerful: Granting Rush.")
                     end
 
-                    -- We consumed 3/5 of the required charges, grant Regen as a bonus.
+                    -- We consumed 3/5 of the required charges, grant Berserk as a bonus.
                     if consumedChargesFromAbility >= consumedChargesChunk * 3 then
-                        applyRegen = true
-                        Log("Powerful: Granting Regen.")
+                        applyBerserk = true
+                        Log("Powerful: Granting Berserk.")
                     end
 
                     -- We consumed 4/5 of the required charges, increase turn duration by +2.
                     if consumedChargesFromAbility >= consumedChargesChunk * 4 then
                         turnDuration = turnDuration + 3
-                        Log("Powerful: Increasing duration by +2.")
+                        Log("Powerful: Increasing duration by +3.")
                     end
 
                     -- We consumed ALL required charges, grant Enraged as a bonus.
@@ -799,7 +799,7 @@ local function TryRegisterAbilityHooks()
                     -- Reapply powerful with the potentially new turn duration.
                     -- But do not treat him as casting character, since he'd reapply lumina effects regarding powerful twice.
                     local powerfulBuffClass = StaticFindObject("/Game/Gameplay/Buffs/StatsBuffs/BP_BattleBuff_Powerful_125.BP_BattleBuff_Powerful_125_C")
-                    skillScript:ApplyBuff(shellBuffClass, castingCharacterClass, turnDuration, nil, 4, appliedBuff)
+                    skillScript:ApplyBuff(powerfulBuffClass, castingCharacterClass, turnDuration, nil, 4, appliedBuff)
 
                     if applyShell then
                         local shellBuffClass = StaticFindObject("/Game/Gameplay/Buffs/StatsBuffs/BP_BattleBuff_Defense15.BP_BattleBuff_Defense15_C")
@@ -812,9 +812,10 @@ local function TryRegisterAbilityHooks()
                         skillScript:ApplyBuff(rushBuffClass, castingCharacterClass, turnDuration, castingCharacterClass, 4, appliedBuff)
                     end
 
-                    if applyRegen then
-                        local regenBuffClass = StaticFindObject("/Game/Gameplay/Buffs/UniqueBuffs/BP_BattleBuff_Regen.BP_BattleBuff_Regen_C")
-                        skillScript:ApplyBuff(regenBuffClass, castingCharacterClass, turnDuration, castingCharacterClass, 4, appliedBuff)
+                    if applyBerserk then
+                        local berserkBuffClass = StaticFindObject("/Game/Gameplay/Buffs/GenericBuff/BP_BattleBuff_Berserk.BP_BattleBuff_Berserk_C")
+                        skillScript:ApplyBuff(berserkBuffClass, castingCharacterClass, turnDuration, castingCharacterClass, 4, appliedBuff)
+                        appliedBuff.CreatedBuffInstance.IsPermanent = false -- Berserk is hardcoded to be permanent, set this to false.
                     end
 
                     -- Enraged is always limited to 1 turn by the base game unfortunately :D

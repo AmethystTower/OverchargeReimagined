@@ -199,8 +199,8 @@ return
     -- Maximum amount of charges this ability can consume for extra buffs on the casting character. Default: 50
     PowerfulChargesConsumed = 50,
 
-    -- AP cost of this ability. Default: 3
-    PowerfulAPCost = 3,
+    -- AP cost of this ability. Default: 4 / Default in Vanilla: 3
+    PowerfulAPCost = 4,
 
     ------------------------------------------------------------------------
 
