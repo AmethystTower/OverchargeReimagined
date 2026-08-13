@@ -436,6 +436,40 @@ local function CalculateAmountOfConsumedCharges(abilityName, abilityNameLog)
     Log(abilityNameLog .. ": Consuming " .. consumedChargesFromAbility .. " charges for increased damage.")
 end
 
+local function ResetAbilityStates()
+    -- Reset all ability states.
+    -- EXCEPT Steeled Strike, that ability gets set to false if our character gets hit or when his turn starts.
+    usedShatter = false
+    usedOvercharge = false
+    usedLightHolder = false
+    usedRadiantStrike = false
+    usedMarkingShot = false
+    usedLumiereAssault = false
+    usedStrikeStorm = false
+    usedFromFire = false
+    usedPowerful = false
+    usedEndbringer = false
+    usedBerserkSlash = false
+    usedDefiantStrike = false
+    usedBlitz = false
+    usedFollowUp = false
+    usedAscendingAssault = false
+    usedSpeedBurst = false
+    usedPhantomStars = false
+    usedPurification = false
+    usedAngelsEyes = false
+    fullChargeBonus = false
+
+    -- Only reset it at the end of our turn if we actually executed the ability.
+    if steeledStrikeExecuted then
+        steeledStrikeExecuted = false
+        usedSteeledStrike = false
+    end
+
+    -- Set this back to 0.
+    consumedChargesFromAbility = 0
+end
+
 -- The following hooks we need to be careful because they don't get registed if we don't have the needed character participating in the first battle.
 -- They are responsible for monitoring when someone executes those abilities.
 -- We will call this function in our RECEIVE_BEGIN_PLAY hook everytime a battle starts to ensure they are registered when needed.
@@ -1575,6 +1609,12 @@ RegisterHook(CLIENT_RESTART, function()
             -- Also this needs to run AFTER saving our chargeComponent otherwise this will silently fail.
             TryRegisterAbilityHooks()
 
+            -- Reset all ability states incase some are left from our last fight.
+            ResetAbilityStates()
+
+            -- Also reset steeled strike incase it's true from our last fight.
+            usedSteeledStrike = false
+
             -- Add a 2 second delay before applying the starting charges.
             -- Otherwise we'd get an error and no charges due to calling this too early when the character is not fully initialized yet.
             ExecuteWithDelay(2000, function()
@@ -1641,36 +1681,7 @@ RegisterHook(CLIENT_RESTART, function()
         overchargeCharacterTurn = false
 
         -- Reset all ability states.
-        -- EXCEPT Steeled Strike, that ability gets set to false if our character gets hit or when his turn starts.
-        usedShatter = false
-        usedOvercharge = false
-        usedLightHolder = false
-        usedRadiantStrike = false
-        usedMarkingShot = false
-        usedLumiereAssault = false
-        usedStrikeStorm = false
-        usedFromFire = false
-        usedPowerful = false
-        usedEndbringer = false
-        usedBerserkSlash = false
-        usedDefiantStrike = false
-        usedBlitz = false
-        usedFollowUp = false
-        usedAscendingAssault = false
-        usedSpeedBurst = false
-        usedPhantomStars = false
-        usedPurification = false
-        usedAngelsEyes = false
-        fullChargeBonus = false
-
-        -- Only reset it at the end of our turn if we actually executed the ability.
-        if steeledStrikeExecuted then
-            steeledStrikeExecuted = false
-            usedSteeledStrike = false
-        end
-
-        -- Set this back to 0.
-        consumedChargesFromAbility = 0
+        ResetAbilityStates()
     end)
 
     -- This hook runs whenever someone dodges.
@@ -1708,8 +1719,6 @@ RegisterHook(CLIENT_RESTART, function()
         if not IsValidChargeComponent() then
             return
         end
-
-        Log("Charge owner: " .. tostring(chargeComponent:GetOwner()))
 
         local parryingCharacter = unwrap(character)
 
