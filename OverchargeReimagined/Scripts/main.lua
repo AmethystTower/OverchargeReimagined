@@ -175,6 +175,7 @@ local phantomStarsHookRegistered = false
 local paradigmShiftHookRegistered = false
 local purificationHookRegistered = false
 local angelsEyesHookRegistered = false
+local berserkHookRegistered = false
 
 -- Booleans that we need to monitor states.
 local updatingNativeCharge = false
@@ -256,6 +257,7 @@ local ANGELS_EYES_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Ba
 local GET_BASE_COST = "/Game/Gameplay/SkillTree/BP_DataAsset_Skill.BP_DataAsset_Skill_C:GetSkillBaseCost"
 local GET_COST = "/Game/Gameplay/SkillTree/BP_DataAsset_Skill.BP_DataAsset_Skill_C:GetSkillCost"
 local GET_ATTACK_MULTIPLIER = "/Game/Gameplay/Battle/BP_BattleDamageBuilder.BP_BattleDamageBuilder_C:GetAttackPowerMultiplier"
+local BERSERK_TURN_START = "/Game/Gameplay/Buffs/GenericBuff/BP_BattleBuff_Berserk.BP_BattleBuff_Berserk_C:OnCharacterTurnStart"
 
 -- This function lets us unwrap UE4 objects as proper values.
 local function unwrap(param)
@@ -1382,6 +1384,57 @@ local function TryRegisterAbilityHooks()
         if ok then
             angelsEyesHookRegistered = true
             Log("Successfully registered Angel's Eyes ability execution hooks.")
+        end
+    end
+
+    -- Try to register the turn start function hook for the buff of Berserk.
+    if not berserkHookRegistered then
+        local ok = pcall(function()
+            -- This hook runs whenever a character starts a turn and there is a character that has "Berserk".
+            -- We have to be careful here so we don't affect the characters that DO NOT have the "Berserk" buff.
+            -- I DID NOT KNOW THAT BERSERK SLOWLY MAKES AFFECTED CHARACTERS GROW, I fought the chromatic lampmaster for an hour in the randomizer in spring meadows and suddenly noticed that Gustave was LARGE.
+            -- This should fix it while not taking away this feature from enemies BUT you can turn off this fix with a config setting if you like to meme around... :)
+            RegisterHook(BERSERK_TURN_START, function(param, characterStats, turnStartDependencies)
+                if not IsValidChargeComponent() then
+                    return
+                end
+
+                local berserk = unwrap(param)
+                local stats = unwrap(characterStats)
+
+                if not berserk or not stats then
+                    return
+                end
+
+                -- Not a big fan of using GetOuter but that is the easiest solution right now.
+                local berserkParent = berserk:GetOuter()
+
+                -- Get the owner of the berserk buff.
+                local berserkCharacter = berserkParent:GetOwner()
+
+                -- Get the current character who's playing the current turn.
+                local currentCharacter = stats:GetOwner()
+
+                -- Do nothing if any of these objects are invalid.
+                -- And compare the berserk character to the current character playing the turn, making sure the character without berserk doesn't get affected.
+                if not berserkCharacter:IsValid() or not currentCharacter:IsValid() or berserkCharacter:GetFullName() ~= currentCharacter:GetFullName() then
+                    Log("BERSERK_TURN_START: Preventing non-berserk character from being affected.")
+                    return
+                end
+
+                -- Reset the berserk character's size back to normal if it is the owner of the charge component.
+                -- We do not want to affect normal enemies with this and have them keep their size scaling.
+                if chargeComponent:IsCharacterOwner(berserkCharacter) then
+                    berserkCharacter:ChangeSize(1, 0.05, nil)
+                    Log("BERSERK_TURN_START: Set berserk character's size back to normal.")
+                end
+            end)
+        end)
+
+        -- If it was successful, mark the hooks registrations as true.
+        if ok then
+            berserkHookRegistered = true
+            Log("Successfully registered Berserk turn start function hook.")
         end
     end
 end
