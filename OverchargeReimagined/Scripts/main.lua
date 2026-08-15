@@ -129,6 +129,8 @@ local phantomStarsChargesConsumed = config.PhantomStarsChargesConsumed or 40
 local phantomStarsChargesPercentage = config.PhantomStarsChargesPercentage or 0.1
 local paradigmShiftAPPerCharge = config.ParadigmShiftAPPerCharge or 1
 local angelsEyesAdditionalChargesPerHit = config.AngelsEyesAdditionalChargesPerHit or 3
+local berserkScaleSize = config.BerserkScaleSize or 1
+local berserkScaleTime = config.BerserkScaleTime or 0.05
 
 -- These values SHOULD NOT BE MODIFIED.
 local virtualCurrentCharges = 0 -- Our own charge counter.
@@ -1425,7 +1427,7 @@ local function TryRegisterAbilityHooks()
                 -- Reset the berserk character's size back to normal if it is the owner of the charge component.
                 -- We do not want to affect normal enemies with this and have them keep their size scaling.
                 if chargeComponent:IsCharacterOwner(berserkCharacter) then
-                    berserkCharacter:ChangeSize(1, 0.05, nil)
+                    berserkCharacter:ChangeSize(berserkScaleSize, berserkScaleTime, nil)
                     Log("BERSERK_TURN_START: Set berserk character's size back to normal.")
                 end
             end)

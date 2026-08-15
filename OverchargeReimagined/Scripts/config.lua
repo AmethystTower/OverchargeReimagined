@@ -410,4 +410,20 @@ return
 
     -- Charges per hit with this ability. Default: 3
     AngelsEyesAdditionalChargesPerHit = 3,
+
+    ------------------------------------------------------------------------
+    -- BERSERK: This setting fixes the Berserk buff to not scale affected character's sizes.
+    -- This has a setting because the Berserk buff has a built-in feature to slowly increase the scaling size of affected characters.
+    -- It is very subtle but you can notice it in longer battles and it makes the character and menus look weird, this setting fixes it so this doesn't happen anymore.
+
+    -- WARNING: THESE SETTINGS CAN MAKE USING THE UI AND SHOOTING ENEMIES IMPOSSIBLE! DO NOT MODIFY IF YOU WANT PROPER GAMEPLAY.
+    -- Modify this at your own risk.
+    ------------------------------------------------------------------------
+
+    -- This defines the percentage scale size the character gets set to. Default: 1.00 (100%)
+    -- WARNING Anything that isn't 1.00 (100%) keeps stacking, so he'll keep getting bigger or smaller.
+    BerserkScaleSize = 1.00,
+
+    -- This defines the amount of time it takes to transition to the new size. Default: 0.05 (50 milliseconds)
+    BerserkScaleTime = 0.05,
 }
