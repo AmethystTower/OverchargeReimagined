@@ -309,16 +309,16 @@ local function GetAbilityValues(config)
         -- Speed Burst
         ["SpeedBurst"] = 
         {
-            APCost = config.SpeedBurstAPCost or 3,
-            ChargesConsumed = config.SpeedBurstChargesConsumed or 25,
-            ChargesMultiplier = config.SpeedBurstDamagePerCharge or 0.2,
+            APCost = config.SpeedBurstAPCost or 6,
+            ChargesConsumed = nil,
+            ChargesMultiplier = nil,
             Description =       "Deals high single target <keyword id=\"Element_Light\">Light</> damage. 5 hits.\n" ..
                                 "Damage increased by Speed difference with the target.\n" ..
                                 "<keyword id=\"Element_Light\">Perfection</>: <img id=\"Rank_C\"/>: Increased damage.\n" ..
-                                "<keyword id=\"Element_Lightning\">Overcharge</>: Consumes up to " .. (config.SpeedBurstChargesConsumed or 25) .. " <keyword id=\"Gustave_Charges\">Charges</> for increased damage.",
+                                "<keyword id=\"Element_Lightning\">Overcharge</>: Generates " .. (config.SpeedBurstChargesPerHit or 1) .. " additional <keyword id=\"Gustave_Charges\">Charge(s)</> per hit.",
             ShortDescription =  "High <keyword id=\"Element_Light\">Light</> damage increased by Speed difference. 5 hits.\n",
             PerfectionDescription = "<img id=\"Rank_C\"/>: Increased damage.",
-            OverchargeDescription = "Consumes up to " .. (config.SpeedBurstChargesConsumed or 25) .. " <keyword id=\"Gustave_Charges\">Charges</> for increased damage.",
+            OverchargeDescription = "Generates " .. (config.SpeedBurstChargesPerHit or 1) .. " additional <keyword id=\"Gustave_Charges\">Charge(s)</> per hit.",
         },
 
         -- Phantom Stars

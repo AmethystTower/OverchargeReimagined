@@ -128,6 +128,7 @@ local phantomStarsAPReducedCost = config.PhantomStarsAPReducedCost or 5
 local phantomStarsChargesConsumed = config.PhantomStarsChargesConsumed or 40
 local phantomStarsChargesPercentage = config.PhantomStarsChargesPercentage or 0.1
 local paradigmShiftAPPerCharge = config.ParadigmShiftAPPerCharge or 1
+local speedBurstChargesPerHit = config.SpeedBurstChargesPerHit or 1
 local angelsEyesAdditionalChargesPerHit = config.AngelsEyesAdditionalChargesPerHit or 3
 local berserkScaleSize = config.BerserkScaleSize or 1
 local berserkScaleTime = config.BerserkScaleTime or 0.05
@@ -1222,8 +1223,6 @@ local function TryRegisterAbilityHooks()
 
                 Log("Speed Burst used this turn.")
                 usedSpeedBurst = true
-
-                CalculateAmountOfConsumedCharges("SpeedBurst", "Speed Burst")
             end)
         end)
 
@@ -1561,10 +1560,6 @@ RegisterHook(CLIENT_RESTART, function()
         -- We used Ascending Assault
         elseif usedAscendingAssault then
             modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "AscendingAssault", consumedChargesFromAbility)
-
-        -- We used Speed Burst
-        elseif usedSpeedBurst then
-            modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "SpeedBurst", consumedChargesFromAbility)
 
         -- We used Phantom Stars
         elseif usedPhantomStars then
@@ -1924,7 +1919,12 @@ RegisterHook(CLIENT_RESTART, function()
                 -- Add additional charges per hit from Angel's Eyes.
                 elseif usedAngelsEyes then
                     chargeComponent.ChangeCharge(angelsEyesAdditionalChargesPerHit)
-                    Log("Angel's Eyes: +" .. angelsEyesAdditionalChargesPerHit .. " charges added.")
+                    Log("Angel's Eyes Damage: +" .. angelsEyesAdditionalChargesPerHit .. " charges added.")
+
+                -- Add additional charges per hit from Speed Burst.
+                elseif usedSpeedBurst then
+                    chargeComponent.ChangeCharge(speedBurstChargesPerHit)
+                    Log("Speed Burst Damage: +" .. speedBurstChargesPerHit .. " charges added.")
                 end
 
             -- Damage Reason 2: Buffs such as burn.
