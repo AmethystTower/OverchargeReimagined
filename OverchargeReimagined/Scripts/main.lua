@@ -260,6 +260,7 @@ local GET_BASE_COST = "/Game/Gameplay/SkillTree/BP_DataAsset_Skill.BP_DataAsset_
 local GET_COST = "/Game/Gameplay/SkillTree/BP_DataAsset_Skill.BP_DataAsset_Skill_C:GetSkillCost"
 local GET_ATTACK_MULTIPLIER = "/Game/Gameplay/Battle/BP_BattleDamageBuilder.BP_BattleDamageBuilder_C:GetAttackPowerMultiplier"
 local BERSERK_TURN_START = "/Game/Gameplay/Buffs/GenericBuff/BP_BattleBuff_Berserk.BP_BattleBuff_Berserk_C:OnCharacterTurnStart"
+local MARK_BUFF_REMOVEL = "/Game/Gameplay/Buffs/BP_BattleBuffInstance.BP_BattleBuffInstance_C:MarkBuffForRemoval"
 
 -- This function lets us unwrap UE4 objects as proper values.
 local function unwrap(param)
@@ -831,7 +832,7 @@ local function TryRegisterAbilityHooks()
                     end
 
                     -- Apply any bonus buffs to our character if we get any.
-                    -- We don't need the applied buff object but the function requires it as an output parameter.
+                    -- This holds the created buff instance by ApplyBuff().
                     local appliedBuff = {}
 
                     -- Reapply powerful with the potentially new turn duration.
@@ -853,13 +854,19 @@ local function TryRegisterAbilityHooks()
                     if applyBerserk then
                         local berserkBuffClass = StaticFindObject("/Game/Gameplay/Buffs/GenericBuff/BP_BattleBuff_Berserk.BP_BattleBuff_Berserk_C")
                         skillScript:ApplyBuff(berserkBuffClass, castingCharacterClass, turnDuration, castingCharacterClass, 4, appliedBuff)
-                        appliedBuff.CreatedBuffInstance.IsPermanent = false -- Berserk is hardcoded to be permanent, set this to false.
+
+                        -- Berserk is hardcoded to be permanent, set this to false.
+                        appliedBuff.CreatedBuffInstance.IsPermanent = false
+
+                        -- Set buff type to 1: StatsModifier. This way abilities like "Recovery" don't remove it. This buff's type is usually type 2: StatusEffect.
+                        appliedBuff.CreatedBuffInstance.Type = 1
                     end
 
                     -- Enraged is always limited to 1 turn by the base game unfortunately :D
                     if applyEnraged then
                         local enragedBuffClass = StaticFindObject("/Game/Gameplay/Buffs/GenericBuff/BP_BattleBuff_Enraged.BP_BattleBuff_Enraged_C")
                         skillScript:ApplyBuff(enragedBuffClass, castingCharacterClass, 1, castingCharacterClass, 4, appliedBuff)
+                        appliedBuff.CreatedBuffInstance.Type = 1
                     end
                 end
             end)
@@ -1569,15 +1576,12 @@ RegisterHook(CLIENT_RESTART, function()
         end
     end)
 
-    -- Modify Radiant Strike and Light Holder so that they show their correct descriptions in the skilltree immediately.
-    -- For some reason the game doesn't call GET_BASE_COST for those 2 abilities specifically which is noticable due to them showing incorrect AP costs until they're equipped.
+    -- Modify all abilities so that they show their correct descriptions and AP cost in the skilltree immediately.
     local skill_assets = FindAllOf("BP_DataAsset_Skill_C")
 
-    -- Find Radiant Strike and Light Holder and fix their descriptions immediately.
+    -- Find all modifiable abilities and adjust their descriptions and AP cost to avoid weird issues when entering a battle for the first time.
     for _, asset in pairs(skill_assets) do
-        if asset.NameID:ToString() == "RadiantStrike" or asset.NameID:ToString() == "OldLightHolder" then
-            ModifyAbilityCostAndDescription(asset)
-        end
+        ModifyAbilityCostAndDescription(asset)
     end
 
     -- This hook modifies the AP cost and description of abilities.
