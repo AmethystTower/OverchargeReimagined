@@ -154,7 +154,7 @@ return
 
     -- Lumiere Assault: These are the settings for Lumiere Assault.
 
-    -- Charges per critical hit with this ability. Default: 1
+    -- Charges per critical hit with this ability. Default: 2 / Default in Vanilla: 1
     LumiereAssaultChargesPerCritical = 2,
 
     -- AP cost of this ability. Default: 3
