@@ -2,44 +2,44 @@
 --[[
 ------- Overcharge Reimagined v2.0 - By Killera -------
 
+    DO NOT MODIFY THIS MODULE IF YOU SIMPLY WANT TO CUSTOMIZE THIS MOD.
+    If you just want to customize this mod and simply change gameplay values then use the config.lua instead!
+
 ------- NOTE:
         I am part of the Call of Duty modding community - specifically the MW2 client community.
         You probably heard of clients such as AlterIWnet, FourDeltaOne, RepZIW4 or IW4x before.
         I've been part of these communities for over 10 years and haven't modded any other games since then.
 
-        I like Expedition 33 and I played it a lot with the old "Overcharge Unleashed" mod that simply increased the charge count to 100,
-        but after it broke with the latest update I decided to put my skills to test and create my own mod for a game and engine that I had no idea about.
+        Initially I made this mod because the old "Overcharge Unleashed" mod that simply increased the charge count to 100 broke with the latest update.
+        I had decided to put my skills to test and create my own mod for a game and engine that I had no idea about.
 
-        About 2 weeks later and here we are, having made my first UE4ss mod for Expedition 33!
-        The reason why I went for this type of mod is because it is less prone to break in future updates, since the other Overcharge mod replaced entire game modules.
-        This mod simply hooks the game's runtime functions and adds our own modifications to them, simply being an addition to existing mechanics rather than replacing them.
-        
-        The only downside compared to the original "Overcharge Unleashed" mod is that the UI still displays up to 10 charges.
-        Internally, the mod keeps track of your real charge count, so you'll sometimes have to guess if you're at 30 or 39 charges, for example.
-            
-        But compared to the other mod, you can customize all the settings however you want using the config.lua file!
-         - Want to generate charges passively per battle start and turn? You can do that!
-         - Do you want Overcharge to work like Perfection and gain charges on "Free Aim" hits but also lose charges when you get hit? You can do that!
-         - Want to punish dodges by removing charges but gain more charges per parry to make it require more skill? You can do that!
-         - Want to get bonus charges for any critical hits and not just from Lumiere Assault or Strike Storm? You can do that!
-         - Do you want Simoso's "ethereal sword" double hit effect to generate charges? You can do that as well!
-         - Want buff effects like "Burn" to generate charges? Also possible!
-        You can do all of that and more!
+        About 1 month later and here we are, having made my first UES44 mod for Expedition 33 that basically reworks the entire character Gustave, making his mechanics feel as in-depth as all the others.
+        Since this mod is using Lua and runtime hooking, it should be future proof if the game should receive any future updates and *should* be compatible with pretty much any other mod.
 
-        Feel free to modify this mod as long as credits are given!
+        I didn't plan on making this mod as complex as it is now... but I had the motivation, spare time and it was fun working on this.
+
+        Feel free to modify this mod as long as credits are given and you don't claim my work as your own!
          - If you modify the mod and want to share it, you HAVE to open source it since it is under the GPLv3 license.
-        If you just want to customize this mod and simply change gameplay values then use the config.lua instead!
 
-        PS: Time for some shameless advertising!
+        Now the code might not be the most beautiful visually since I just threw everything into one module, but the game remains stable and it works well enough from a functional standpoint.
+        I promise my code usually looks better than this when I am in my elements C# and C++ :)
+
+        PS:
+        Time for some shameless advertising!
         If you happen to play Call of Duty and like to play the old Modern Warfare 2 game, feel free to follow our project here:
         https://discord.gg/wzD7eCM
         https://www.youtube.com/@mw2reimagined/videos
 
         Everything in this file was reverse engineered by me using FModel and a lot of trial and error.
+        
+        If you like my work and want to support it, feel free to donate here: https://www.paypal.com/donate/?hosted_button_id=573NC92F7RVCS
 
         PPS:
-        LUA is a disgusting language, I hate it. C++, C# and even assembly are much better.
+        Lua is a disgusting language, I hate it. C++, C# and even assembly are much better.
         The only reason why I went for Lua is because of the simplicity that anyone can just modify it and maybe learn from my work.
+
+        PPPS: If you should have any requests for mods that modifiy the other characters' abilities like this and add new effects or mechanics, feel free to message me.
+        If I happen to have the time and motivation maybe I'd do it :)
 
         Have fun with the mod! :)
 ------- NOTE END
@@ -261,7 +261,6 @@ local GET_BASE_COST = "/Game/Gameplay/SkillTree/BP_DataAsset_Skill.BP_DataAsset_
 local GET_COST = "/Game/Gameplay/SkillTree/BP_DataAsset_Skill.BP_DataAsset_Skill_C:GetSkillCost"
 local GET_ATTACK_MULTIPLIER = "/Game/Gameplay/Battle/BP_BattleDamageBuilder.BP_BattleDamageBuilder_C:GetAttackPowerMultiplier"
 local BERSERK_TURN_START = "/Game/Gameplay/Buffs/GenericBuff/BP_BattleBuff_Berserk.BP_BattleBuff_Berserk_C:OnCharacterTurnStart"
-local MARK_BUFF_REMOVEL = "/Game/Gameplay/Buffs/BP_BattleBuffInstance.BP_BattleBuffInstance_C:MarkBuffForRemoval"
 
 -- This function lets us unwrap UE4 objects as proper values.
 local function unwrap(param)

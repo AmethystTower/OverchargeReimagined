@@ -1,6 +1,7 @@
-# Overcharge Reimagined v1.1
+# Overcharge Reimagined v2.0
 
-This is an UE4SS mod for Expedition 33 that expands upon the Overcharge mechanic and adds a lot of customization options to the power.
+This is an UE4SS mod for Expedition 33 that overhauls Gustave as a character and allows all of his skills to interact with his Overcharge mechanic.
+Does NOT interfere with Verso's gameplay like other mods do.
 
 The mod is written in LUA and simply adds our own modifications to the game's runtime functions as an addition to existing mechanics rather than replacing them.
 
@@ -12,20 +13,22 @@ Download the latest release version [here](https://github.com/AmethystTower/Over
 
 ## Features
 
-- [x] Supports custom maximum charge count
 - [x] Fully configurable through `config.lua`
-- [x] Custom charge generation per event
-- [x] Critical hit support
-- [x] Free Aim support
-- [x] Lumina damage support
+- [x] Supports custom maximum charge count
+- [x] All skills interact with the Overcharge mechanic
+- [x] Charge generation per custom events (Critical hits, free aim hits, lumina hits, buff damage)
 - [x] Passive charge generation
 - [x] Negative charge generation (lose charges)
-- [x] Shatter fully sets charges to max no matter what limit was set
 - [x] Runtime hooking (doesn't replace game files and should be compatible with most other mods)
 
 ## Customization Options
 
-The mod adds the following customization options to the Overcharge mechanic via its config.lua file:
+The mod adds a lot of customization options via its config.lua file.
+
+### All skills used by the character can be customized.
+Customizations include the AP cost, charge generation amount, charge consumption amount, damage per charge and other unique settings.
+
+The mod adds the following customization options to the Overcharge charge generation mechanic:
 
 | Mechanic | Name in Config | Description | Default Value | Part of Vanilla |
 |-------------|------------|-----------------------------------------------------------------|------|:------:|

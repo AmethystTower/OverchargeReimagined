@@ -1,20 +1,25 @@
 
--- TODO: Reduce duplicated strings.
--- I don't like the way this code here is right now but I'll take care of this in the near future.
--- It is like this since I didn't have a clear design yet in mind and did everything on the fly, so I added new stuff when I had new ideas.
+--[[
+------- Overcharge Reimagined v2.0 - By Killera -------
 
--- DO NOT MODIFY THIS MODULE IF YOU SIMPLY WANT TO CUSTOMIZE THIS MOD.
--- Use the config.lua for that instead!
+        TODO: Reduce duplicated strings.
+        I don't like the way this code here is right now and how it rebuilds the whole table everytime it is called but it works well enough for now.
+        It does what we need for dynamic descriptions to work in order to show the current charge counter on some abilities.
 
--- This function returns a list with the settings for all modified abilities like AP cost, consumed charges, damage multiplier per charge and dynamic descriptions.
--- Maybe not the most ideal to create this list everytime we need it, but it gets the job done for now considering this is in Lua.
+        DO NOT MODIFY THIS MODULE IF YOU SIMPLY WANT TO CUSTOMIZE THIS MOD.
+        Use the config.lua for that instead!
+
+        This function returns a list with the settings for all modified abilities like AP cost, consumed charges, damage multiplier per charge and dynamic descriptions.
+        Maybe not the most ideal to create this list everytime we need it, but it gets the job done for now considering this is in Lua.
+]]--
+
 local function GetAbilityValues(config)
     local abilityValues = 
     {
         -- Overcharge
         ["UnleashCharge"] = 
         {
-            APCost = config.OverchargeAPCost or 7,
+            APCost = config.OverchargeAPCost or 6,
             ChargesConsumed = config.VirtualMaxCharges or 100,
             ChargesMultiplier = config.OverchargeDamagePerCharge,
             Description =       "Deals high single target <keyword id=\"Element_Lightning\">Lightning</> damage. 1 hit.\n" ..
@@ -31,7 +36,7 @@ local function GetAbilityValues(config)
         -- Shatter
         ["PerfectBreak_Gustave"] = 
         {
-            APCost = config.ShatterAPCost or 8,
+            APCost = config.ShatterAPCost or 6,
             ChargesConsumed = config.VirtualMaxCharges or 100,
             ChargesMultiplier = config.ShatterDamagePerCharge or 0.2,
             Description =       "Deals high <keyword id=\"Element_Lightning\">Lightning</> damage to all enemies. 1 hit.\n" ..
@@ -342,7 +347,7 @@ local function GetAbilityValues(config)
         -- Paradigm Shift
         ["ParadigmShift"] = 
         {
-            APCost = config.ParadigmShiftAPCost or 9,
+            APCost = config.ParadigmShiftAPCost or 1,
             ChargesConsumed = config.ParadigmShiftChargesConsumed or 1,
             ChargesMultiplier = nil,
             Description =       "Deals low <keyword id=\"Element_Physical\">Physical</> single target damage and gives 1-3 <keyword id=\"APShard\">AP</> back. 3 hits.\n" ..
@@ -372,7 +377,7 @@ local function GetAbilityValues(config)
         -- Angel's Eyes
         ["AngelsEyes"] = 
         {
-            APCost = 3,
+            APCost = 3, -- This is the gradient cost, modifiying this is not recommended.
             ChargesConsumed = nil,
             ChargesMultiplier = nil,
             Description =       "Deals extreme <keyword id=\"Element_Physical\">Physical</> Damage. 8 hits.\n" ..
@@ -389,4 +394,5 @@ local function GetAbilityValues(config)
     return abilityValues
 end
 
+-- Expose the function to main.lua.
 return GetAbilityValues
