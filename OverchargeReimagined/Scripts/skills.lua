@@ -353,9 +353,9 @@ local function GetAbilityValues(config)
             Description =       "Deals low <keyword id=\"Element_Physical\">Physical</> single target damage and gives 1-3 <keyword id=\"APShard\">AP</> back. 3 hits.\n" ..
                                 "<keyword id=\"Element_Light\">Perfection</>: <img id=\"Rank_C\"/>: +1 <keyword id=\"APShard\">AP</>\n" ..
                                 "<keyword id=\"Element_Lightning\">Overcharge</>: Consumes " .. (config.ParadigmShiftChargesConsumed or 1) .. " <keyword id=\"Gustave_Charges\">Charge(s)</> per hit to give +1 <keyword id=\"APShard\">AP</> per charge.",
-            ShortDescription =  "Low <keyword id=\"Element_Physical\">Physical</> damage and gives 1-3 <keyword id=\"APShard\">AP</> back. 3 hits.",
-            PerfectionDescription = "<keyword id=\"Element_Light\">Perfection</>: <img id=\"Rank_C\"/>: +1 <keyword id=\"APShard\">AP</>\n",
-            OverchargeDescription = "<keyword id=\"Element_Lightning\">Overcharge</>: Consumes " .. (config.ParadigmShiftChargesConsumed or 1) .. " <keyword id=\"Gustave_Charges\">Charge(s)</> per hit to give +1 <keyword id=\"APShard\">AP</> per charge.",
+            ShortDescription =  "Low <keyword id=\"Element_Physical\">Physical</> damage and gives 1-3 <keyword id=\"APShard\">AP</> back. 3 hits.\n",
+            PerfectionDescription = "<img id=\"Rank_C\"/>: +1 <keyword id=\"APShard\">AP</>\n",
+            OverchargeDescription = "Consumes " .. (config.ParadigmShiftChargesConsumed or 1) .. " <keyword id=\"Gustave_Charges\">Charge(s)</> per hit to give +1 <keyword id=\"APShard\">AP</> per charge.",
         },
 
         -- Purification
