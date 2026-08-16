@@ -1534,8 +1534,12 @@ RegisterHook(CLIENT_RESTART, function()
             -- Formula: Every x amount of max. health adds +x to the multiplier.
             local addedModifier = (result.MaxHP / lightHolderHealthChunkSize) * lightHolderDamagePerHealthChunk
 
+            Log("FinalDamageMultiplier before: " .. tostring(modifier.FinalDamageMultiplier))
+
             modifier.FinalDamageMultiplier = modifier.FinalDamageMultiplier + addedModifier
             Log("Added +" .. addedModifier .. " to the damage multiplier based on " .. result.MaxHP .. " health for Light Holder.")
+
+            Log("FinalDamageMultiplier after: " .. tostring(modifier.FinalDamageMultiplier))
 
         -- We used Steeled strike.
         elseif usedSteeledStrike then
