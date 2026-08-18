@@ -320,10 +320,63 @@ local function GetAbilityOverrideValues(abilityNameID)
     return newValues
 end
 
+-- Since we must build an FText ourselves, the runtime strings require the special symbols to be escaped, otherwise they won't print properly.
+-- Example: In Lua we write \"Element\" for the colours but in the runtime it becomes "Element".
+-- In order for the colours to not break, we must turn "Element" back into \"Element\" and also handle newlines.
+local function EscapeStringCharacters(value)
+    value = value:gsub("\\", "\\\\")
+    value = value:gsub('"', '\\"')
+    value = value:gsub("\n", "\\n")
+
+    return value
+end
+
+-- UE4SS' implementation of FText has a major bug with this game where it expects the size of FTest properties to be 24 bytes, but the game only uses 16 bytes!
+-- This caused UE4SS' function to write into adjacent memory and cause a memory corruption.
+-- This would cause weird behaviour like giving the ability's targeting type an impossible value or it would cause a hard game crash.
+-- With our own implementation we build the FText ourselves in order to circumvent this issue.
+-- Let's hope that UE4SS fixes this issue at some point, since it has been a known problem for a few months now.
+-- Our function gets the memory location of the ability's description property and we import our custom built FText into it.
+-- Special thanks to SamTheMan for researching about this issue.
+local function FTextCustom(skillObject, propertyName, string)
+    local success, errorMessage = pcall(function()
+        local reflection = skillObject:Reflection()
+
+        if not reflection then
+            Log("Failed to get reflection for skill object.")
+            return
+        end
+
+        local property = reflection:GetProperty(propertyName)
+
+        if not property then
+            Log("Failed to find property for skill object.")
+            return
+        end
+
+        local pointer = property:ContainerPtrToValuePtr(skillObject)
+
+        if not pointer then
+            Log("Failed to find pointer address for property of skill object.")
+            return
+        end
+
+        local customFText = 'INVTEXT("' .. EscapeStringCharacters(string) .. '")'
+        property:ImportText(customFText, pointer, 0, skillObject)
+    end)
+
+    if not success then
+        Log("Failed to set " .. propertyName .. ": " .. tostring(errorMessage))
+    end
+end
+
 -- This function modifies the AP cost and description of abilities.
 local function ModifyAbilityCostAndDescription(param)
+    -- Since we call this function from a hook that gives us a remote object and from upon loading a save with direct skill objects, we need to handle both possibilities.
+    -- If it is a remote object then unwrap it, otherwise just use the param directly.
     local self = unwrap(param) or param
 
+    -- Make sure it exists and is valid.
     if not self or not self:IsValid() then
         return
     end
@@ -352,18 +405,17 @@ local function ModifyAbilityCostAndDescription(param)
         return
     end
 
-    -- For whatever reason modifiying the ShortDescription property corrupts the value of this property, giving it a random integer value from a different memory location.
-    -- I assume this is a bug in UE4SS and it assumes a wrong size for the property.
-    -- After countless testing and debugging it seems this is the only property that gets corrupted, everything else remains the same.
-    -- Since this isn't a big project and I don't get money for this I won't spend countless of hours trying to figure out what the exact issue is.
-    -- If anyone reports problems that are related to this, only then I'll get back to it.
-    local targetingType = self.TargetingType
-
-    self.APCost = abilityValues.APCost
+    -- Modifiy AP cost to our new value if it hasn't been yet.
+    if self.APCost ~= abilityValues.APCost then
+        self.APCost = abilityValues.APCost
+        Log("Modified AP cost of ability: " .. tostring(self.NameID:ToString()))
+    end
 
     -- Set the skill's long description which is shown in the character menu and at the top left window during target selection in battle.
-    if self.Description ~= abilityValues.Description then
-        self.Description = FText(abilityValues.Description)
+    -- Only do this if the descriptions are different though.
+    if self.Description:ToString() ~= abilityValues.Description then
+        FTextCustom(self, "Description", abilityValues.Description)
+        Log("Modified long description of ability: " .. tostring(self.NameID:ToString()))
     end
 
     -- Build the string for the short description dynamically.
@@ -383,13 +435,15 @@ local function ModifyAbilityCostAndDescription(param)
         assembledShortDescription = assembledShortDescription .. ("\nCharges: " .. virtualCurrentCharges .. " of " .. virtualMaxCharges .. " <keyword id=\"Gustave_Charges\">Charges</> available.")
     end
 
-    -- Set the skill's short description to what we just assembled on the fly.
-    self.ShortDescription = FText(assembledShortDescription)
+    -- Set the skill's short description to what we just assembled on the fly if it's not the same.
+    -- Only do this if the descriptions are different though.
+    if self.ShortDescription:ToString() ~= assembledShortDescription then
+        FTextCustom(self, "ShortDescription", assembledShortDescription)
+        Log("Modified short description of ability: " .. tostring(self.NameID:ToString()))
+    end
     
-    -- Set the value of TargetingType to what it originally was.
-    self.TargetingType = targetingType
-
-    Log("Modified ability: " .. tostring(self.NameID:ToString()))
+    -- This might no longer be needed since we circumvent UE4SS' FText bug that would corrupt this value.
+    --self.TargetingType = targetingType
 end
 
 local function IncreaseDamageMultiplierBasedOnCharges(multiplier, abilityName, consumedCharges)
