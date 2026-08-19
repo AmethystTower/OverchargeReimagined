@@ -179,6 +179,15 @@ local paradigmShiftHookRegistered = false
 local purificationHookRegistered = false
 local angelsEyesHookRegistered = false
 local berserkHookRegistered = false
+local modifiedAllAbilities = false
+local receiveBeginPlayHookRegistered = false
+local onTurnStartHookRegistered = false
+local onTurnEndHookRegistered = false
+local dodgeSuccessfulHookRegistered = false
+local parrySuccessfulHookRegistered = false
+local onBreakStunHookRegistered = false
+local onReceivedDamageHookRegistered = false
+local changeChargeHookRegistered = false
 
 -- Booleans that we need to monitor states.
 local updatingNativeCharge = false
@@ -187,6 +196,7 @@ local firstTurn = false
 local overchargeCharacterTurn = false
 local fullChargeBonus = false
 local steeledStrikeExecuted = false
+local enableShortDescriptions = false
 
 -- Booleans that we use to monitor when a specific skill was used or triggers.
 local usedShatter = false
@@ -218,6 +228,7 @@ local chargeComponent = nil
 
 -- Our general hook paths that allow us to modify the game.
 local CLIENT_RESTART = "/Script/Engine.PlayerController:ClientRestart"
+local BATTLE_FULLY_LOADED = "/Game/jRPGTemplate/Blueprints/Components/AC_jRPG_BattleManager.AC_jRPG_BattleManager_C:OnBattleDependenciesFullyLoaded"
 local RECEIVE_BEGIN_PLAY = "/Game/Gameplay/Battle/UniqueMechanics/Charge/BP_UniqueMechanic_Charge_Component.BP_UniqueMechanic_Charge_Component_C:ReceiveBeginPlay"
 local ON_TURN_START = "/Game/Gameplay/Battle/UniqueMechanics/Charge/BP_UniqueMechanic_Charge_Component.BP_UniqueMechanic_Charge_Component_C:OnTurnStart"
 local ON_TURN_END = "/Game/Gameplay/Battle/UniqueMechanics/Charge/BP_UniqueMechanic_Charge_Component.BP_UniqueMechanic_Charge_Component_C:OnTurnEnd"
@@ -413,9 +424,14 @@ local function ModifyAbilityCostAndDescription(param)
 
     -- Set the skill's long description which is shown in the character menu and at the top left window during target selection in battle.
     -- Only do this if the descriptions are different though.
-    if self.Description:ToString() ~= abilityValues.Description then
-        FTextCustom(self, "Description", abilityValues.Description)
-        Log("Modified long description of ability: " .. tostring(self.NameID:ToString()))
+    local longDescription = self.Description
+    if longDescription and longDescription:IsValid() then
+        if longDescription:ToString() ~= abilityValues.Description then
+            FTextCustom(self, "Description", abilityValues.Description)
+            Log("Modified long description of ability: " .. tostring(self.NameID:ToString()))
+        end
+    else
+        Log("Long description of ability " .. tostring(self.NameID:ToString()) .. " could not be modified.")
     end
 
     -- Build the string for the short description dynamically.
@@ -435,15 +451,67 @@ local function ModifyAbilityCostAndDescription(param)
         assembledShortDescription = assembledShortDescription .. ("\nCharges: " .. virtualCurrentCharges .. " of " .. virtualMaxCharges .. " <keyword id=\"Gustave_Charges\">Charges</> available.")
     end
 
-    -- Set the skill's short description to what we just assembled on the fly if it's not the same.
+    -- Set the skill's short description to what we just assembled on the fly.
     -- Only do this if the descriptions are different though.
-    if self.ShortDescription:ToString() ~= assembledShortDescription then
-        FTextCustom(self, "ShortDescription", assembledShortDescription)
-        Log("Modified short description of ability: " .. tostring(self.NameID:ToString()))
+    if enableShortDescriptions then
+        local shortDescription = self.ShortDescription
+        if shortDescription and shortDescription:IsValid() then
+            if shortDescription:ToString() ~= assembledShortDescription then
+                FTextCustom(self, "ShortDescription", assembledShortDescription)
+                Log("Modified short description of ability: " .. tostring(self.NameID:ToString()))
+            end
+        else
+            Log("Short description of ability " .. tostring(self.NameID:ToString()) .. " could not be modified.")
+        end
+    else
+        Log("Modifying short descriptions has not been enabled yet.")
     end
     
     -- This might no longer be needed since we circumvent UE4SS' FText bug that would corrupt this value.
     --self.TargetingType = targetingType
+end
+
+local function ModifyAllDescriptionsAndCost()
+    -- Modify all ability descriptions the first time this function runs (usually when hovering over the skilltree or checking abilities).
+    -- It will also run during battle once to modify all short descriptions.
+    local ok, errorMessage = pcall(function()
+
+        -- Modify all abilities so that they show their correct descriptions and AP cost immediately.
+        local skill_assets = FindAllOf("BP_DataAsset_Skill_C")
+
+        if skill_assets then
+            -- Find all modifiable abilities and adjust their descriptions and AP cost for the skilltree or when entering a battle to avoid weird issues.
+            for _, asset in pairs(skill_assets) do
+                if asset:IsValid() then
+                    ModifyAbilityCostAndDescription(asset)
+                end
+            end
+        end
+    end)
+
+    if ok then
+        Log("Successfully modified all descriptions and AP cost at once.")
+    else
+        Log("Failed to modify all descriptions at once: " .. tostring(errorMessage))
+    end
+end
+
+local function ModifyAbilityCostAndDescriptionUnwrapper(param)
+    -- The first time we call this function: Attempt to modify all NORMAL descriptions and AP costs so that they are correct and do nothing else.
+    -- DO NOT MODIFY THE SHORT DESCRIPTION HERE.
+    if not modifiedAllAbilities then
+        modifiedAllAbilities = true
+        ModifyAllDescriptionsAndCost()
+        return
+    end
+
+    if param then
+        local skill = unwrap(param)
+
+        if skill then
+            ModifyAbilityCostAndDescription(skill)
+        end
+    end
 end
 
 local function IncreaseDamageMultiplierBasedOnCharges(multiplier, abilityName, consumedCharges)
@@ -529,15 +597,508 @@ local function ResetAbilityStates()
     consumedChargesFromAbility = 0
 end
 
--- The following hooks we need to be careful because they don't get registed if we don't have the needed character participating in the first battle.
+-- The following hooks we need to be careful because they don't get registed if we don't have the needed character participating in the first battle or have him in the party at all.
 -- They are responsible for monitoring when someone executes those abilities.
--- We will call this function in our RECEIVE_BEGIN_PLAY hook everytime a battle starts to ensure they are registered when needed.
+-- We will call this function in our BATTLE_FULLY_LOADED hook everytime a battle starts to ensure they are registered when needed.
 local function TryRegisterAbilityHooks()
-    -- If we have no valid charge component then we have no character with Overcharge participating in this battle.
-    if not IsValidChargeComponent() then
-        Log("No valid charge component, can't register ability hooks.")
-        return
+
+    -- Since this function runs when a battle starts, enable modifying short descriptions and change them all.
+    if not enableShortDescriptions then
+        enableShortDescriptions = true
     end
+    -------------- THESE ARE ALL GENERAL GAMEPLAY HOOKS --------------
+
+    -- This hook runs on our character when the battle begins.
+    -- And it turns out this hook runs when he was eaten by an enemy and freed during battle as well.
+    if not receiveBeginPlayHookRegistered then
+        local ok = pcall(function()
+            RegisterHook(RECEIVE_BEGIN_PLAY, function(param)
+                local self = unwrap(param)
+
+                -- Check if the charge component exists, if yes then cache it.
+                if self:IsValid() then
+                    virtualCurrentCharges = 0
+                    consumedChargesFromAbility = 0
+                    firstTurn = true
+                    overchargeCharacterTurn = false
+
+                    Log("Internal Charge Counter: " .. tostring(virtualCurrentCharges))
+
+                    -- Cache the charge component during the fight for easy access in our other hooks.
+                    chargeComponent = self
+
+                    -- Reset all ability states incase some are left from our last fight.
+                    ResetAbilityStates()
+
+                    -- Also reset steeled strike incase it's true from our last fight.
+                    usedSteeledStrike = false
+
+                    -- Add a 2 second delay before applying the starting charges.
+                    -- Otherwise we'd get an error and no charges due to calling this too early when the character is not fully initialized yet.
+                    ExecuteWithDelay(2000, function()
+                        -- This is another safety check to see if self still exists, since we are exceuting delayed code here.
+                        if self:IsValid() then
+                            Log("Adding " .. tostring(startingCharges) .. " starting charges.")
+                            self.ChangeCharge(startingCharges)
+                        end
+                    end)
+                end
+            end)
+        end)
+
+        -- If it was successful, mark the hooks registrations as true.
+        if ok then
+            receiveBeginPlayHookRegistered = true
+            Log("Successfully RECEIVE_BEGIN_PLAY execution hook.")
+        end
+    end
+
+    -- This hook runs whenever our character gets his turn.
+    if not onTurnStartHookRegistered then
+        local ok = pcall(function()
+            RegisterHook(ON_TURN_START, function(param)
+                -- This is a safety incase we somehow ever lose the current charge component, get it when a new turn starts.
+                -- Although this should NEVER happen.
+                if not IsValidChargeComponent() then
+                    local self = unwrap(param)
+
+                    if self:IsValid() then
+                        chargeComponent = self
+                    else
+                        return
+                    end
+
+                    Log("Charge component disappeared: Saved new valid charge component.")
+                end
+
+                -- Mark this as our turn.
+                overchargeCharacterTurn = true
+
+                -- We had used STEELED STRIKE last turn and didn't get hit, consume charges for increased damage now.
+                if usedSteeledStrike then
+                    steeledStrikeExecuted = true
+                    CalculateAmountOfConsumedCharges("SteeledStrike", "Steeled Strike")
+                end
+
+                -- Check if this is our first turn, if yes then don't add the charges per turn yet.
+                if IsValidChargeComponent() and not firstTurn then
+                    Log("Adding " .. tostring(chargesPerTurn) .. " charges per turn.")
+                    chargeComponent.ChangeCharge(chargesPerTurn)
+                else
+                    firstTurn = false
+                end
+            end)
+        end)
+
+        -- If it was successful, mark the hooks registrations as true.
+        if ok then
+            onTurnStartHookRegistered = true
+            Log("Successfully registered ON_TURN_START execution hook.")
+        end
+    end
+
+    -- This hook runs whenever the turn of our character ends.
+    if not onTurnEndHookRegistered then
+        local ok = pcall(function()
+            RegisterHook(ON_TURN_END, function(param)
+                -- This is a safety incase we somehow ever lose the current charge component, get it when a new turn starts.
+                -- Although this should NEVER happen.
+                if not IsValidChargeComponent() then
+                    local self = unwrap(param)
+
+                    if self:IsValid() then
+                        chargeComponent = self
+                    else
+                        return
+                    end
+
+                    Log("Charge component disappeared: Saved new valid charge component.")
+                end
+
+                -- It is no longer our turn.
+                overchargeCharacterTurn = false
+
+                -- Reset all ability states.
+                ResetAbilityStates()
+            end)
+        end)
+
+        -- If it was successful, mark the hooks registrations as true.
+        if ok then
+            onTurnEndHookRegistered = true
+            Log("Successfully registered ON_TURN_END execution hook.")
+        end
+    end
+
+    -- This hook runs whenever someone dodges.
+    if not dodgeSuccessfulHookRegistered then
+        local ok = pcall(function()
+            RegisterHook(DODGE_SUCCESSFUL, function(param, character, enemy)
+                -- We have kept the default value of +1 charge per successful dodge, do nothing.
+                if chargesOnDodge == 1 then
+                    return
+                end
+
+                if not IsValidChargeComponent() then
+                    return
+                end
+
+                local dodgingCharacter = unwrap(character)
+
+                -- The character that is dodging is not the one with Overcharge, skip.
+                if not chargeComponent:IsCharacterOwner(dodgingCharacter) then
+                    return
+                end
+
+                -- We have changed the value of the charges per dodge, add or remove them!
+                -- We do -1 because the game already adds 1 charge by default.
+                local calculatedCharges = chargesOnDodge - 1
+
+                chargeComponent.ChangeCharge(calculatedCharges)
+            end)
+        end)
+
+        -- If it was successful, mark the hooks registrations as true.
+        if ok then
+            dodgeSuccessfulHookRegistered = true
+            Log("Successfully registered DODGE_SUCCESSFUL execution hook.")
+        end
+    end
+
+    -- This hook runs whenever someone parries.
+    if not parrySuccessfulHookRegistered then
+        local ok = pcall(function()
+            RegisterHook(PARRY_SUCCESSFUL, function(param, character, enemy)
+                -- We have kept the default value of +1 charge per successful parry, do nothing.
+                if chargesOnParry == 1 then
+                    return
+                end
+
+                if not IsValidChargeComponent() then
+                    return
+                end
+
+                local parryingCharacter = unwrap(character)
+
+                -- The character that is parrying is not the one with Overcharge, skip.
+                if not chargeComponent:IsCharacterOwner(parryingCharacter) then
+                    return
+                end
+
+                -- We have changed the value of the charges per dodge, add or remove them!
+                -- We do -1 because the game already adds 1 charge by default.
+                local calculatedCharges = chargesOnParry - 1
+
+                chargeComponent.ChangeCharge(calculatedCharges)
+            end)
+        end)
+
+        -- If it was successful, mark the hooks registrations as true.
+        if ok then
+            parrySuccessfulHookRegistered = true
+            Log("Successfully registered PARRY_SUCCESSFUL execution hook.")
+        end
+    end
+
+    -- This hook runs whenever someone gets broken/stunned.
+    if not onBreakStunHookRegistered then
+        local ok = pcall(function()
+            RegisterHook(ON_BREAK_STUN, function(selfParam, sourceParam, reasonParam)
+                if not IsValidChargeComponent() then
+                    return
+                end
+
+                --local selfObject = unwrap(selfParam)
+                local sourceCharacter = unwrap(sourceParam)
+
+                -- Make sure the source character exists.
+                if not sourceCharacter then
+                    return
+                end
+
+                -- This is the reason for the break.
+                local reason = unwrap(reasonParam)
+
+                -- Get our actual breaking character from the parameter.
+                local owner = sourceCharacter:GetOwner()
+
+                -- IMPORTANT: Wrap this IsCharacterOwner() call into a pcall because sometimes the charge component can become a trivial object and make the call IsCharacterOwner() invalid.
+                -- This can happen during the frame where we break and free our character after he was eaten by an enemy, which could cause the game to crash if not guarded properly.
+                local success, isOwner = pcall(function()
+                    return chargeComponent:IsCharacterOwner(owner)
+                end)
+
+                if not success then
+                    Log("ON_BREAK_STUN: IsCharacterOwner failed: " .. tostring(isOwner))
+                    return
+                end
+
+                -- Reason 1: Broken by an ability.
+                if isOwner and reason == 1 then
+                    -- Broken by Shatter.
+                    if usedShatter then
+                        -- We remove -10 from the calculated amount because Shatter is hardcoded to give 10 charges on a break.
+                        Log("Player caused break using the ability Shatter, instantly refilling charges by " .. (shatterChargesPercentage * 100) .. "% of " .. virtualMaxCharges .. " total charges.")
+                        chargeComponent.ChangeCharge(math.floor(virtualMaxCharges * shatterChargesPercentage) - 10)
+                    -- Broken by Overcharge.
+                    elseif usedOvercharge then
+                        Log("Player caused break using the ability Overcharge, instantly refilling charges by " .. (overchargeChargesPercentage * 100) .. "% of " .. virtualMaxCharges .. " total charges.")
+                        chargeComponent.ChangeCharge(math.floor(virtualMaxCharges * overchargeChargesPercentage))
+                    -- Broken by Phantom Stars.
+                    elseif usedPhantomStars then
+                        Log("Player caused break using the ability Phantom Stars, instantly refilling charges by " .. (phantomStarsChargesPercentage * 100) .. "% of " .. virtualMaxCharges .. " total charges.")
+                        chargeComponent.ChangeCharge(math.floor(virtualMaxCharges * phantomStarsChargesPercentage))
+                    end
+                end
+            end)
+        end)
+
+        -- If it was successful, mark the hooks registrations as true.
+        if ok then
+            onBreakStunHookRegistered = true
+            Log("Successfully registered ON_BREAK_STUN execution hook.")
+        end
+    end
+
+    -- This hook runs whenever someone takes damage.
+    if not onReceivedDamageHookRegistered then
+        local ok = pcall(function()
+            RegisterHook(ON_RECEIVED_DAMAGE, function(param, damageParam)
+                if not IsValidChargeComponent() then
+                    return
+                end
+
+                local damageObject = unwrap(damageParam)
+
+                local statsComponentSource = damageObject.SourceCharacter
+                local statsComponentTarget = damageObject.TargetCharacter
+
+                local sourceOwner = statsComponentSource.GetOwner()
+                local targetOwner = statsComponentTarget.GetOwner()
+
+                local isSourceOwner = sourceOwner:IsValid() and chargeComponent:IsCharacterOwner(sourceOwner)
+                local isTargetOwner = targetOwner:IsValid() and chargeComponent:IsCharacterOwner(targetOwner)
+
+                -- We damaged ourselves, do nothing.
+                if isSourceOwner and isTargetOwner then
+                    return
+                end
+
+                -- Get the damage reason.
+                damageReason = damageObject.DamageReason
+
+                -- We dealt damage to an enemy!
+                if isSourceOwner then
+                    -- Critical hits: Add or remove charges based on critical hits, if enabled.
+                    -- This is independent from Lumiere Assault and Strike Storm.
+                    if damageObject.IsCriticalHit and chargesOnCritical ~= 0 then
+                        -- Check if the player enabled bonus charges from critical hits to affect free aim shots as well.
+                        if damageReason ~= 3 or freeAimAffectedByCriticals then
+                            chargeComponent.ChangeCharge(chargesOnCritical)
+                            Log("Critical Damage: +" .. chargesOnCritical .. " charges added.")
+                        end
+                    end
+
+                    -- Damage Reason 1: Skill damage.
+                    -- Add or remove charges for damaging enemies with abilities if it is NOT from Overcharge or Shatter, if enabled.
+                    if damageReason == 1 then
+                        chargeComponent.ChangeCharge(chargesFromSkillDamage - 1)
+                        Log("Skill Damage: +" .. chargesFromSkillDamage .. " charges added.")
+
+                        -- Monitor abilities that generate bonus charges on critical hits as their exclusive feature.
+                        if damageObject.IsCriticalHit then
+                            -- Light Holder.
+                            if usedLightHolder then
+                                chargeComponent.ChangeCharge(lightHolderChargesPerCritical)
+                                Log("Light Holder Critical Damage: +" .. lightHolderChargesPerCritical .. " charges added.")
+
+                            -- From Fire.
+                            elseif usedFromFire then
+                                chargeComponent.ChangeCharge(fromFireChargesPerCritical)
+                                Log("From Fire Critical Damage: +" .. fromFireChargesPerCritical .. " charges added.")
+
+                            -- Lumiere Assault.
+                            -- Remove 1 from our value since the base game adds 1 per critical hit naturally already.
+                            elseif usedLumiereAssault then
+                                chargeComponent.ChangeCharge(lumiereAssaultChargesPerCritical - 1)
+                                Log("Lumiere Assault Critical Damage: +" .. lumiereAssaultChargesPerCritical .. " charges added.")
+
+                            -- Strike Storm.
+                            -- Remove 2 from our value since the base game adds 2 per critical hit naturally already.
+                            elseif usedStrikeStorm then
+                                chargeComponent.ChangeCharge(strikeStormChargesPerCritical - 2)
+                                Log("Strike Storm Critical Damage: +" .. strikeStormChargesPerCritical .. " charges added.")
+                            end
+                        end
+
+                        -- Monitor Endbringer's hits when the target is stunned for bonus charges.
+                        if usedEndbringer and damageObject.TargetCharacter.IsStun then
+                            chargeComponent.ChangeCharge(endbringerChargesPerStunnedHit)
+                            Log("Endbringer Stun Damage: +" .. endbringerChargesPerStunnedHit .. " charges added.")
+
+                        -- The base game still adds charges from Overcharge's and Shatter's hit, so remove these hits.
+                        elseif usedShatter or usedOvercharge then
+                            chargeComponent.ChangeCharge((-1))
+
+                        -- Add additional charges per hit from Angel's Eyes.
+                        elseif usedAngelsEyes then
+                            chargeComponent.ChangeCharge(angelsEyesAdditionalChargesPerHit)
+                            Log("Angel's Eyes Damage: +" .. angelsEyesAdditionalChargesPerHit .. " charges added.")
+
+                        -- Add additional charges per hit from Speed Burst.
+                        elseif usedSpeedBurst then
+                            chargeComponent.ChangeCharge(speedBurstChargesPerHit)
+                            Log("Speed Burst Damage: +" .. speedBurstChargesPerHit .. " charges added.")
+                        end
+
+                    -- Damage Reason 2: Buffs such as burn.
+                    -- Add or remove charges for damaging enemies through buffs, if enabled.
+                    elseif damageReason == 2 and chargesOnBuffDamage ~= 0 then
+                        chargeComponent.ChangeCharge(chargesOnBuffDamage)
+                        Log("Buff Damage: +" .. chargesOnBuffDamage .. " charges added.")
+
+                    -- Damage reason 3: Free aim shots.
+                    -- Add/remove charges for shooting enemies, if enabled.
+                    elseif damageReason == 3 and chargesOnFreeAim ~= 0 then
+                        chargeComponent.ChangeCharge(chargesOnFreeAim)
+                        Log("Free Aim Damage: +" .. chargesOnFreeAim .. " charges added.")
+
+                    -- Damage Reason 4: Basic attacks.
+                    -- Add/remove charges for basic attacking enemies, if enabled.
+                    elseif damageReason == 4 then
+                        chargeComponent.ChangeCharge(chargesOnBaseAttacks - 1)
+                        Log("Base Attack Damage: +" .. chargesOnBaseAttacks .. " charges added.")
+
+                    -- Damage Reason 5 and 9: Normal counter attacks.
+                    -- Add or remove charges for doing a normal or ranged counter attack, if enabled.
+                    elseif damageReason == 5 or damageReason == 9 then
+                        chargeComponent.ChangeCharge(chargesOnCounterAttacks - 1)
+                        Log("Counter Attack Damage: +" .. chargesOnCounterAttacks .. " charges added.")
+
+                    -- Damage reason 6: Lumina which is used by the Simoso "ethereal" sword ability for double light damage.
+                    -- Add/remove charges for this effect, if enabled.
+                    elseif damageReason == 6 and chargesOnLuminaDamage ~= 0 then
+                        chargeComponent.ChangeCharge(chargesOnLuminaDamage)
+                        Log("Lumina Damage: +" .. chargesOnLuminaDamage .. " charges added.")
+
+                    -- Damage Reason 8: Gradient counter attack.
+                    -- Add or remove charges for doing a gradient counter attack, if enabled.
+                    elseif damageReason == 8 then
+                        chargeComponent.ChangeCharge(chargesOnGradientCounter - 1)
+                        Log("Gradient Counter Damage: +" .. chargesOnGradientCounter .. " charges added.")
+
+                    -- Damage Reason 11: Jump counter attack.
+                    -- Add or remove charges for doing a jump counter attack, if enabled.
+                    elseif damageReason == 11 then
+                        chargeComponent.ChangeCharge(chargesOnJumpCounter - 1)
+                        Log("Jump Counter Damage: +" .. chargesOnJumpCounter .. " charges added.")
+                    end
+                end
+
+                -- We took damage from an enemy!
+                if isTargetOwner then
+                    -- Adds or removes charges when receiving a hit, if enabled.
+                    -- Damage reason anything other than 2: Add or remove charges for anything that isn't buff damage (e.g. burn).
+                    if damageReason ~= 2 and chargesOnReceivedHit ~=0 then
+                        chargeComponent.ChangeCharge(chargesOnReceivedHit)
+                        Log("Damage Taken: +" .. chargesOnReceivedHit .. " charges added.")
+                    end
+
+                    -- Incase Steeled Strike is enabled, disable it now since we got hit and it was cancelled.
+                    if usedSteeledStrike then
+                        usedSteeledStrike = false
+                    end
+                end
+            end)
+        end)
+
+        -- If it was successful, mark the hooks registrations as true.
+        if ok then
+            onReceivedDamageHookRegistered = true
+            Log("Successfully registered ON_RECEIVED_DAMAGE execution hook.")
+        end
+    end
+
+    -- This hook runs whenever charges get added/removed.
+    if not changeChargeHookRegistered then
+        local ok = pcall(function()
+            RegisterHook(CHANGE_CHARGE, function(param, amount)
+                -- Since we call ChangeCharge() in our hook, this prevents an infinite recursive call.
+                if updatingNativeCharge then
+                    return
+                end
+
+                if not IsValidChargeComponent() then
+                    return
+                end
+
+                -- We already have the maximum amount of charges, so do nothing otherwise the player keeps hearing the "max charges" noise.
+                -- Unless the added charge amount is negative, then in this case do NOT skip this instance.
+                if(virtualCurrentCharges == virtualMaxCharges) and (read_int(amount) >= 0) then
+                    return
+                end
+
+                -- Reset the max charges of the component to the original game value after OnExecuteSkill was executed.
+                -- Since ChangeCarge() gets called basically everytime this is the perfect place to reset the max count cleanly.
+                if restoreMaxCharges then
+                    chargeComponent.MaxChargeCount = MAX_INGAME_CHARGES
+                    restoreMaxCharges = false
+                end
+
+                -- Don't generate charges from the vanilla functionality of Powerful, since our version has been reworked to not do this anymore.
+                if usedPowerful then
+                    usedPowerful = false
+                    return
+                end
+
+                -- The amount of charges that get added to our counter.
+                -- Also includes the bonus charges from Lumiere Assault, Strike Storm and Shatter.
+                Log("Added charges: "..tostring(read_int(amount)))
+
+                -- Add the charges.
+                virtualCurrentCharges = virtualCurrentCharges + read_int(amount)
+
+                -- Make sure we don't go over our max limit.
+                -- Also make sure our virtual charges never go below 0 as well.
+                if(virtualCurrentCharges > virtualMaxCharges) then
+                    virtualCurrentCharges = virtualMaxCharges
+                elseif(virtualCurrentCharges < 0) then
+                    virtualCurrentCharges = 0
+                end
+
+                Log("Internal Charge Counter: " .. tostring(virtualCurrentCharges))
+
+                updatingNativeCharge = true
+                
+                -- Force game's internal charge counter back to 0 so that we can base it off the amount from our custom counter.
+                chargeComponent.SetChargeCountInternal(0)
+
+                -- Calculate the amount of in-game charges based off our internal counter multiplied by x.
+                -- Ideally this will result in an increase in steps of 10.
+                local charges = math.floor(virtualCurrentCharges * CHARGE_MULTIPLIER)
+
+                -- This is a safety measure for the in-game counter just incase it somehow goes below 0 or above 10 charges.
+                if(charges < 0) then
+                    charges = 0
+                elseif(charges > MAX_INGAME_CHARGES) then
+                    charges = MAX_INGAME_CHARGES
+                end
+
+                -- Add the amount of in-game charges we calculated.
+                -- This forces the current amount of charges to be used by the game for: gameplay, UI, animation selection and fx effect played on the arm.
+                chargeComponent.ChangeCharge(charges)
+                updatingNativeCharge = false
+            end)
+        end)
+
+        -- If it was successful, mark the hooks registrations as true.
+        if ok then
+            changeChargeHookRegistered = true
+            Log("Successfully registered CHANGE_CHARGE execution hook.")
+        end
+    end
+
+    -------------- THESE ARE ALL ABILITY HOOKS --------------
 
     -- Try to register Overcharge's hooks.
     if not unleashHookRegistered then
@@ -1303,7 +1864,13 @@ local function TryRegisterAbilityHooks()
                 Log("Phantom Stars used this turn.")
                 usedPhantomStars = true
 
-                CalculateAmountOfConsumedCharges("PhantomStars", "Phantom Stars")
+                -- For some reason Phantom Stars seems to calculate the consumed AP after we already consumed our charges.
+                -- And because of the charges already being consumed, we might fall under the required amount and it would eat all AP no matter what.
+                -- We'll wait a frame before consuming the charges so it takes the reduced AP cost instead of the regular cost.
+                -- Why do Follow up and Ascending Assault not have this weirdness? Enjoyable game!
+                ExecuteWithDelay(50, function()
+                    CalculateAmountOfConsumedCharges("PhantomStars", "Phantom Stars")
+                end)
             end)
 
             -- This hook runs whenever Phantom Stars checks its requirement for reduced AP cost.
@@ -1508,6 +2075,9 @@ RegisterHook(CLIENT_RESTART, function()
 
     clientHookRegistered = true
 
+    -- Load all ability and charge component hooks once a battle starts.
+    RegisterHook(BATTLE_FULLY_LOADED, TryRegisterAbilityHooks)
+
     RegisterHook(GET_ATTACK_MULTIPLIER, function(param)
         if not IsValidChargeComponent() then
             return
@@ -1628,16 +2198,8 @@ RegisterHook(CLIENT_RESTART, function()
         end
     end)
 
-    -- Modify all abilities so that they show their correct descriptions and AP cost in the skilltree immediately.
-    local skill_assets = FindAllOf("BP_DataAsset_Skill_C")
-
-    -- Find all modifiable abilities and adjust their descriptions and AP cost to avoid weird issues when entering a battle for the first time.
-    for _, asset in pairs(skill_assets) do
-        ModifyAbilityCostAndDescription(asset)
-    end
-
     -- This hook modifies the AP cost and description of abilities.
-    RegisterHook(GET_BASE_COST, ModifyAbilityCostAndDescription)
+    RegisterHook(GET_BASE_COST, ModifyAbilityCostAndDescriptionUnwrapper)
 
     -- This hook runs when we're in battle and open the ability menu.
     -- We will use this function to decide if an ability should be highlighted in orange because we have the optimal charge counts for them.
@@ -1695,421 +2257,5 @@ RegisterHook(CLIENT_RESTART, function()
         if not abilityValues.ChargesConsumed and virtualCurrentCharges == 0 and abilityNameID ~= "EndBringer" then
             skillState:SetOvercharge(true, true)
         end
-    end)
-
-    -- This hook runs on our character when the battle begins.
-    -- And it turns out this hook runs when he was eaten by an enemy and freed during battle as well.
-    RegisterHook(RECEIVE_BEGIN_PLAY, function(param)
-        local self = unwrap(param)
-
-        -- Check if the charge component exists, if yes then cache it.
-        if self:IsValid() then
-            virtualCurrentCharges = 0
-            consumedChargesFromAbility = 0
-            firstTurn = true
-            overchargeCharacterTurn = false
-
-            Log("Internal Charge Counter: " .. tostring(virtualCurrentCharges))
-
-            -- Cache the charge component during the fight for easy access in our other hooks.
-            chargeComponent = self
-
-            -- Try registering the ability hooks for Overcharge and Shatter.
-            -- These hooks will fail if we don't have the needed character equipped for this battle.
-            -- Which means we will have to try and register these hooks every battle.
-            -- Also this needs to run AFTER saving our chargeComponent otherwise this will silently fail.
-            TryRegisterAbilityHooks()
-
-            -- Reset all ability states incase some are left from our last fight.
-            ResetAbilityStates()
-
-            -- Also reset steeled strike incase it's true from our last fight.
-            usedSteeledStrike = false
-
-            -- Add a 2 second delay before applying the starting charges.
-            -- Otherwise we'd get an error and no charges due to calling this too early when the character is not fully initialized yet.
-            ExecuteWithDelay(2000, function()
-                -- This is another safety check to see if self still exists, since we are exceuting delayed code here.
-                if self:IsValid() then
-                    Log("Adding " .. tostring(startingCharges) .. " starting charges.")
-                    self.ChangeCharge(startingCharges)
-                end
-            end)
-        end
-    end)
-    
-    -- This hook runs whenever our character gets his turn.
-    RegisterHook(ON_TURN_START, function(param)
-        -- This is a safety incase we somehow ever lose the current charge component, get it when a new turn starts.
-        -- Although this should NEVER happen.
-        if not IsValidChargeComponent() then
-            local self = unwrap(param)
-
-            if self:IsValid() then
-                chargeComponent = self
-            else
-                return
-            end
-
-            Log("Charge component disappeared: Saved new valid charge component.")
-        end
-
-        -- Mark this as our turn.
-        overchargeCharacterTurn = true
-
-        -- We had used STEELED STRIKE last turn and didn't get hit, consume charges for increased damage now.
-        if usedSteeledStrike then
-            steeledStrikeExecuted = true
-            CalculateAmountOfConsumedCharges("SteeledStrike", "Steeled Strike")
-        end
-
-        -- Check if this is our first turn, if yes then don't add the charges per turn yet.
-        if IsValidChargeComponent() and not firstTurn then
-            Log("Adding " .. tostring(chargesPerTurn) .. " charges per turn.")
-            chargeComponent.ChangeCharge(chargesPerTurn)
-        else
-            firstTurn = false
-        end
-    end)
-
-    -- This hook runs whenever the turn of our character ends.
-    RegisterHook(ON_TURN_END, function(param)
-        -- This is a safety incase we somehow ever lose the current charge component, get it when a new turn starts.
-        -- Although this should NEVER happen.
-        if not IsValidChargeComponent() then
-            local self = unwrap(param)
-
-            if self:IsValid() then
-                chargeComponent = self
-            else
-                return
-            end
-
-            Log("Charge component disappeared: Saved new valid charge component.")
-        end
-
-        -- It is no longer our turn.
-        overchargeCharacterTurn = false
-
-        -- Reset all ability states.
-        ResetAbilityStates()
-    end)
-
-    -- This hook runs whenever someone dodges.
-    RegisterHook(DODGE_SUCCESSFUL, function(param, character, enemy)
-        -- We have kept the default value of +1 charge per successful dodge, do nothing.
-        if chargesOnDodge == 1 then
-            return
-        end
-
-        if not IsValidChargeComponent() then
-            return
-        end
-
-        local dodgingCharacter = unwrap(character)
-
-        -- The character that is dodging is not the one with Overcharge, skip.
-        if not chargeComponent:IsCharacterOwner(dodgingCharacter) then
-            return
-        end
-
-        -- We have changed the value of the charges per dodge, add or remove them!
-        -- We do -1 because the game already adds 1 charge by default.
-        local calculatedCharges = chargesOnDodge - 1
-
-        chargeComponent.ChangeCharge(calculatedCharges)
-    end)
-
-    -- This hook runs whenever someone parries.
-    RegisterHook(PARRY_SUCCESSFUL, function(param, character, enemy)
-        -- We have kept the default value of +1 charge per successful parry, do nothing.
-        if chargesOnParry == 1 then
-            return
-        end
-
-        if not IsValidChargeComponent() then
-            return
-        end
-
-        local parryingCharacter = unwrap(character)
-
-        -- The character that is parrying is not the one with Overcharge, skip.
-        if not chargeComponent:IsCharacterOwner(parryingCharacter) then
-            return
-        end
-
-        -- We have changed the value of the charges per dodge, add or remove them!
-        -- We do -1 because the game already adds 1 charge by default.
-        local calculatedCharges = chargesOnParry - 1
-
-        chargeComponent.ChangeCharge(calculatedCharges)
-    end)
-
-    -- This hook runs whenever someone gets broken/stunned.
-    RegisterHook(ON_BREAK_STUN, function(selfParam, sourceParam, reasonParam)
-        if not IsValidChargeComponent() then
-            return
-        end
-
-        --local selfObject = unwrap(selfParam)
-        local sourceCharacter = unwrap(sourceParam)
-
-        -- Make sure the source character exists.
-        if not sourceCharacter then
-            return
-        end
-
-        -- This is the reason for the break.
-        local reason = unwrap(reasonParam)
-
-        -- Get our actual breaking character from the parameter.
-        local owner = sourceCharacter:GetOwner()
-
-        -- IMPORTANT: Wrap this IsCharacterOwner() call into a pcall because sometimes the charge component can become a trivial object and make the call IsCharacterOwner() invalid.
-        -- This can happen during the frame where we break and free our character after he was eaten by an enemy, which could cause the game to crash if not guarded properly.
-        local success, isOwner = pcall(function()
-            return chargeComponent:IsCharacterOwner(owner)
-        end)
-
-        if not success then
-            Log("ON_BREAK_STUN: IsCharacterOwner failed: " .. tostring(isOwner))
-            return
-        end
-
-        -- Reason 1: Broken by an ability.
-        if isOwner and reason == 1 then
-            -- Broken by Shatter.
-            if usedShatter then
-                -- We remove -10 from the calculated amount because Shatter is hardcoded to give 10 charges on a break.
-                Log("Player caused break using the ability Shatter, instantly refilling charges by " .. (shatterChargesPercentage * 100) .. "% of " .. virtualMaxCharges .. " total charges.")
-                chargeComponent.ChangeCharge(math.floor(virtualMaxCharges * shatterChargesPercentage) - 10)
-            -- Broken by Overcharge.
-            elseif usedOvercharge then
-                Log("Player caused break using the ability Overcharge, instantly refilling charges by " .. (overchargeChargesPercentage * 100) .. "% of " .. virtualMaxCharges .. " total charges.")
-                chargeComponent.ChangeCharge(math.floor(virtualMaxCharges * overchargeChargesPercentage))
-            -- Broken by Phantom Stars.
-            elseif usedPhantomStars then
-                Log("Player caused break using the ability Phantom Stars, instantly refilling charges by " .. (phantomStarsChargesPercentage * 100) .. "% of " .. virtualMaxCharges .. " total charges.")
-                chargeComponent.ChangeCharge(math.floor(virtualMaxCharges * phantomStarsChargesPercentage))
-            end
-        end
-    end)
-
-    -- This hook runs whenever someone takes damage.
-    RegisterHook(ON_RECEIVED_DAMAGE, function(param, damageParam)
-        if not IsValidChargeComponent() then
-            return
-        end
-
-        local damageObject = unwrap(damageParam)
-
-        local statsComponentSource = damageObject.SourceCharacter
-        local statsComponentTarget = damageObject.TargetCharacter
-
-        local sourceOwner = statsComponentSource.GetOwner()
-        local targetOwner = statsComponentTarget.GetOwner()
-
-        local isSourceOwner = sourceOwner:IsValid() and chargeComponent:IsCharacterOwner(sourceOwner)
-        local isTargetOwner = targetOwner:IsValid() and chargeComponent:IsCharacterOwner(targetOwner)
-
-        -- We damaged ourselves, do nothing.
-        if isSourceOwner and isTargetOwner then
-            return
-        end
-
-        -- Get the damage reason.
-        damageReason = damageObject.DamageReason
-
-        -- We dealt damage to an enemy!
-        if isSourceOwner then
-            -- Critical hits: Add or remove charges based on critical hits, if enabled.
-            -- This is independent from Lumiere Assault and Strike Storm.
-            if damageObject.IsCriticalHit and chargesOnCritical ~= 0 then
-                -- Check if the player enabled bonus charges from critical hits to affect free aim shots as well.
-                if damageReason ~= 3 or freeAimAffectedByCriticals then
-                    chargeComponent.ChangeCharge(chargesOnCritical)
-                    Log("Critical Damage: +" .. chargesOnCritical .. " charges added.")
-                end
-            end
-
-            -- Damage Reason 1: Skill damage.
-            -- Add or remove charges for damaging enemies with abilities if it is NOT from Overcharge or Shatter, if enabled.
-            if damageReason == 1 then
-                chargeComponent.ChangeCharge(chargesFromSkillDamage - 1)
-                Log("Skill Damage: +" .. chargesFromSkillDamage .. " charges added.")
-
-                -- Monitor abilities that generate bonus charges on critical hits as their exclusive feature.
-                if damageObject.IsCriticalHit then
-                    -- Light Holder.
-                    if usedLightHolder then
-                        chargeComponent.ChangeCharge(lightHolderChargesPerCritical)
-                        Log("Light Holder Critical Damage: +" .. lightHolderChargesPerCritical .. " charges added.")
-
-                    -- From Fire.
-                    elseif usedFromFire then
-                        chargeComponent.ChangeCharge(fromFireChargesPerCritical)
-                        Log("From Fire Critical Damage: +" .. fromFireChargesPerCritical .. " charges added.")
-
-                    -- Lumiere Assault.
-                    -- Remove 1 from our value since the base game adds 1 per critical hit naturally already.
-                    elseif usedLumiereAssault then
-                        chargeComponent.ChangeCharge(lumiereAssaultChargesPerCritical - 1)
-                        Log("Lumiere Assault Critical Damage: +" .. lumiereAssaultChargesPerCritical .. " charges added.")
-
-                    -- Strike Storm.
-                    -- Remove 2 from our value since the base game adds 2 per critical hit naturally already.
-                    elseif usedStrikeStorm then
-                        chargeComponent.ChangeCharge(strikeStormChargesPerCritical - 2)
-                        Log("Strike Storm Critical Damage: +" .. strikeStormChargesPerCritical .. " charges added.")
-                    end
-                end
-
-                -- Monitor Endbringer's hits when the target is stunned for bonus charges.
-                if usedEndbringer and damageObject.TargetCharacter.IsStun then
-                    chargeComponent.ChangeCharge(endbringerChargesPerStunnedHit)
-                    Log("Endbringer Stun Damage: +" .. endbringerChargesPerStunnedHit .. " charges added.")
-
-                -- The base game still adds charges from Overcharge's and Shatter's hit, so remove these hits.
-                elseif usedShatter or usedOvercharge then
-                    chargeComponent.ChangeCharge((-1))
-
-                -- Add additional charges per hit from Angel's Eyes.
-                elseif usedAngelsEyes then
-                    chargeComponent.ChangeCharge(angelsEyesAdditionalChargesPerHit)
-                    Log("Angel's Eyes Damage: +" .. angelsEyesAdditionalChargesPerHit .. " charges added.")
-
-                -- Add additional charges per hit from Speed Burst.
-                elseif usedSpeedBurst then
-                    chargeComponent.ChangeCharge(speedBurstChargesPerHit)
-                    Log("Speed Burst Damage: +" .. speedBurstChargesPerHit .. " charges added.")
-                end
-
-            -- Damage Reason 2: Buffs such as burn.
-            -- Add or remove charges for damaging enemies through buffs, if enabled.
-            elseif damageReason == 2 and chargesOnBuffDamage ~= 0 then
-                chargeComponent.ChangeCharge(chargesOnBuffDamage)
-                Log("Buff Damage: +" .. chargesOnBuffDamage .. " charges added.")
-
-            -- Damage reason 3: Free aim shots.
-            -- Add/remove charges for shooting enemies, if enabled.
-            elseif damageReason == 3 and chargesOnFreeAim ~= 0 then
-                chargeComponent.ChangeCharge(chargesOnFreeAim)
-                Log("Free Aim Damage: +" .. chargesOnFreeAim .. " charges added.")
-
-            -- Damage Reason 4: Basic attacks.
-            -- Add/remove charges for basic attacking enemies, if enabled.
-            elseif damageReason == 4 then
-                chargeComponent.ChangeCharge(chargesOnBaseAttacks - 1)
-                Log("Base Attack Damage: +" .. chargesOnBaseAttacks .. " charges added.")
-
-            -- Damage Reason 5 and 9: Normal counter attacks.
-            -- Add or remove charges for doing a normal or ranged counter attack, if enabled.
-            elseif damageReason == 5 or damageReason == 9 then
-                chargeComponent.ChangeCharge(chargesOnCounterAttacks - 1)
-                Log("Counter Attack Damage: +" .. chargesOnCounterAttacks .. " charges added.")
-
-            -- Damage reason 6: Lumina which is used by the Simoso "ethereal" sword ability for double light damage.
-            -- Add/remove charges for this effect, if enabled.
-            elseif damageReason == 6 and chargesOnLuminaDamage ~= 0 then
-                chargeComponent.ChangeCharge(chargesOnLuminaDamage)
-                Log("Lumina Damage: +" .. chargesOnLuminaDamage .. " charges added.")
-
-            -- Damage Reason 8: Gradient counter attack.
-            -- Add or remove charges for doing a gradient counter attack, if enabled.
-            elseif damageReason == 8 then
-                chargeComponent.ChangeCharge(chargesOnGradientCounter - 1)
-                Log("Gradient Counter Damage: +" .. chargesOnGradientCounter .. " charges added.")
-
-            -- Damage Reason 11: Jump counter attack.
-            -- Add or remove charges for doing a jump counter attack, if enabled.
-            elseif damageReason == 11 then
-                chargeComponent.ChangeCharge(chargesOnJumpCounter - 1)
-                Log("Jump Counter Damage: +" .. chargesOnJumpCounter .. " charges added.")
-            end
-        end
-
-        -- We took damage from an enemy!
-        if isTargetOwner then
-            -- Adds or removes charges when receiving a hit, if enabled.
-            -- Damage reason anything other than 2: Add or remove charges for anything that isn't buff damage (e.g. burn).
-            if damageReason ~= 2 and chargesOnReceivedHit ~=0 then
-                chargeComponent.ChangeCharge(chargesOnReceivedHit)
-                Log("Damage Taken: +" .. chargesOnReceivedHit .. " charges added.")
-            end
-
-            -- Incase Steeled Strike is enabled, disable it now since we got hit and it was cancelled.
-            if usedSteeledStrike then
-                usedSteeledStrike = false
-            end
-        end
-    end)
-
-    -- This hook runs whenever charges get added/removed.
-    RegisterHook(CHANGE_CHARGE, function(param, amount)
-        -- Since we call ChangeCharge() in our hook, this prevents an infinite recursive call.
-        if updatingNativeCharge then
-            return
-        end
-
-        if not IsValidChargeComponent() then
-            return
-        end
-
-        -- We already have the maximum amount of charges, so do nothing otherwise the player keeps hearing the "max charges" noise.
-        -- Unless the added charge amount is negative, then in this case do NOT skip this instance.
-        if(virtualCurrentCharges == virtualMaxCharges) and (read_int(amount) >= 0) then
-            return
-        end
-
-        -- Reset the max charges of the component to the original game value after OnExecuteSkill was executed.
-        -- Since ChangeCarge() gets called basically everytime this is the perfect place to reset the max count cleanly.
-        if restoreMaxCharges then
-            chargeComponent.MaxChargeCount = MAX_INGAME_CHARGES
-            restoreMaxCharges = false
-        end
-
-        -- Don't generate charges from the vanilla functionality of Powerful, since our version has been reworked to not do this anymore.
-        if usedPowerful then
-            usedPowerful = false
-            return
-        end
-
-        -- The amount of charges that get added to our counter.
-        -- Also includes the bonus charges from Lumiere Assault, Strike Storm and Shatter.
-        Log("Added charges: "..tostring(read_int(amount)))
-
-        -- Add the charges.
-        virtualCurrentCharges = virtualCurrentCharges + read_int(amount)
-
-        -- Make sure we don't go over our max limit.
-        -- Also make sure our virtual charges never go below 0 as well.
-        if(virtualCurrentCharges > virtualMaxCharges) then
-            virtualCurrentCharges = virtualMaxCharges
-        elseif(virtualCurrentCharges < 0) then
-            virtualCurrentCharges = 0
-        end
-
-        Log("Internal Charge Counter: " .. tostring(virtualCurrentCharges))
-
-        updatingNativeCharge = true
-        
-        -- Force game's internal charge counter back to 0 so that we can base it off the amount from our custom counter.
-        chargeComponent.SetChargeCountInternal(0)
-
-        -- Calculate the amount of in-game charges based off our internal counter multiplied by x.
-        -- Ideally this will result in an increase in steps of 10.
-        local charges = math.floor(virtualCurrentCharges * CHARGE_MULTIPLIER)
-
-        -- This is a safety measure for the in-game counter just incase it somehow goes below 0 or above 10 charges.
-        if(charges < 0) then
-            charges = 0
-        elseif(charges > MAX_INGAME_CHARGES) then
-            charges = MAX_INGAME_CHARGES
-        end
-
-        -- Add the amount of in-game charges we calculated.
-        -- This forces the current amount of charges to be used by the game for: gameplay, UI, animation selection and fx effect played on the arm.
-        chargeComponent.ChangeCharge(charges)
-        updatingNativeCharge = false
     end)
 end)

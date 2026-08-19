@@ -339,7 +339,7 @@ local function GetAbilityValues(config)
                                 "If a target is <keyword id=\"Break\">Broken</> by the hit, Phantom Stars refills " .. string.format("%g", (config.PhantomStarsChargesPercentage or 0.1) * 100) .. "% of its total <keyword id=\"Gustave_Charges\">Charges</>",
             ShortDescription =  "Extreme <keyword id=\"Element_Light\">Light</> damage to all enemies. 5 hits.\n" ..
                                 "Can <keyword id=\"Break\">Break</>\n",
-            PerfectionDescription = "<img id=\"Rank_S\"/>: Costs 2 <keyword id=\"APShard\">AP</>",
+            PerfectionDescription = "<img id=\"Rank_S\"/>: Costs 5 <keyword id=\"APShard\">AP</>",
             OverchargeDescription = "Consumes up to " .. (config.PhantomStarsChargesConsumed or 40) .. " <keyword id=\"Gustave_Charges\">Charges</> for increased damage. Costs " .. (config.PhantomStarsAPReducedCost or 5) .. " <keyword id=\"APShard\">AP</> if required charges are available.\n" ..
                                     "If a target is <keyword id=\"Break\">Broken</> by the hit, Phantom Stars refills " .. string.format("%g", (config.PhantomStarsChargesPercentage or 0.1) * 100) .. "% of its total <keyword id=\"Gustave_Charges\">Charges</>",
         },
