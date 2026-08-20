@@ -1,6 +1,6 @@
 
 --[[
-------- Overcharge Reimagined v2.2 - By Killera -------
+------- Overcharge Reimagined v2.3 - By Killera -------
 
         TODO: Reduce duplicated strings.
         I don't like the way this code here is right now and how it rebuilds the whole table everytime it is called but it works well enough for now.

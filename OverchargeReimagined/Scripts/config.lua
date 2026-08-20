@@ -1,8 +1,8 @@
 
 --[[
-------- Overcharge Reimagined v2.2 - By Killera -------
+------- Overcharge Reimagined v2.3 - By Killera -------
 
-        Overcharge Reimagined v2.2 configuration file.
+        Overcharge Reimagined v2.3 configuration file.
 
         If you created a cool template with this config that offers unique gameplay, feel free to suggest it and maybe it will get added to this mod's official repository!
         It would have your name on it and others could find it useful!
@@ -25,7 +25,8 @@ return
 
     ------------------------------------------------------------------------
     -- Charge generation settings below.
-    -- All charge generation default settings match the base game.
+    -- This is a config with recommended charge generation settings for the best balance:
+    -- Parries and all types of counter attacks generate 2 charges and free aim shots generate 1 charge per hit.
 
     -- IMPORTANT NOTE: ALL SETTINGS ACCEPT BOTH POSITIVE AND NEGATIVE VALUES.
     -- This means that depending on the settings, they can ADD OR REMOVE charges.
@@ -427,7 +428,7 @@ return
     AngelsEyesAdditionalChargesPerHit = 3,
 
     ------------------------------------------------------------------------
-    -- BERSERK: This setting fixes the Berserk buff to not scale the size of our character when it gaining with enough charges via "Powerful".
+    -- BERSERK: This setting fixes the Berserk buff to not scale the size of our character when receiving it with enough charges via "Powerful".
     -- This has a setting because the Berserk buff has a built-in feature to slowly increase the scaling size of affected characters (I never knew nor noticed this on enemies tbh, did you?).
     -- It is very subtle but you can notice it in longer battles and it can make the character and menus look weird, this setting fixes it so this doesn't happen anymore.
 
