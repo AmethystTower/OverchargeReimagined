@@ -422,17 +422,11 @@ local function ModifyAbilityCostAndDescription(param)
         Log("Modified AP cost of ability: " .. tostring(self.NameID:ToString()))
     end
 
-    -- Set the skill's long description which is shown in the character menu and at the top left window during target selection in battle.
-    -- Only do this if the descriptions are different though.
-    local longDescription = self.Description
-    if longDescription and longDescription:IsValid() then
-        if longDescription:ToString() ~= abilityValues.Description then
-            FTextCustom(self, "Description", abilityValues.Description)
-            Log("Modified long description of ability: " .. tostring(self.NameID:ToString()))
-        end
-    else
-        Log("Long description of ability " .. tostring(self.NameID:ToString()) .. " could not be modified.")
-    end
+    -- Set the skill's long description which is shown in the character/skill tree menus and at the top left window during target selection in battle.
+    -- UE4SS MEMORY CORRUPTION: Since we can't safely read the contents of the descriptions due to a bug in UE4SS... we can't check if the description is already the same.
+    -- TODO: Find a custom way of checking the description so we prevent unnecessary writes.
+    FTextCustom(self, "Description", abilityValues.Description)
+    Log("Modified long description of ability: " .. tostring(self.NameID:ToString()))
 
     -- Build the string for the short description dynamically.
     local assembledShortDescription = abilityValues.ShortDescription
@@ -452,20 +446,10 @@ local function ModifyAbilityCostAndDescription(param)
     end
 
     -- Set the skill's short description to what we just assembled on the fly.
-    -- Only do this if the descriptions are different though.
-    if enableShortDescriptions then
-        local shortDescription = self.ShortDescription
-        if shortDescription and shortDescription:IsValid() then
-            if shortDescription:ToString() ~= assembledShortDescription then
-                FTextCustom(self, "ShortDescription", assembledShortDescription)
-                Log("Modified short description of ability: " .. tostring(self.NameID:ToString()))
-            end
-        else
-            Log("Short description of ability " .. tostring(self.NameID:ToString()) .. " could not be modified.")
-        end
-    else
-        Log("Modifying short descriptions has not been enabled yet.")
-    end
+    -- UE4SS MEMORY CORRUPTION: Since we can't safely read the contents of the descriptions due to a bug in UE4SS... we can't check if the description is already the same.
+    -- TODO: Find a custom way of checking the description so we prevent unnecessary writes.
+    FTextCustom(self, "ShortDescription", assembledShortDescription)
+    Log("Modified short description of ability: " .. tostring(self.NameID:ToString()))
     
     -- This might no longer be needed since we circumvent UE4SS' FText bug that would corrupt this value.
     --self.TargetingType = targetingType
