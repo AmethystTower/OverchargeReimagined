@@ -1,6 +1,6 @@
 
 --[[
-------- Overcharge Reimagined v2.1 - By Killera -------
+------- Overcharge Reimagined v2.2 - By Killera -------
 
     DO NOT MODIFY THIS MODULE IF YOU SIMPLY WANT TO CUSTOMIZE THIS MOD.
     If you just want to customize this mod and simply change gameplay values then use the config.lua instead!

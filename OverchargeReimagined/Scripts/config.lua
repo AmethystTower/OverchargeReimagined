@@ -1,8 +1,8 @@
 
 --[[
-------- Overcharge Reimagined v2.1 - By Killera -------
+------- Overcharge Reimagined v2.2 - By Killera -------
 
-        Overcharge Reimagined v2.1 configuration file.
+        Overcharge Reimagined v2.2 configuration file.
 
         If you created a cool template with this config that offers unique gameplay, feel free to suggest it and maybe it will get added to this mod's official repository!
         It would have your name on it and others could find it useful!
