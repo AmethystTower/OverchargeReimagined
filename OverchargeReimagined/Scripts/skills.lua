@@ -21,7 +21,7 @@ local function GetAbilityValues(config)
         {
             APCost = config.OverchargeAPCost or 6,
             ChargesConsumed = config.VirtualMaxCharges or 100,
-            ChargesMultiplier = config.OverchargeDamagePerCharge or 0.15,
+            ChargesMultiplier = config.OverchargeDamagePerCharge or 0.2,
             Description =       "Deals high single target <keyword id=\"Element_Lightning\">Lightning</> damage. 1 hit.\n" ..
                                 "Consumes all <keyword id=\"Gustave_Charges\">Charges</> for increased damage.\n" ..
                                 "Can <keyword id=\"Break\">Break</>\n" ..

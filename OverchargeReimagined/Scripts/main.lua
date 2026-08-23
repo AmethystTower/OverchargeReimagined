@@ -111,7 +111,7 @@ end
 local shatterChargesPercentage = config.ShatterChargesPercentage or 0.15
 local overchargeChargesPercentage = config.OverchargeChargesPercentage or 0.25
 local overloadChargesPercentage = config.OverloadChargesPercentage or 0.5
-local overchargeMaxChargesBonus = config.OverchargeMaxChargesBonus or 0.05
+local overchargeMaxChargesBonus = config.OverchargeMaxChargesBonus or 0.25
 local shatterMaxChargesBonus = config.ShatterMaxChargesBonus or 0.15
 local lightHolderDamagePerHealthChunk = config.LightHolderDamagePerHealthChunk or 0.01
 local lightHolderHealthChunkSize = config.LightHolderHealthChunkSize or 100

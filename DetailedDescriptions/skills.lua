@@ -21,15 +21,15 @@ local function GetAbilityValues(config)
         {
             APCost = config.OverchargeAPCost or 6,
             ChargesConsumed = config.VirtualMaxCharges or 100,
-            ChargesMultiplier = config.OverchargeDamagePerCharge or 0.15,
+            ChargesMultiplier = config.OverchargeDamagePerCharge or 0.2,
             Description =       "150% <keyword id=\"Element_Lightning\">Lightning</> damage. [<text color=\"#D5B87C\">1x</>]\n" ..
-                                "Consumes all <keyword id=\"Gustave_Charges\">Charges</> for +" .. string.format("%g", 20 + ((config.OverchargeDamagePerCharge or 0.15) * 100)) .. "% damage per charge.\n" ..
-                                "Deals " .. string.format("%g", 20 + ((config.OverchargeMaxChargesBonus or 0.15) * 100)) .. "% more damage if charges are at max.\n" ..
+                                "Consumes all <keyword id=\"Gustave_Charges\">Charges</> for +" .. string.format("%g", 20 + ((config.OverchargeDamagePerCharge or 0.2) * 100)) .. "% damage per charge.\n" ..
+                                "Deals " .. string.format("%g", 20 + ((config.OverchargeMaxChargesBonus or 0.25) * 100)) .. "% more damage if charges are at max.\n" ..
                                 "Can <keyword id=\"Break\">Stun</>\n" ..
                                 "If a target is <keyword id=\"Break\">Stunned</> by the hit, Overcharge refills " .. string.format("%g", (config.OverchargeChargesPercentage or 0.25) * 100) .. "% of total <keyword id=\"Gustave_Charges\">Charges</>",
             ShortDescription =  "150% <keyword id=\"Element_Lightning\">Lightning</> damage. [<text color=\"#D5B87C\">1x</>]\n" ..
-                                "Consumes all <keyword id=\"Gustave_Charges\">Charges</> for +" .. string.format("%g", 20 + ((config.OverchargeDamagePerCharge or 0.15) * 100)) .. "% damage per charge.\n" ..
-                                "Deals " .. string.format("%g", 20 + ((config.OverchargeMaxChargesBonus or 0.15) * 100)) .. "% more damage if charges are at max.\n" ..
+                                "Consumes all <keyword id=\"Gustave_Charges\">Charges</> for +" .. string.format("%g", 20 + ((config.OverchargeDamagePerCharge or 0.2) * 100)) .. "% damage per charge.\n" ..
+                                "Deals " .. string.format("%g", 20 + ((config.OverchargeMaxChargesBonus or 0.25) * 100)) .. "% more damage if charges are at max.\n" ..
                                 "Can <keyword id=\"Break\">Stun</>\n" ..
                                 "If a target is <keyword id=\"Break\">Stunned</> by the hit, Overcharge refills " .. string.format("%g", (config.OverchargeChargesPercentage or 0.25) * 100) .. "% of total <keyword id=\"Gustave_Charges\">Charges</>",
             PerfectionDescription = nil,
