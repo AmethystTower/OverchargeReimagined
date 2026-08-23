@@ -1,6 +1,6 @@
 
 --[[
-------- Overcharge Reimagined v2.3 - By Killera -------
+------- Overcharge Reimagined v2.4 - By Killera -------
 
     DO NOT MODIFY THIS MODULE IF YOU SIMPLY WANT TO CUSTOMIZE THIS MOD.
     If you just want to customize this mod and simply change gameplay values then use the config.lua instead!
@@ -66,6 +66,8 @@ end
 local functionOK, GetAbilityValues = pcall(require, "skills")
 
 if not functionOK then
+    -- Create an empty list as fallback.
+    GetAbilityValues = {}
     Log("Failed to load skills.lua, using empty list.")
 else
     Log("skills.lua loaded successfully!")
@@ -151,6 +153,10 @@ else
     -- Now we can't generate any charges anymore... hope you're happy! :D
     virtualMaxCharges = 0
 end
+
+-- This array helps us track which ability descriptions we have modified so far.
+-- Since we can't read their descriptions directly due to an UE4SS bug causing a potential crash, we need to do it this way.
+local trackedAbilities = {}
 
 -- These booleans that tell us if a hook is now in place or not.
 local clientHookRegistered = false
@@ -348,7 +354,7 @@ end
 -- Let's hope that UE4SS fixes this issue at some point, since it has been a known problem for a few months now.
 -- Our function gets the memory location of the ability's description property and we import our custom built FText into it.
 -- Special thanks to SamTheMan for researching about this issue.
-local function FTextCustom(skillObject, propertyName, string)
+local function FTextCustom(skillObject, propertyName, newDescription, abilityNameID)
     local success, errorMessage = pcall(function()
         local reflection = skillObject:Reflection()
 
@@ -357,6 +363,7 @@ local function FTextCustom(skillObject, propertyName, string)
             return
         end
 
+        -- Find the skill's description reflection property.
         local property = reflection:GetProperty(propertyName)
 
         if not property then
@@ -364,6 +371,7 @@ local function FTextCustom(skillObject, propertyName, string)
             return
         end
 
+        -- Get the property's memory address.
         local pointer = property:ContainerPtrToValuePtr(skillObject)
 
         if not pointer then
@@ -371,8 +379,17 @@ local function FTextCustom(skillObject, propertyName, string)
             return
         end
 
-        local customFText = 'INVTEXT("' .. EscapeStringCharacters(string) .. '")'
+        -- Build our own FText formatted string and import it directly into the corresponding description property.
+        local customFText = 'INVTEXT("' .. EscapeStringCharacters(newDescription) .. '")'
         property:ImportText(customFText, pointer, 0, skillObject)
+
+        -- Add the new description to the version in the tracked abilities array.
+        -- This will allow us to compare the descriptions and see if they are different, so we prevent unnecessary writing.
+        if propertyName == "Description" then
+            trackedAbilities[abilityNameID].Description = newDescription
+        elseif propertyName == "ShortDescription" then
+            trackedAbilities[abilityNameID].ShortDescription = newDescription
+        end
     end)
 
     if not success then
@@ -415,41 +432,53 @@ local function ModifyAbilityCostAndDescription(param)
         return
     end
 
-    -- Modifiy AP cost to our new value if it hasn't been yet.
+    -- Track this ability in our global array so we don't modify the descriptions unnecessarily if it never changes.
+    if not trackedAbilities[abilityNameID] then
+        -- Initialize the descriptions with null so that we will always receive and write the first description instance.
+        trackedAbilities[abilityNameID] = {}
+        trackedAbilities[abilityNameID].Description = nil
+        trackedAbilities[abilityNameID].ShortDescription = nil
+    end
+
+    -- Modifiy AP cost of this ability to our new value if it differs from our custom value.
     if self.APCost ~= abilityValues.APCost then
         self.APCost = abilityValues.APCost
-        Log("Modified AP cost of ability: " .. tostring(self.NameID:ToString()))
+        Log("Modified AP cost of ability: " .. tostring(abilityNameID))
     end
 
     -- Set the skill's long description which is shown in the character/skill tree menus and at the top left window during target selection in battle.
-    -- UE4SS MEMORY CORRUPTION: Since we can't safely read the contents of the descriptions due to a bug in UE4SS... we can't check if the description is already the same.
-    -- TODO: Find a custom way of checking the description so we prevent unnecessary writes.
-    FTextCustom(self, "Description", abilityValues.Description)
-    Log("Modified long description of ability: " .. tostring(self.NameID:ToString()))
+    -- Only do this if the description from our tracked abilities array is different.
+    -- Due to the UE4SS memory corruption issue from handling FText properties, we can't read the description directly otherwise it could return garbage and crash the game.
+    if trackedAbilities[abilityNameID] and trackedAbilities[abilityNameID].Description ~= abilityValues.Description then
+        FTextCustom(self, "Description", abilityValues.Description, abilityNameID)
+        Log("Modified long description of ability: " .. tostring(abilityNameID))
+    end
 
     -- Build the string for the short description dynamically.
     local assembledShortDescription = abilityValues.ShortDescription
 
     -- We currently have the Overcharge character's turn and are selecting his abilities, show Overcharge effect strings if they exist.
-    if overchargeCharacterTurn and abilityValues.OverchargeDescription then
+    if IsValidChargeComponent() and overchargeCharacterTurn and abilityValues.OverchargeDescription then
         assembledShortDescription = assembledShortDescription .. abilityValues.OverchargeDescription
     -- We have a different character's turn, show Perfection effect strings, if they exist.
     elseif abilityValues.PerfectionDescription then
         assembledShortDescription = assembledShortDescription .. abilityValues.PerfectionDescription
     end
 
-    -- Show the current charge count for any abilities that consume charges and specifically Overcharge and Shatter since they consume all charges.
+    -- Show the current charge count for any abilities that consume charges and specifically for Overcharge and Shatter since they consume all charges.
     -- Of course we make sure that the count only gets shown if it's the turn of the Overcharge character.
-    if (abilityValues.ChargesConsumed or abilityNameID == "UnleashCharge" or abilityNameID == "PerfectBreak_Gustave") and overchargeCharacterTurn then
+    if (abilityValues.ChargesConsumed or abilityNameID == "UnleashCharge" or abilityNameID == "PerfectBreak_Gustave") and overchargeCharacterTurn and IsValidChargeComponent() then
         assembledShortDescription = assembledShortDescription .. ("\nCharges: " .. virtualCurrentCharges .. " of " .. virtualMaxCharges .. " <keyword id=\"Gustave_Charges\">Charges</> available.")
     end
 
     -- Set the skill's short description to what we just assembled on the fly.
-    -- UE4SS MEMORY CORRUPTION: Since we can't safely read the contents of the descriptions due to a bug in UE4SS... we can't check if the description is already the same.
-    -- TODO: Find a custom way of checking the description so we prevent unnecessary writes.
-    FTextCustom(self, "ShortDescription", assembledShortDescription)
-    Log("Modified short description of ability: " .. tostring(self.NameID:ToString()))
-    
+    -- Only do this if the short description from our tracked abilities array is different.
+    -- Due to the UE4SS memory corruption issue from handling FText properties, we can't read the description directly otherwise it could return garbage and crash the game.
+    if trackedAbilities[abilityNameID] and trackedAbilities[abilityNameID].ShortDescription ~= assembledShortDescription then
+        FTextCustom(self, "ShortDescription", assembledShortDescription, abilityNameID)
+        Log("Modified short description of ability: " .. tostring(abilityNameID))
+    end
+
     -- This might no longer be needed since we circumvent UE4SS' FText bug that would corrupt this value.
     --self.TargetingType = targetingType
 end
@@ -480,14 +509,14 @@ local function ModifyAllDescriptionsAndCost()
 end
 
 local function ModifyAbilityCostAndDescriptionUnwrapper(param)
-    -- The first time we call this function: Attempt to modify all NORMAL descriptions and AP costs so that they are correct and do nothing else.
-    -- DO NOT MODIFY THE SHORT DESCRIPTION HERE.
+    -- The first time we call this function: Attempt to modify all descriptions and AP costs so that they are correct right away.
     if not modifiedAllAbilities then
         modifiedAllAbilities = true
         ModifyAllDescriptionsAndCost()
         return
     end
 
+    -- Modify individual ability's description.
     if param then
         local skill = unwrap(param)
 

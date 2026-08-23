@@ -1,8 +1,8 @@
 
 --[[
-------- Overcharge Reimagined v2.3 - By Killera -------
+------- Overcharge Reimagined v2.4 - By Killera -------
 
-        Overcharge Reimagined v2.3 configuration file.
+        Overcharge Reimagined v2.4 configuration file.
 
         If you created a cool template with this config that offers unique gameplay, feel free to suggest it and maybe it will get added to this mod's official repository!
         It would have your name on it and others could find it useful!
@@ -106,11 +106,11 @@ return
     -- NOTE: The value works like this: 0.25 = 25% of max. charges, 0.33 = 33% of max. charges, 1.00 = 100% of max charges aka. complete refill.
     OverchargeChargesPercentage = 0.25,
 
-    -- This adds ontop of Overcharge's default 0.20 damage per charge from the base game. Default: 0.05 (+5%)
-    OverchargeDamagePerCharge = 0.05,
+    -- This adds ontop of Overcharge's default 0.20 damage per charge from the base game. Default: 0.15 (+15%)
+    OverchargeDamagePerCharge = 0.15,
 
-    -- This adds ontop of Overcharge's default 0.25 "fully charged" bonus from the base game. Default: 0.10 (+10%)
-    OverchargeMaxChargesBonus = 0.10,
+    -- This adds ontop of Overcharge's default 0.25 "fully charged" bonus from the base game. Default: 0.15 (+15%)
+    OverchargeMaxChargesBonus = 0.15,
 
     -- AP cost of this ability. Default: 6 / Default in Vanilla: 4
     -- Since Overcharge is quite a bit stronger in this mod, a higher AP cost is only fair.

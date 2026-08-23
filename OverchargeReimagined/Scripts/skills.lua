@@ -1,6 +1,6 @@
 
 --[[
-------- Overcharge Reimagined v2.3 - By Killera -------
+------- Overcharge Reimagined v2.4 - By Killera -------
 
         TODO: Reduce duplicated strings.
         I don't like the way this code here is right now and how it rebuilds the whole table everytime it is called but it works well enough for now.
@@ -21,14 +21,14 @@ local function GetAbilityValues(config)
         {
             APCost = config.OverchargeAPCost or 6,
             ChargesConsumed = config.VirtualMaxCharges or 100,
-            ChargesMultiplier = config.OverchargeDamagePerCharge,
+            ChargesMultiplier = config.OverchargeDamagePerCharge or 0.15,
             Description =       "Deals high single target <keyword id=\"Element_Lightning\">Lightning</> damage. 1 hit.\n" ..
                                 "Consumes all <keyword id=\"Gustave_Charges\">Charges</> for increased damage.\n" ..
                                 "Can <keyword id=\"Break\">Break</>\n" ..
-                                "If a target is <keyword id=\"Break\">Broken</> by the hit, Overcharge refills " .. string.format("%g", (config.OverchargeChargesPercentage or 0.25) * 100) .. "% of its total <keyword id=\"Gustave_Charges\">Charges</>",
+                                "If a target is <keyword id=\"Break\">Broken</> by the hit, Overcharge refills " .. string.format("%g", (config.OverchargeChargesPercentage or 0.25) * 100) .. "% of total <keyword id=\"Gustave_Charges\">Charges</>",
             ShortDescription =  "High <keyword id=\"Element_Lightning\">Lightning</> damage based on the amount of <keyword id=\"Gustave_Charges\">Charges</> 1 hit.\n" ..
                                 "Can <keyword id=\"Break\">Break</>\n" ..
-                                "If a target is <keyword id=\"Break\">Broken</> by the hit, Overcharge refills " .. string.format("%g", (config.OverchargeChargesPercentage or 0.25) * 100) .. "% of its total <keyword id=\"Gustave_Charges\">Charges</>",
+                                "If a target is <keyword id=\"Break\">Broken</> by the hit, Overcharge refills " .. string.format("%g", (config.OverchargeChargesPercentage or 0.25) * 100) .. "% of total <keyword id=\"Gustave_Charges\">Charges</>",
             PerfectionDescription = nil,
             OverchargeDescription = nil,
         },
@@ -42,10 +42,10 @@ local function GetAbilityValues(config)
             Description =       "Deals high <keyword id=\"Element_Lightning\">Lightning</> damage to all enemies. 1 hit.\n" ..
                                 "Consumes all <keyword id=\"Gustave_Charges\">Charges</> for increased damage.\n" ..
                                 "Can <keyword id=\"Break\">Break</>\n" ..
-                                "If a target is <keyword id=\"Break\">Broken</> by the hit, Shatter refills " .. string.format("%g", (config.ShatterChargesPercentage or 0.2) * 100) .. "% of its total <keyword id=\"Gustave_Charges\">Charges</>",
+                                "If a target is <keyword id=\"Break\">Broken</> by the hit, Shatter refills " .. string.format("%g", (config.ShatterChargesPercentage or 0.2) * 100) .. "% of total <keyword id=\"Gustave_Charges\">Charges</>",
             ShortDescription =  "High <keyword id=\"Element_Lightning\">Lightning</> damage based on the amount of <keyword id=\"Gustave_Charges\">Charges</> 1 hit.\n" ..
                                 "Can <keyword id=\"Break\">Break</>\n" ..
-                                "If a target is <keyword id=\"Break\">Broken</> by the hit, Shatter refills " .. string.format("%g", (config.ShatterChargesPercentage or 0.2) * 100) .. "% of its total <keyword id=\"Gustave_Charges\">Charges</>",
+                                "If a target is <keyword id=\"Break\">Broken</> by the hit, Shatter refills " .. string.format("%g", (config.ShatterChargesPercentage or 0.2) * 100) .. "% of total <keyword id=\"Gustave_Charges\">Charges</>",
             PerfectionDescription = nil,
             OverchargeDescription = nil,
         },
@@ -336,12 +336,12 @@ local function GetAbilityValues(config)
                                 "Can <keyword id=\"Break\">Break</>\n" ..
                                 "<keyword id=\"Element_Light\">Perfection</>: <img id=\"Rank_S\"/>: Costs 5 <keyword id=\"APShard\">AP</>\n" ..
                                 "<keyword id=\"Element_Lightning\">Overcharge</>: Consumes up to " .. (config.PhantomStarsChargesConsumed or 40) .. " <keyword id=\"Gustave_Charges\">Charges</> for increased damage. Costs " .. (config.PhantomStarsAPReducedCost or 5) .. " <keyword id=\"APShard\">AP</> if required charges are available.\n" ..
-                                "If a target is <keyword id=\"Break\">Broken</> by the hit, Phantom Stars refills " .. string.format("%g", (config.PhantomStarsChargesPercentage or 0.1) * 100) .. "% of its total <keyword id=\"Gustave_Charges\">Charges</>",
+                                "If a target is <keyword id=\"Break\">Broken</> by the hit, Phantom Stars refills " .. string.format("%g", (config.PhantomStarsChargesPercentage or 0.1) * 100) .. "% of total <keyword id=\"Gustave_Charges\">Charges</>",
             ShortDescription =  "Extreme <keyword id=\"Element_Light\">Light</> damage to all enemies. 5 hits.\n" ..
                                 "Can <keyword id=\"Break\">Break</>\n",
             PerfectionDescription = "<img id=\"Rank_S\"/>: Costs 5 <keyword id=\"APShard\">AP</>",
             OverchargeDescription = "Consumes up to " .. (config.PhantomStarsChargesConsumed or 40) .. " <keyword id=\"Gustave_Charges\">Charges</> for increased damage. Costs " .. (config.PhantomStarsAPReducedCost or 5) .. " <keyword id=\"APShard\">AP</> if required charges are available.\n" ..
-                                    "If a target is <keyword id=\"Break\">Broken</> by the hit, Phantom Stars refills " .. string.format("%g", (config.PhantomStarsChargesPercentage or 0.1) * 100) .. "% of its total <keyword id=\"Gustave_Charges\">Charges</>",
+                                    "If a target is <keyword id=\"Break\">Broken</> by the hit, Phantom Stars refills " .. string.format("%g", (config.PhantomStarsChargesPercentage or 0.1) * 100) .. "% of total <keyword id=\"Gustave_Charges\">Charges</>",
         },
 
         -- Paradigm Shift
