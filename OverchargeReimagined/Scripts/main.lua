@@ -194,6 +194,7 @@ local parrySuccessfulHookRegistered = false
 local onBreakStunHookRegistered = false
 local onReceivedDamageHookRegistered = false
 local changeChargeHookRegistered = false
+local updateCurrentValueHookRegistered = false
 
 -- Booleans that we need to monitor states.
 local updatingNativeCharge = false
@@ -230,10 +231,13 @@ local consumedChargesFromAbility = 0
 
 -- Here we will store the active charge component from our character during the battle so we can modify it from any of our hooks.
 local chargeComponent = nil
+local chargePortrait_CurrentValue = nil
 
 -- Our general hook paths that allow us to modify the game.
 local CLIENT_RESTART = "/Script/Engine.PlayerController:ClientRestart"
 local BATTLE_FULLY_LOADED = "/Game/jRPGTemplate/Blueprints/Components/AC_jRPG_BattleManager.AC_jRPG_BattleManager_C:OnBattleDependenciesFullyLoaded"
+
+-- Those are our hooks related to the Overcharge component so we can intercept charge generation and consumption.
 local RECEIVE_BEGIN_PLAY = "/Game/Gameplay/Battle/UniqueMechanics/Charge/BP_UniqueMechanic_Charge_Component.BP_UniqueMechanic_Charge_Component_C:ReceiveBeginPlay"
 local ON_TURN_START = "/Game/Gameplay/Battle/UniqueMechanics/Charge/BP_UniqueMechanic_Charge_Component.BP_UniqueMechanic_Charge_Component_C:OnTurnStart"
 local ON_TURN_END = "/Game/Gameplay/Battle/UniqueMechanics/Charge/BP_UniqueMechanic_Charge_Component.BP_UniqueMechanic_Charge_Component_C:OnTurnEnd"
@@ -242,6 +246,8 @@ local DODGE_SUCCESSFUL = "/Game/Gameplay/Battle/UniqueMechanics/Charge/BP_Unique
 local PARRY_SUCCESSFUL = "/Game/Gameplay/Battle/UniqueMechanics/Charge/BP_UniqueMechanic_Charge_Component.BP_UniqueMechanic_Charge_Component_C:OnParrySuccessful_Event"
 local ON_RECEIVED_DAMAGE = "/Game/Gameplay/Battle/UniqueMechanics/Charge/BP_UniqueMechanic_Charge_Component.BP_UniqueMechanic_Charge_Component_C:OnCharacterReceivedDamage"
 local ON_BREAK_STUN = "/Game/jRPGTemplate/Blueprints/Components/AC_jRPG_CharacterBattleStats.AC_jRPG_CharacterBattleStats_C:PerformBreakStun"
+local OVERCHARGE_WIDGET_CONSTRUCT = "/Game/Gameplay/Battle/UniqueMechanics/Charge/WBP_UniqueMechanic_Charge.WBP_UniqueMechanic_Charge_C:Construct"
+local UPDATE_CURRENT_VALUE = "/Game/Gameplay/Battle/UniqueMechanics/Charge/WBP_UniqueMechanic_Charge.WBP_UniqueMechanic_Charge_C:UpdateCurrentValue"
 
 -- These are all ability hooks that we use so that they can have additional effects as well as consume and generate charges.
 local UNLEASH_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Gustave/BP_Battle_SkillScript_Gustave_UnleashCharge.BP_Battle_SkillScript_Gustave_UnleashCharge_C:OnExecuteSkill"
@@ -317,6 +323,11 @@ local function IsValidChargeComponent()
     return chargeComponent and chargeComponent:IsValid()
 end
 
+-- This function helps us find out if the overcharge portrait component is still valid.
+local function IsValidChargePortraitProperties()
+    return chargePortrait_CurrentValue and chargePortrait_CurrentValue:IsValid()
+end
+
 -- This function gets all the custom settings such as APCost, ChargeConsumption and descriptions from the skills.lua file.
 local function GetAbilityOverrideValues(abilityNameID)
     local abilityOverrides = GetAbilityValues(config)
@@ -382,13 +393,17 @@ local function FTextCustom(skillObject, propertyName, newDescription, abilityNam
         -- Build our own FText formatted string and import it directly into the corresponding description property.
         local customFText = 'INVTEXT("' .. EscapeStringCharacters(newDescription) .. '")'
         property:ImportText(customFText, pointer, 0, skillObject)
+        Log("Imported text into FText property.")
 
         -- Add the new description to the version in the tracked abilities array.
         -- This will allow us to compare the descriptions and see if they are different, so we prevent unnecessary writing.
-        if propertyName == "Description" then
-            trackedAbilities[abilityNameID].Description = newDescription
-        elseif propertyName == "ShortDescription" then
-            trackedAbilities[abilityNameID].ShortDescription = newDescription
+        -- Also check if abilityNameID is null because we use this function to modify the charge UI, which doesn't need a name ID.
+        if abilityNameID then
+            if propertyName == "Description" then
+                trackedAbilities[abilityNameID].Description = newDescription
+            elseif propertyName == "ShortDescription" then
+                trackedAbilities[abilityNameID].ShortDescription = newDescription
+            end
         end
     end)
 
@@ -1602,6 +1617,45 @@ local function TryRegisterChargeComponentHooks()
 
     Log("Trying to register charge component hooks...")
 
+    RegisterHook(OVERCHARGE_WIDGET_CONSTRUCT, function(param)
+        -- This is the full widget object responsible for the UI.
+        local self = unwrap(param)
+
+        if self:IsValid() then
+            -- Cache the portrait text property for the charge counter for this fight so that we can call it from any of our hooks.
+            chargePortrait_CurrentValue = self.TextBlock_CurrentValue
+
+            if self.TextBlock_MaxValue:IsValid() then
+                self.TextBlock_MaxValue:SetText(FText("/" .. tostring(virtualMaxCharges)))
+                Log("Modified Overcharge's arm UI widget to " .. tostring(virtualMaxCharges) .. " max charges.")
+            end
+        end
+    end)
+
+    if not updateCurrentValueHookRegistered then
+        local ok = pcall(function()
+            -- This hook gets called when the game thinks we reached the maximum charge amount and slightly moves the text and plays the "fully charged" sound.
+            -- It messes up our custom charge counter in the UI so we fix it here.
+            RegisterHook(UPDATE_CURRENT_VALUE, function(param)
+                if not IsValidChargeComponent() then
+                    return
+                end
+
+                -- Fix the arm widget's charge counter so it displays the correct amount.
+                if IsValidChargePortraitProperties() then
+                    chargePortrait_CurrentValue:SetText(FText(tostring(virtualCurrentCharges)))
+                    Log("Game thinks max charges were reached, updated widget UI counter via UPDATE_CURRENT_VALUE.")
+                end
+            end)
+        end)
+
+        -- If it was successful, mark the hooks registrations as true.
+        if ok then
+            updateCurrentValueHookRegistered = true
+            Log("Successfully registered UPDATE_CURRENT_VALUE execution hook.")
+        end
+    end
+
     -- This hook runs on our character when the battle begins.
     -- And it turns out this hook runs when he was eaten by an enemy and freed during battle as well.
     if not receiveBeginPlayHookRegistered then
@@ -1649,7 +1703,7 @@ local function TryRegisterChargeComponentHooks()
         -- If it was successful, mark the hooks registrations as true.
         if ok then
             receiveBeginPlayHookRegistered = true
-            Log("Successfully RECEIVE_BEGIN_PLAY execution hook.")
+            Log("Successfully registered RECEIVE_BEGIN_PLAY execution hook.")
         end
     end
 
@@ -2087,6 +2141,11 @@ local function TryRegisterChargeComponentHooks()
                 -- Add the amount of in-game charges we calculated.
                 -- This forces the current amount of charges to be used by the game for: gameplay, UI, animation selection and fx effect played on the arm.
                 chargeComponent.ChangeCharge(charges)
+
+                if IsValidChargePortraitProperties() then
+                    chargePortrait_CurrentValue:SetText(FText(tostring(virtualCurrentCharges)))
+                end
+
                 updatingNativeCharge = false
             end)
         end)
