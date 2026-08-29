@@ -106,14 +106,18 @@ return
     -- NOTE: The value works like this: 0.25 = 25% of max. charges, 0.33 = 33% of max. charges, 1.00 = 100% of max charges aka. complete refill.
     OverchargeChargesPercentage = 0.25,
 
-    -- This adds ontop of Overcharge's default 0.20 damage per charge from the base game. Default: 0.20 (+20%)
+    -- This adds ontop of Overcharge's default 0.20 (0.40 if hitting 2 perfect skillchecks) damage per charge from the base game. Default: 0.20 (+20%)
     OverchargeDamagePerCharge = 0.20,
 
     -- This adds ontop of Overcharge's default 0.25 "fully charged" bonus from the base game. Default: 0.25 (+25%)
     OverchargeMaxChargesBonus = 0.25,
 
+    -- The elemental damage type of this ability. Default: 8 (Void) / Default in Vanilla: 4 (Lightning)
+    -- Valid Values: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
+    OverchargeElement = 0,
+
     -- AP cost of this ability. Default: 6 / Default in Vanilla: 4
-    -- Since Overcharge is quite a bit stronger in this mod, a higher AP cost is only fair.
+    -- Since Overcharge is quite a bit stronger in this mod and uses void damage as default, a higher AP cost is only fair.
     OverchargeAPCost = 6,
 
     ------------------------------------------------------------------------
@@ -127,7 +131,7 @@ return
     ShatterChargesPercentage = 0.20,
 
     -- Additional damage multiplier that Shatter gets for each charge it consumes. Default: 0.30 (30%)
-    -- Overcharge gets 0.20 in the base game.
+    -- Overcharge gets 0.20 (0.40 if hitting 2 perfect skillchecks) in the base game.
     ShatterDamagePerCharge = 0.30,
 
     -- The extra amount of damage that Shatter gets if the charges are full. Default: 0.35 (30%)

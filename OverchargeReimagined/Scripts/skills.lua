@@ -13,7 +13,34 @@
         Maybe not the most ideal to create this list everytime we need it, but it gets the job done for now considering this is in Lua.
 ]]--
 
-local function GetAbilityValues(config)
+-- Lua has no switch-case... ABSOLUTE KANK I HATE THIS LANGUAGE SO MUCH
+local function GetElementString(elementValue, elementalEnum, isShortDescription)
+    if elementValue == elementalEnum.Physical then
+        return "<keyword id=\"Element_Physical\">Physical</>"
+    elseif elementValue == elementalEnum.Fire then
+        return "<keyword id=\"Element_Fire\">Fire</>"
+    elseif elementValue == elementalEnum.Ice then
+        return "<keyword id=\"Element_Ice\">Ice</>"
+    elseif elementValue == elementalEnum.Lightning then
+        return "<keyword id=\"Element_Lightning\">Lightning</>"
+    elseif elementValue == elementalEnum.Earth then
+        return "<keyword id=\"Element_Earth\">Earth</>"
+    elseif elementValue == elementalEnum.Dark then
+        return "<keyword id=\"Element_Dark\">Dark</>"
+    elseif elementValue == elementalEnum.Light then
+        return "<keyword id=\"Element_Light\">Light</>"
+    elseif elementValue == elementalEnum.Void then
+        return "<keyword id=\"Element_Void\">Void</>"
+    else
+        if isShortDescription then
+            return "{DynamicElement}"
+        else
+            return "Weapon's Element"
+        end
+    end
+end
+
+local function GetAbilityValues(config, elementalEnum)
     local abilityValues = 
     {
         -- Overcharge
@@ -22,11 +49,11 @@ local function GetAbilityValues(config)
             APCost = config.OverchargeAPCost or 6,
             ChargesConsumed = config.VirtualMaxCharges or 100,
             ChargesMultiplier = config.OverchargeDamagePerCharge or 0.2,
-            Description =       "Deals high single target <keyword id=\"Element_Lightning\">Lightning</> damage. 1 hit.\n" ..
+            Description =       "Deals high single target " .. GetElementString(config.OverchargeElement or 8, elementalEnum, false) .. " damage. 1 hit.\n" ..
                                 "Consumes all <keyword id=\"Gustave_Charges\">Charges</> for increased damage.\n" ..
                                 "Can <keyword id=\"Break\">Break</>\n" ..
                                 "If a target is <keyword id=\"Break\">Broken</> by the hit, Overcharge refills " .. string.format("%g", (config.OverchargeChargesPercentage or 0.25) * 100) .. "% of total <keyword id=\"Gustave_Charges\">Charges</>",
-            ShortDescription =  "High <keyword id=\"Element_Lightning\">Lightning</> damage based on the amount of <keyword id=\"Gustave_Charges\">Charges</> 1 hit.\n" ..
+            ShortDescription =  "High " .. GetElementString(config.OverchargeElement or 8, elementalEnum, true) .. " damage based on the amount of <keyword id=\"Gustave_Charges\">Charges</> 1 hit.\n" ..
                                 "Can <keyword id=\"Break\">Break</>\n" ..
                                 "If a target is <keyword id=\"Break\">Broken</> by the hit, Overcharge refills " .. string.format("%g", (config.OverchargeChargesPercentage or 0.25) * 100) .. "% of total <keyword id=\"Gustave_Charges\">Charges</>",
             PerfectionDescription = nil,
