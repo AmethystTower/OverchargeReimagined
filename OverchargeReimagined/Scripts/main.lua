@@ -77,14 +77,15 @@ else
 end
 
 -- This gets our list of ability modifications such as new descriptions and different AP costs.
-local functionOK, GetAbilityValues = pcall(require, "skills")
+local functionOK, SkillsHelper = pcall(require, "skills")
 
 if not functionOK then
     -- Create an empty list as fallback.
-    GetAbilityValues = {}
+    SkillsHelper = {}
     Log("Failed to load skills.lua, using empty list.")
 else
     Log("skills.lua loaded successfully!")
+    SkillsHelper.Init(Log, config, ElementsHelper.ElementEnum)
 end
 
 -- This is our custom charge limit, can be set to any number but it should NOT be negative.
@@ -251,6 +252,7 @@ local usedSpeedBurst = false
 local usedPhantomStars = false
 local usedPurification = false
 local usedAngelsEyes = false
+local usedParadigmShift = false
 
 -- This tells if we have consumed some charges this turn with any ability that isn't the "Overcharge" skill.
 local consumedChargesFromAbility = 0
@@ -309,6 +311,7 @@ local SPEED_BURST_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Ba
 local PHANTOM_STARS_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_Verso_PhantomStars.BP_Battle_SkillScript_Verso_PhantomStars_C:OnExecuteSkill"
 local PHANTOM_STARS_COST_OVERRIDE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_Verso_PhantomStars.BP_Battle_SkillScript_Verso_PhantomStars_C:GetSkillCostOverride"
 local PARADIGM_SHIFT_ON_EFFECT = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_Verso_ParadigmShift.BP_Battle_SkillScript_Verso_ParadigmShift_C:OnActionEffect"
+local PARADIGM_SHIFT_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_Verso_ParadigmShift.BP_Battle_SkillScript_Verso_ParadigmShift_C:OnExecuteSkill"
 local PURIFICATION_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_NEW_15.BP_Battle_SkillScript_NEW_15_C:OnExecuteSkill"
 local ANGELS_EYES_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_Verso_AngelsEyes.BP_Battle_SkillScript_Verso_AngelsEyes_C:OnExecuteSkill"
 
@@ -383,21 +386,14 @@ end
 
 -- This function gets all the custom settings such as APCost, ChargeConsumption and descriptions from the skills.lua file.
 local function GetAbilityOverrideValues(abilityNameID)
-    local abilityOverrides = GetAbilityValues(config, ElementsHelper.ElementEnum)
+    local abilityOverrides = SkillsHelper.GetAbilityValues(abilityNameID)
 
     if not abilityOverrides then
-        Log("Failed to call GetAbilityValues()")
+        Log("Failed to call GetAbilityValues() or no values found for: " .. tostring(abilityNameID))
         return nil
     end
 
-    local newValues = abilityOverrides[abilityNameID]
-
-    if not newValues then
-        Log("No values found for: " .. tostring(abilityNameID))
-        return nil
-    end
-
-    return newValues
+    return abilityOverrides
 end
 
 -- Since we must build an FText ourselves, the runtime strings require the special symbols to be escaped, otherwise they won't print properly.
@@ -531,15 +527,15 @@ local function ModifyAbilityCostAndDescription(param)
         Log("Modified long description of ability: " .. tostring(abilityNameID))
     end
 
-    -- Build the string for the short description dynamically.
-    local assembledShortDescription = abilityValues.ShortDescription
+    -- Build the short description string.
+    local assembledShortDescription = ""
 
-    -- We currently have the Overcharge character's turn and are selecting his abilities, show Overcharge effect strings if they exist.
-    if IsValidChargeComponent() and overchargeCharacterTurn and abilityValues.OverchargeDescription then
-        assembledShortDescription = assembledShortDescription .. abilityValues.OverchargeDescription
-    -- We have a different character's turn, show Perfection effect strings, if they exist.
-    elseif abilityValues.PerfectionDescription then
-        assembledShortDescription = assembledShortDescription .. abilityValues.PerfectionDescription
+    -- We currently have the Overcharge character's turn and are selecting his abilities, show Overcharge effect string if it exists.
+    if IsValidChargeComponent() and overchargeCharacterTurn and abilityValues.OverchargeShortDescription then
+        assembledShortDescription = abilityValues.OverchargeShortDescription
+    -- We currently have a different character's turn, show Perfection description instead if it exists.
+    elseif abilityValues.PerfectionShortDescription then
+        assembledShortDescription = abilityValues.PerfectionShortDescription
     end
 
     -- Since the game's arm UI counter is showing the custom charge counters now, this may have become obsolete.
@@ -668,6 +664,7 @@ local function ResetAbilityStates()
     usedPhantomStars = false
     usedPurification = false
     usedAngelsEyes = false
+    usedParadigmShift = false
     fullChargeBonus = false
 
     -- Only reset it at the end of our turn if we actually executed the ability.
@@ -1494,7 +1491,7 @@ local function TryRegisterAbilityHooks()
     if not paradigmShiftHookRegistered then
         local ok = pcall(function()
             -- This hook runs whenever someone uses Paradigm Shift.
-            RegisterHook(PARADIGM_SHIFT_ON_EFFECT, function(param)
+            RegisterHook(PARADIGM_SHIFT_ON_EXECUTE, function(param)
                 if not IsValidChargeComponent() then
                     return
                 end
@@ -1505,6 +1502,19 @@ local function TryRegisterAbilityHooks()
                 end
 
                 Log("Paradigm Shift used this turn.")
+                usedParadigmShift = true
+            end)
+
+            -- This hook runs everytime an enemy gets hit by Paradigm Shift.
+            RegisterHook(PARADIGM_SHIFT_ON_EFFECT, function(param)
+                if not IsValidChargeComponent() then
+                    return
+                end
+
+                -- A different character used this ability, do nothing.
+                if not overchargeCharacterTurn then
+                    return
+                end
 
                 local skillScript = unwrap(param)
 
@@ -2273,6 +2283,7 @@ RegisterHook(CLIENT_RESTART, function()
         -- This is basically another version of Overcharge now, except it's slightly weaker but hits all enemies instead.
         elseif usedShatter then
             modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "PerfectBreak_Gustave", consumedChargesFromAbility)
+            modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "PerfectBreak_Gustave")
 
             -- Overcharge is full, further increase Shatter's bonus damage!
             if fullChargeBonus then
@@ -2283,11 +2294,21 @@ RegisterHook(CLIENT_RESTART, function()
         -- We used Marking Shot.
         elseif usedMarkingShot then
             modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "MarkingShot_Gustave", consumedChargesFromAbility)
+            modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "MarkingShot_Gustave")
+
+        -- We used Lumiere Assault.
+        elseif usedLumiereAssault then
+            modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "Combo1_Gustave")
+
+        -- We used Strike Storm.
+        elseif usedStrikeStorm then
+            modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "StrikeStorm_Gustave")
 
         -- We used From Fire.
         elseif usedFromFire then
             modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "FromFire_Gustave", consumedChargesFromAbility)
-            
+            modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "FromFire_Gustave")
+
             -- Heal our character based on the amount of charges we consumed.
             local result = {}
 
@@ -2307,13 +2328,15 @@ RegisterHook(CLIENT_RESTART, function()
         -- We used the unused version of Radiant Strike.
         elseif usedRadiantStrike then
             modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "RadiantStrike", consumedChargesFromAbility)
+            modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "RadiantStrike")
 
         -- We used the unused version of Light Holder which says it scales with health, get the max HP!
         -- I decided to not go for current health since that is a bit lame really, makes low-health builds not good with it then.
         -- This ability does not consume charges, it generates bonus charges on criticals instead.
         elseif usedLightHolder then
-            local result = {}
+            modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "OldLightHolder")
 
+            local result = {}
             modifier.DamageSource:GetMaxHP(result)
 
             -- Formula: Every x amount of max. health adds +x to the multiplier.
@@ -2329,34 +2352,52 @@ RegisterHook(CLIENT_RESTART, function()
         -- We used Steeled strike.
         elseif usedSteeledStrike then
             modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "SteeledStrike", consumedChargesFromAbility)
+            modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "SteeledStrike")
+
+        elseif usedEndbringer then
+            modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "EndBringer")
 
         -- We used Berserk Slash
         elseif usedBerserkSlash then
             modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "BerserkSlash", consumedChargesFromAbility)
+            modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "BerserkSlash")
 
         -- We used Defiant Strike
         elseif usedDefiantStrike then
             modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "DefiantStrike", consumedChargesFromAbility)
+            modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "DefiantStrike")
 
         -- We used Blitz
         elseif usedBlitz then
             modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "Blitz", consumedChargesFromAbility)
+            modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "Blitz")
 
         -- We used Follow Up
         elseif usedFollowUp then
             modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "FollowUp", consumedChargesFromAbility)
+            modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "FollowUp")
 
         -- We used Ascending Assault
         elseif usedAscendingAssault then
             modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "AscendingAssault", consumedChargesFromAbility)
+            modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "AscendingAssault")
+
+        -- We used Speed Burst.
+        elseif usedSpeedBurst then
+            modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "SpeedBurst")
 
         -- We used Phantom Stars
         elseif usedPhantomStars then
             modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "PhantomStars", consumedChargesFromAbility)
+            modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "PhantomStars")
+
+        elseif usedParadigmShift then
+            modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "ParadigmShift")
 
         -- We used Purification
         elseif usedPurification then
             modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "Purification", consumedChargesFromAbility)
+            modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "Purification")
         end
     end)
 
@@ -2364,6 +2405,7 @@ RegisterHook(CLIENT_RESTART, function()
     RegisterHook(GET_BASE_COST, ModifyAbilityCostAndDescriptionUnwrapper)
 
     -- This hook runs on any character's turn start.
+    -- We will use it in order to grab the elemental damage type of our character's weapon for abilities that use it.
     RegisterHook(GENERIC_CHARACTER_TURN_START, function(param)
         local self = unwrap(param)
 

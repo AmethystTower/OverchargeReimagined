@@ -113,8 +113,8 @@ return
     OverchargeMaxChargesBonus = 0.25,
 
     -- The elemental damage type of this ability. Default: 8 (Void) / Default in Vanilla: 4 (Lightning)
-    -- Valid Values: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
-    OverchargeElement = 0,
+    -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
+    OverchargeElement = 8,
 
     -- AP cost of this ability. Default: 6 / Default in Vanilla: 4
     -- Since Overcharge is quite a bit stronger in this mod and uses void damage as default, a higher AP cost is only fair.
@@ -138,6 +138,10 @@ return
     -- Overcharge uses 0.25 in the base game.
     ShatterMaxChargesBonus = 0.35,
 
+    -- The elemental damage type of this ability. Default: 8 (Void) / Default in Vanilla: 4 (Lightning)
+    -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
+    ShatterElement = 8,
+
     -- AP cost of this ability. Default: 6 / Default in Vanilla: 5
     -- Shatter is basically like Overcharge that hits all enemies so it is VERY strong in this mod, a higher AP cost is only fair.
     ShatterAPCost = 6,
@@ -152,6 +156,10 @@ return
     -- Additional damage multiplier per consumed charge. Default: 0.20 (20%)
     MarkingShotDamagePerCharge = 0.20,
 
+    -- The elemental damage type of this ability. Default: 8 (Void) / Default in Vanilla: 4 (Lightning)
+    -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
+    MarkingShotElement = 1,
+
     -- AP cost of this ability. Default: 2
     MarkingShotAPCost = 2,
 
@@ -162,6 +170,10 @@ return
     -- Charges per critical hit with this ability. Default: 2 / Default in Vanilla: 1
     LumiereAssaultChargesPerCritical = 2,
 
+    -- The elemental damage type of this ability. Default: 0 (Weapon's Element)
+    -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
+    LumiereAssaultElement = 0,
+
     -- AP cost of this ability. Default: 3
     LumiereAssaultAPCost = 3,
 
@@ -171,6 +183,10 @@ return
 
     -- Charges per critical hit with this ability. Default: 3 / Default in Vanilla: 2
     StrikeStormChargesPerCritical = 3,
+
+    -- The elemental damage type of this ability. Default: 0 (Weapon's Element)
+    -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
+    StrikeStormElement = 0,
 
     -- AP cost of this ability. Default: 7
     StrikeStormAPCost = 7,
@@ -192,6 +208,10 @@ return
 
     -- Charges per critical hit with this ability. Default: 2
     FromFireChargesPerCritical = 2,
+
+    -- The elemental damage type of this ability. Default: 0 (Weapon's Element)
+    -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
+    FromFireElement = 0,
 
     -- AP cost of this ability. Default: 5 / Default in Vanilla: 4
     FromFireAPCost = 5,
@@ -239,6 +259,10 @@ return
     -- Example: If the setting is 100 and our character has 1000 health, the damage multiplier will increase 10 times.
     LightHolderHealthChunkSize = 100,
 
+    -- The elemental damage type of this ability. Default: 7 (Light)
+    -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
+    LightHolderElement = 7,
+
     -- AP cost of this ability. Default: 5 / Default in Vanilla: 4
     -- This ability can be quite strong with enough max health, so the higher cost is justified.
     LightHolderAPCost = 5,
@@ -253,6 +277,10 @@ return
     -- Additional damage multiplier per consumed charge. Default: 0.20 (20%)
     RadiantStrikeDamagePerCharge = 0.20,
 
+    -- The elemental damage type of this ability. Default: 7 (Light)
+    -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
+    RadiantStrikeElement = 7,
+
     -- AP cost of this ability. Default: 5 / Default in Vanilla: 4
     RadiantStrikeAPCost = 5,
 
@@ -266,6 +294,7 @@ return
     OverloadChargesPercentage = 0.50,
 
     -- AP cost of this ability. Default: 6
+    -- NOTE: This setting affects the Perfection character as well!
     OverloadAPCost = 6,
 
     ------------------------------------------------------------------------
@@ -278,7 +307,12 @@ return
     -- Additional damage multiplier per consumed charge. Default: 0.20 (20%)
     SteeledStrikeDamagePerCharge = 0.20,
 
+    -- The elemental damage type of this ability. Default: 1 (Physical)
+    -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
+    SteeledStrikeElement = 1,
+
     -- AP cost of this ability. Default: 9
+    -- NOTE: This setting affects the Perfection character as well!
     SteeledStrikeAPCost = 9,
 
     ------------------------------------------------------------------------
@@ -288,7 +322,12 @@ return
     -- Charges per hit on a stunned enemy with this ability. Default: 5
     EndbringerChargesPerStunnedHit = 5,
 
+    -- The elemental damage type of this ability. Default: 1 (Physical)
+    -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
+    EndbringerElement = 1,
+
     -- AP cost of this ability. Default: 9
+    -- NOTE: This setting affects the Perfection character as well!
     EndbringerAPCost = 9,
 
     ------------------------------------------------------------------------
@@ -301,7 +340,12 @@ return
     -- Additional damage multiplier per consumed charge. Default: 0.20 (20%)
     BerserkSlashDamagePerCharge = 0.20,
 
+    -- The elemental damage type of this ability. Default: 1 (Physical)
+    -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
+    BerserkSlashElement = 1,
+
     -- AP cost of this ability. Default: 4
+    -- NOTE: This setting affects the Perfection character as well!
     BerserkSlashAPCost = 4,
 
     ------------------------------------------------------------------------
@@ -314,7 +358,12 @@ return
     -- Additional damage multiplier per consumed charge. Default: 0.20 (20%)
     DefiantStrikeDamagePerCharge = 0.20,
 
+    -- The elemental damage type of this ability. Default: 1 (Physical)
+    -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
+    DefiantStrikeElement = 1,
+
     -- AP cost of this ability. Default: 3
+    -- NOTE: This setting affects the Perfection character as well!
     DefiantStrikeAPCost = 3,
 
     ------------------------------------------------------------------------
@@ -327,7 +376,12 @@ return
     -- Additional damage multiplier per consumed charge. Default: 0.20 (20%)
     BlitzDamagePerCharge = 0.20,
 
+    -- The elemental damage type of this ability. Default: 1 (Physical)
+    -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
+    BlitzElement = 1,
+
     -- AP cost of this ability. Default: 3
+    -- NOTE: This setting affects the Perfection character as well!
     BlitzAPCost = 3,
 
     ------------------------------------------------------------------------
@@ -341,7 +395,12 @@ return
     FollowUpDamagePerCharge = 0.20,
 
     -- AP cost of this ability. Default: 5
+    -- NOTE: This setting affects the Perfection character as well!
     FollowUpAPCost = 5,
+
+    -- The elemental damage type of this ability. Default: 4 (Lightning) / Default in Vanilla: 7 (Light)
+    -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
+    FollowUpElement = 4,
 
     -- Reduced AP cost of this ability. Default: 2
     -- NOTE: This value is used when all required charges from FollowUpChargesConsumed are available.
@@ -358,7 +417,12 @@ return
     AscendingAssaultDamagePerCharge = 0.20,
 
     -- AP cost of this ability. Default: 5
+    -- NOTE: This setting affects the Perfection character as well!
     AscendingAssaultAPCost = 5,
+
+    -- The elemental damage type of this ability. Default: 0 (Weapon's Element) / Default in Vanilla: 0 (Weapon's Element)
+    -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
+    AscendingAssaultElement = 0,
 
     -- Reduced AP cost of this ability. Default: 2
     -- NOTE: This value is used when all required charges from AscendingAssaultChargesConsumed are available.
@@ -371,7 +435,12 @@ return
     -- Extra charges per hit with this ability. Default: 2
     SpeedBurstChargesPerHit = 2,
 
+    -- The elemental damage type of this ability. Default: 7 (Light)
+    -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
+    SpeedBurstElement = 7,
+
     -- AP cost of this ability. Default: 6
+    -- NOTE: This setting affects the Perfection character as well!
     SpeedBurstAPCost = 6,
 
     ------------------------------------------------------------------------
@@ -388,7 +457,12 @@ return
     -- Additional damage multiplier per consumed charge. Default: 0.20 (20%)
     PhantomStarsDamagePerCharge = 0.20,
 
+    -- The elemental damage type of this ability. Default: 7 (Light)
+    -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
+    PhantomStarsElement = 7,
+
     -- AP cost of this ability. Default: 9
+    -- NOTE: This setting affects the Perfection character as well!
     PhantomStarsAPCost = 9,
 
     -- Reduced AP cost of this ability. Default: 5
@@ -406,7 +480,12 @@ return
     -- Amount of AP given per consumed charge. Default: 1
     ParadigmShiftAPPerCharge = 1,
 
+    -- The elemental damage type of this ability. Default: 1 (Physical)
+    -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
+    ParadigmShiftElement = 1,
+
     -- AP cost of this ability. Default: 1
+    -- NOTE: This setting affects the Perfection character as well!
     ParadigmShiftAPCost = 1,
 
     ------------------------------------------------------------------------
@@ -419,14 +498,20 @@ return
     -- Additional damage multiplier per consumed charge. Default: 0.20 (20%)
     PurificationDamagePerCharge = 0.20,
 
+    -- The elemental damage type of this ability. Default: 7 (Light)
+    -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
+    PurificationElement = 7,
+
     -- AP cost of this ability. Default: 4
+    -- NOTE: This setting affects the Perfection character as well!
     PurificationAPCost = 4,
 
     ------------------------------------------------------------------------
 
     -- Angel's Eyes: These are the settings for Angel's Eyes.
     -- This is a gradient ability and it's the only one that interacts with Perfection, so it will interact with Overcharge as well.
-    -- No cost settings though, there is no reason to modify it since gradients are special.
+    -- No cost or elemental damage settings though, there is no reason to modify it since gradients are special.
+    -- Maybe if this mod overhauls the gradients too in the future so they feel unique, but not right now.
 
     -- Extra charges per hit with this ability. Default: 3
     AngelsEyesAdditionalChargesPerHit = 3,

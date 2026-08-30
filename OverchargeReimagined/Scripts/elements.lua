@@ -33,7 +33,31 @@ local abilityElement = {}
 
 -- Initialize the table with all config settings now.
 local function Init(log, config)
-    abilityElement["UnleashCharge"] = config.OverchargeElement or ElementEnum.Void
+    if not config then
+        log("Failed to initialize abilityElement array because of missing config values.")
+    end
+
+    abilityElement["UnleashCharge"] = config.OverchargeElement
+    abilityElement["PerfectBreak_Gustave"] = config.ShatterElement
+    abilityElement["MarkingShot_Gustave"] = config.MarkingShot
+    abilityElement["Combo1_Gustave"] = config.LumiereAssaultElement
+    abilityElement["StrikeStorm_Gustave"] = config.StrikeStormElement
+    abilityElement["FromFire_Gustave"] = config.FromFireElement
+    abilityElement["OldLightHolder"] = config.LightHolderElement
+    abilityElement["RadiantStrike"] = config.RadiantStrikeElement
+
+    -- These abilities are shared.
+    abilityElement["SteeledStrike"] = config.SteeledStrikeElement
+    abilityElement["EndBringer"] = config.EndbringerElement
+    abilityElement["BerserkSlash"] = config.BerserkSlashElement
+    abilityElement["DefiantStrike"] = config.DefiantStrikeElement
+    abilityElement["Blitz"] = config.BlitzElement
+    abilityElement["FollowUp"] = config.FollowUpElement
+    abilityElement["AscendingAssault"] = config.AscendingAssaultElement
+    abilityElement["SpeedBurst"] = config.SpeedBurstElement
+    abilityElement["PhantomStars"] = config.PhantomStarsElement
+    abilityElement["ParadigmShift"] = config.ParadigmShiftElement
+    abilityElement["Purification"] = config.PurificationElement
 
     log("Initialized abilityElement array in elements.lua successfully!")
 end
