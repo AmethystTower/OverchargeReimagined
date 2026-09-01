@@ -1,19 +1,18 @@
 
 --[[
-------- Overcharge Reimagined v2.4 - By Killera -------
+------- Overcharge Reimagined v3.0 - By Killera -------
 
-        TODO: Reduce duplicated strings.
-        I don't like the way this code here is right now and how it rebuilds the whole table everytime it is called but it works well enough for now.
-        It does what we need for dynamic descriptions to work in order to show the current charge counter on some abilities.
+        This module handles all the ability descriptions and settings like AP cost, consumed charges and damage per charge.
+        The descriptions are quite difficult to read because of all the variables and the formatting needed.
+        But if this isn't an issue to you then you can feel free to modify and translate this to a different language if you desire.
+        I will happily add it to the official repository and make the translation available as an extra download.
 
         DO NOT MODIFY THIS MODULE IF YOU SIMPLY WANT TO CUSTOMIZE THIS MOD.
         Use the config.lua for that instead!
-
-        This function returns a list with the settings for all modified abilities like AP cost, consumed charges, damage multiplier per charge and dynamic descriptions.
-        Maybe not the most ideal to create this list everytime we need it, but it gets the job done for now considering this is in Lua.
 ]]--
 
--- Lua has no switch-case... ABSOLUTE KANK I HATE THIS LANGUAGE SO MUCH
+-- Lua has no switch-case... ABSOLUTE KANK I HATE THIS LANGUAGE SO MUCH.
+-- This function simply returns a formatted string for each elemental damage type in their respective colours.
 local function GetElementString(elementValue, elementalEnum, isShortDescription)
     if elementValue == elementalEnum.Physical then
         return "<keyword id=\"Element_Physical\">Physical</>"
@@ -52,7 +51,10 @@ local function Init(log, config, elementalEnum)
     -- Overcharge
     abilityValues["UnleashCharge"] = {}
     abilityValues["UnleashCharge"].APCost = config.OverchargeAPCost
+    abilityValues["UnleashCharge"].ChargesConsumed = config.VirtualMaxCharges
     abilityValues["UnleashCharge"].ChargesMultiplier = config.OverchargeDamagePerCharge
+    abilityValues["UnleashCharge"].OverchargeName = nil
+    abilityValues["UnleashCharge"].PerfectionName = nil
     abilityValues["UnleashCharge"].OverchargeDescription = nil
     abilityValues["UnleashCharge"].PerfectionDescription = nil
     abilityValues["UnleashCharge"].Description =    "Deals high single target " .. GetElementString(config.OverchargeElement, elementalEnum, false) .. " damage. 1 hit.\n" ..
@@ -69,6 +71,8 @@ local function Init(log, config, elementalEnum)
     abilityValues["PerfectBreak_Gustave"].APCost = config.ShatterAPCost
     abilityValues["PerfectBreak_Gustave"].ChargesConsumed = config.VirtualMaxCharges
     abilityValues["PerfectBreak_Gustave"].ChargesMultiplier = config.ShatterDamagePerCharge
+    abilityValues["PerfectBreak_Gustave"].OverchargeName = nil
+    abilityValues["PerfectBreak_Gustave"].PerfectionName = nil
     abilityValues["PerfectBreak_Gustave"].OverchargeDescription = nil
     abilityValues["PerfectBreak_Gustave"].PerfectionDescription = nil
     abilityValues["PerfectBreak_Gustave"].Description = "Deals high " .. GetElementString(config.ShatterElement, elementalEnum, false) .. " damage to all enemies. 1 hit.\n" ..
@@ -85,13 +89,17 @@ local function Init(log, config, elementalEnum)
     abilityValues["MarkingShot_Gustave"].APCost = config.MarkingShotAPCost
     abilityValues["MarkingShot_Gustave"].ChargesConsumed = config.MarkingShotChargesConsumed
     abilityValues["MarkingShot_Gustave"].ChargesMultiplier = config.MarkingShotDamagePerCharge
+    abilityValues["MarkingShot_Gustave"].OverchargeName = "Gunslinger"
+    abilityValues["MarkingShot_Gustave"].PerfectionName = nil
     abilityValues["MarkingShot_Gustave"].OverchargeDescription = nil
     abilityValues["MarkingShot_Gustave"].PerfectionDescription = nil
     abilityValues["MarkingShot_Gustave"].Description =  "Deals low single target " .. GetElementString(config.MarkingShotElement, elementalEnum, false) .. " damage. 1 hit.\n" ..
                                                         "Applies <keyword id=\"StatusEffect_Mark\">Mark</>\n" ..
-                                                        "Consumes up to " .. (config.MarkingShotChargesConsumed) .. " <keyword id=\"Gustave_Charges\">Charges</> for increased damage."
+                                                        "Consumes up to " .. (config.MarkingShotChargesConsumed) .. " <keyword id=\"Gustave_Charges\">Charges</> for increased damage.\n" ..
+                                                        "Has a chance of " .. string.format("%g", (config.MarkingShotStunChance) * 100) .. "% to <keyword id=\"StatusEffect_Stunned\">Stun</> the target if consuming " .. (config.MarkingShotChargesConsumed) .. " <keyword id=\"Gustave_Charges\">Charges</>"
     abilityValues["MarkingShot_Gustave"].OverchargeShortDescription =   "Low " .. GetElementString(config.MarkingShotElement, elementalEnum, true) .. " damage and applies <keyword id=\"StatusEffect_Mark\">Mark</> 1 hit.\n" .. 
-                                                                        "Consumes up to " .. (config.MarkingShotChargesConsumed) .. " <keyword id=\"Gustave_Charges\">Charges</> for increased damage."
+                                                                        "Consumes up to " .. (config.MarkingShotChargesConsumed) .. " <keyword id=\"Gustave_Charges\">Charges</> for increased damage.\n" ..
+                                                                        "Has a chance of " .. string.format("%g", (config.MarkingShotStunChance) * 100) .. "% to <keyword id=\"StatusEffect_Stunned\">Stun</> the target if consuming " .. (config.MarkingShotChargesConsumed) .. " <keyword id=\"Gustave_Charges\">Charges</>"
     abilityValues["MarkingShot_Gustave"].PerfectionShortDescription = nil
 
     -- Lumiere Assault
@@ -99,6 +107,8 @@ local function Init(log, config, elementalEnum)
     abilityValues["Combo1_Gustave"].APCost = config.LumiereAssaultAPCost
     abilityValues["Combo1_Gustave"].ChargesConsumed = nil
     abilityValues["Combo1_Gustave"].ChargesMultiplier = nil
+    abilityValues["Combo1_Gustave"].OverchargeName = nil
+    abilityValues["Combo1_Gustave"].PerfectionName = nil
     abilityValues["Combo1_Gustave"].OverchargeDescription = nil
     abilityValues["Combo1_Gustave"].PerfectionDescription = nil
     abilityValues["Combo1_Gustave"].Description =   "Deals low single target " .. GetElementString(config.LumiereAssaultElement, elementalEnum, false) .. " damage. 5 hits.\n" ..
@@ -112,6 +122,8 @@ local function Init(log, config, elementalEnum)
     abilityValues["StrikeStorm_Gustave"].APCost = config.StrikeStormAPCost
     abilityValues["StrikeStorm_Gustave"].ChargesConsumed = nil
     abilityValues["StrikeStorm_Gustave"].ChargesMultiplier = nil
+    abilityValues["StrikeStorm_Gustave"].OverchargeName = "Blade Storm"
+    abilityValues["StrikeStorm_Gustave"].PerfectionName = nil
     abilityValues["StrikeStorm_Gustave"].OverchargeDescription = nil
     abilityValues["StrikeStorm_Gustave"].PerfectionDescription = nil
     abilityValues["StrikeStorm_Gustave"].Description =  "Deals very high single target " .. GetElementString(config.StrikeStormElement, elementalEnum, false) .. " damage. 6 hits.\n" ..
@@ -125,6 +137,8 @@ local function Init(log, config, elementalEnum)
     abilityValues["FromFire_Gustave"].APCost = config.FromFireAPCost
     abilityValues["FromFire_Gustave"].ChargesConsumed = config.FromFireChargesConsumed
     abilityValues["FromFire_Gustave"].ChargesMultiplier = config.FromFireDamagePerCharge
+    abilityValues["FromFire_Gustave"].OverchargeName = "Fueling Fire"
+    abilityValues["FromFire_Gustave"].PerfectionName = nil
     abilityValues["FromFire_Gustave"].OverchargeDescription = nil
     abilityValues["FromFire_Gustave"].PerfectionDescription = nil
     abilityValues["FromFire_Gustave"].Description = "Deals medium single target " .. GetElementString(config.FromFireElement, elementalEnum, false) .. " damage. 3 hits.\n" ..
@@ -142,6 +156,8 @@ local function Init(log, config, elementalEnum)
     abilityValues["PerfectRecovery_Gustave"].APCost = config.RecoveryAPCost
     abilityValues["PerfectRecovery_Gustave"].ChargesConsumed = nil
     abilityValues["PerfectRecovery_Gustave"].ChargesMultiplier = nil
+    abilityValues["PerfectRecovery_Gustave"].OverchargeName = "Charging Recovery"
+    abilityValues["PerfectRecovery_Gustave"].PerfectionName = nil
     abilityValues["PerfectRecovery_Gustave"].OverchargeDescription = nil
     abilityValues["PerfectRecovery_Gustave"].PerfectionDescription = nil
     abilityValues["PerfectRecovery_Gustave"].Description =  "<keyword id=\"Heal\">Recovers</> 50% Health and dispels Status Effects.\n" ..
@@ -155,6 +171,8 @@ local function Init(log, config, elementalEnum)
     abilityValues["Powerful_Gustave"].APCost = config.PowerfulAPCost
     abilityValues["Powerful_Gustave"].ChargesConsumed = config.PowerfulChargesConsumed
     abilityValues["Powerful_Gustave"].ChargesMultiplier = nil
+    abilityValues["Powerful_Gustave"].OverchargeName = "Blind Rage"
+    abilityValues["Powerful_Gustave"].PerfectionName = nil
     abilityValues["Powerful_Gustave"].OverchargeDescription = nil
     abilityValues["Powerful_Gustave"].PerfectionDescription = nil
     abilityValues["Powerful_Gustave"].Description = "Applies <keyword id=\"Buff_Powerful\">Powerful</> to 1-3 allies for 3 turns.\n" ..
@@ -178,6 +196,8 @@ local function Init(log, config, elementalEnum)
     abilityValues["OldLightHolder"].APCost = config.LightHolderAPCost
     abilityValues["OldLightHolder"].ChargesConsumed = nil
     abilityValues["OldLightHolder"].ChargesMultiplier = nil
+    abilityValues["OldLightHolder"].OverchargeName = "Fading Hope"
+    abilityValues["OldLightHolder"].PerfectionName = nil
     abilityValues["OldLightHolder"].OverchargeDescription = nil
     abilityValues["OldLightHolder"].PerfectionDescription = nil
     abilityValues["OldLightHolder"].Description =   "Deals high single target " .. GetElementString(config.LightHolderElement, elementalEnum, false) .. " damage. 5 hits.\n" ..
@@ -192,6 +212,8 @@ local function Init(log, config, elementalEnum)
     abilityValues["RadiantStrike"].APCost = config.RadiantStrikeAPCost
     abilityValues["RadiantStrike"].ChargesConsumed = config.RadiantStrikeChargesConsumed
     abilityValues["RadiantStrike"].ChargesMultiplier = config.RadiantStrikeDamagePerCharge
+    abilityValues["RadiantStrike"].OverchargeName = "Fire Storm"
+    abilityValues["RadiantStrike"].PerfectionName = nil
     abilityValues["RadiantStrike"].OverchargeDescription = nil
     abilityValues["RadiantStrike"].PerfectionDescription = nil
     abilityValues["RadiantStrike"].Description =   "Deals low " .. GetElementString(config.RadiantStrikeElement, elementalEnum, false) .. " damage to all enemies. 1 hit.\n" ..
@@ -209,6 +231,8 @@ local function Init(log, config, elementalEnum)
     abilityValues["Overcharge"].APCost = config.OverloadAPCost
     abilityValues["Overcharge"].ChargesConsumed = nil
     abilityValues["Overcharge"].ChargesMultiplier = nil
+    abilityValues["Overcharge"].OverchargeName = "Overclock"
+    abilityValues["Overcharge"].PerfectionName = "Overload"
     abilityValues["Overcharge"].OverchargeDescription = "Refills " .. string.format("%g", (config.OverloadChargesPercentage) * 100) .. "% of total <keyword id=\"Gustave_Charges\">Charges</>"
     abilityValues["Overcharge"].PerfectionDescription = "Increases Rank to <img id=\"Rank_A\"/>"
     abilityValues["Overcharge"].Description =   "Refills all <keyword id=\"APShard\">AP</> but sets self-Health to 1." ..
@@ -222,6 +246,8 @@ local function Init(log, config, elementalEnum)
     abilityValues["SteeledStrike"].APCost = config.SteeledStrikeAPCost
     abilityValues["SteeledStrike"].ChargesConsumed = config.SteeledStrikeChargesConsumed
     abilityValues["SteeledStrike"].ChargesMultiplier = config.SteeledStrikeDamagePerCharge
+    abilityValues["SteeledStrike"].OverchargeName = "Unrelenting Strike"
+    abilityValues["SteeledStrike"].PerfectionName = "Steeled Strike"
     abilityValues["SteeledStrike"].OverchargeDescription = "Consumes up to " .. (config.SteeledStrikeChargesConsumed) .. " <keyword id=\"Gustave_Charges\">Charges</> for increased damage."
     abilityValues["SteeledStrike"].PerfectionDescription = "<img id=\"Rank_S\"/>: Increased damage."
     abilityValues["SteeledStrike"].Description =    "After 1 turn, deals extreme single target damage. 13 hits.\n" ..
@@ -238,6 +264,8 @@ local function Init(log, config, elementalEnum)
     abilityValues["EndBringer"].APCost = config.EndbringerAPCost
     abilityValues["EndBringer"].ChargesConsumed = nil
     abilityValues["EndBringer"].ChargesMultiplier = nil
+    abilityValues["EndBringer"].OverchargeName = "Deathbringer"
+    abilityValues["EndBringer"].PerfectionName = "Endbringer"
     abilityValues["EndBringer"].OverchargeDescription = "<keyword id=\"StatusEffect_Stunned\">Stun Hits</> generate " .. (config.EndbringerChargesPerStunnedHit) .. " additional <keyword id=\"Gustave_Charges\">Charge(s)</>"
     abilityValues["EndBringer"].PerfectionDescription = "<img id=\"Rank_A\"/>: Can reapply <keyword id=\"StatusEffect_Stunned\">Stun</>"
     abilityValues["EndBringer"].Description =   "Deals extreme single target damage. 6 hits.\n" ..
@@ -251,10 +279,12 @@ local function Init(log, config, elementalEnum)
 
     -- Berserk Slash
     abilityValues["BerserkSlash"] = {}
-    abilityValues["BerserkSlash"].APCost = config.BerserkSlashAPCost or 4
-    abilityValues["BerserkSlash"].ChargesConsumed = config.BerserkSlashChargesConsumed or 10
-    abilityValues["BerserkSlash"].ChargesMultiplier = config.BerserkSlashDamagePerCharge or 0.2
-    abilityValues["BerserkSlash"].OverchargeDescription = "Consumes up to " .. (config.BerserkSlashChargesConsumed or 10) .. " <keyword id=\"Gustave_Charges\">Charges</> for increased damage."
+    abilityValues["BerserkSlash"].APCost = config.BerserkSlashAPCost
+    abilityValues["BerserkSlash"].ChargesConsumed = config.BerserkSlashChargesConsumed
+    abilityValues["BerserkSlash"].ChargesMultiplier = config.BerserkSlashDamagePerCharge
+    abilityValues["BerserkSlash"].OverchargeName = "Raging Slash"
+    abilityValues["BerserkSlash"].PerfectionName = "Berserk Slash"
+    abilityValues["BerserkSlash"].OverchargeDescription = "Consumes up to " .. (config.BerserkSlashChargesConsumed) .. " <keyword id=\"Gustave_Charges\">Charges</> for increased damage."
     abilityValues["BerserkSlash"].PerfectionDescription = "<img id=\"Rank_C\"/>: Increased damage."
     abilityValues["BerserkSlash"].Description = "Deals medium single target damage. 3 hits.\n" ..
                                                 "Damage is increased for each Health this character is missing." ..
@@ -270,6 +300,8 @@ local function Init(log, config, elementalEnum)
     abilityValues["DefiantStrike"].APCost = config.DefiantStrikeAPCost
     abilityValues["DefiantStrike"].ChargesConsumed = config.DefiantStrikeChargesConsumed
     abilityValues["DefiantStrike"].ChargesMultiplier = config.DefiantStrikeDamagePerCharge
+    abilityValues["DefiantStrike"].OverchargeName = "Vengeful Strike"
+    abilityValues["DefiantStrike"].PerfectionName = "Defiant Strike"
     abilityValues["DefiantStrike"].OverchargeDescription = "Consumes up to " .. (config.DefiantStrikeChargesConsumed) .. " <keyword id=\"Gustave_Charges\">Charges</> for increased damage."
     abilityValues["DefiantStrike"].PerfectionDescription = "<img id=\"Rank_B\"/>: Increased damage."
     abilityValues["DefiantStrike"].Description =    "Deals high single target damage that applies <keyword id=\"StatusEffect_Mark\">Mark</> 2 hits.\n" ..
@@ -286,6 +318,8 @@ local function Init(log, config, elementalEnum)
     abilityValues["Blitz"].APCost = config.BlitzAPCost
     abilityValues["Blitz"].ChargesConsumed = config.BlitzChargesConsumed
     abilityValues["Blitz"].ChargesMultiplier = config.BlitzDamagePerCharge
+    abilityValues["Blitz"].OverchargeName = "Blitzkrieg"
+    abilityValues["Blitz"].PerfectionName = "Blitz"
     abilityValues["Blitz"].OverchargeDescription = "Consumes up to " .. (config.BlitzChargesConsumed) .. " <keyword id=\"Gustave_Charges\">Charges</> for increased damage."
     abilityValues["Blitz"].PerfectionDescription = "<img id=\"Rank_B\"/>: Increased damage."
     abilityValues["Blitz"].Description =    "Deals low single target damage. 1 hit.\n" ..
@@ -302,6 +336,8 @@ local function Init(log, config, elementalEnum)
     abilityValues["FollowUp"].APCost = config.FollowUpAPCost
     abilityValues["FollowUp"].ChargesConsumed = config.FollowUpChargesConsumed
     abilityValues["FollowUp"].ChargesMultiplier = config.FollowUpDamagePerCharge
+    abilityValues["FollowUp"].OverchargeName = "Thunder"
+    abilityValues["FollowUp"].PerfectionName = "Follow Up"
     abilityValues["FollowUp"].OverchargeDescription = "Consumes up to " .. (config.FollowUpChargesConsumed) .. " <keyword id=\"Gustave_Charges\">Charges</> for increased damage. Costs " .. (config.FollowUpAPReducedCost) .. " <keyword id=\"APShard\">AP</> if required charges are available."
     abilityValues["FollowUp"].PerfectionDescription = "<img id=\"Rank_S\"/>: Costs 2 <keyword id=\"APShard\">AP</>"
     abilityValues["FollowUp"].Description = "Deals medium single target damage. 1 hit.\n" ..
@@ -316,6 +352,8 @@ local function Init(log, config, elementalEnum)
     abilityValues["AscendingAssault"].APCost = config.AscendingAssaultAPCost
     abilityValues["AscendingAssault"].ChargesConsumed = config.AscendingAssaultChargesConsumed
     abilityValues["AscendingAssault"].ChargesMultiplier = config.AscendingAssaultDamagePerCharge
+    abilityValues["AscendingAssault"].OverchargeName = "Descending Assault"
+    abilityValues["AscendingAssault"].PerfectionName = "Ascending Assault"
     abilityValues["AscendingAssault"].OverchargeDescription = "Consumes up to " .. (config.AscendingAssaultChargesConsumed) .. " <keyword id=\"Gustave_Charges\">Charges</> for increased damage. Costs " .. (config.AscendingAssaultAPReducedCost) .. " <keyword id=\"APShard\">AP</> if required charges are available."
     abilityValues["AscendingAssault"].PerfectionDescription = "<img id=\"Rank_S\"/>: Costs 2 <keyword id=\"APShard\">AP</>"
     abilityValues["AscendingAssault"].Description = "Deals low single target damage. 1 hit.\n" ..
@@ -332,6 +370,8 @@ local function Init(log, config, elementalEnum)
     abilityValues["SpeedBurst"].APCost = config.SpeedBurstAPCost
     abilityValues["SpeedBurst"].ChargesConsumed = nil
     abilityValues["SpeedBurst"].ChargesMultiplier = nil
+    abilityValues["SpeedBurst"].OverchargeName = "Charging Burst"
+    abilityValues["SpeedBurst"].PerfectionName = "Speed Burst"
     abilityValues["SpeedBurst"].OverchargeDescription = "Generates " .. (config.SpeedBurstChargesPerHit) .. " additional <keyword id=\"Gustave_Charges\">Charge(s)</> per hit."
     abilityValues["SpeedBurst"].PerfectionDescription = "<img id=\"Rank_C\"/>: Increased damage."
     abilityValues["SpeedBurst"].Description =   "Deals high single target damage. 5 hits.\n" ..
@@ -346,6 +386,8 @@ local function Init(log, config, elementalEnum)
     abilityValues["PhantomStars"].APCost = config.PhantomStarsAPCost
     abilityValues["PhantomStars"].ChargesConsumed = config.PhantomStarsChargesConsumed
     abilityValues["PhantomStars"].ChargesMultiplier = config.PhantomStarsDamagePerCharge
+    abilityValues["PhantomStars"].OverchargeName = "Icy Snowflakes"
+    abilityValues["PhantomStars"].PerfectionName = "Phantom Stars"
     abilityValues["PhantomStars"].OverchargeDescription = "Consumes up to " .. (config.PhantomStarsChargesConsumed) .. " <keyword id=\"Gustave_Charges\">Charges</> for increased damage. Costs " .. (config.PhantomStarsAPReducedCost) .. " <keyword id=\"APShard\">AP</> if required charges are available.\n" ..
                                                           "If a target is <keyword id=\"Break\">Broken</> by the hit, Phantom Stars refills " .. string.format("%g", (config.PhantomStarsChargesPercentage) * 100) .. "% of total <keyword id=\"Gustave_Charges\">Charges</>"
     abilityValues["PhantomStars"].PerfectionDescription = "<img id=\"Rank_S\"/>: Costs 5 <keyword id=\"APShard\">AP</>"
@@ -363,6 +405,8 @@ local function Init(log, config, elementalEnum)
     abilityValues["ParadigmShift"].APCost = config.ParadigmShiftAPCost
     abilityValues["ParadigmShift"].ChargesConsumed = config.ParadigmShiftChargesConsumed
     abilityValues["ParadigmShift"].ChargesMultiplier = nil
+    abilityValues["ParadigmShift"].OverchargeName = nil
+    abilityValues["ParadigmShift"].PerfectionName = nil
     abilityValues["ParadigmShift"].OverchargeDescription = "Consumes " .. (config.ParadigmShiftChargesConsumed) .. " <keyword id=\"Gustave_Charges\">Charge(s)</> per hit to give " .. (config.ParadigmShiftAPPerCharge) .. " <keyword id=\"APShard\">AP</> per charge."
     abilityValues["ParadigmShift"].PerfectionDescription = "<img id=\"Rank_C\"/>: +1 <keyword id=\"APShard\">AP</>"
     abilityValues["ParadigmShift"].Description =    "Deals low single target damage and gives 1-3 <keyword id=\"APShard\">AP</> back. 3 hits." ..
@@ -376,6 +420,8 @@ local function Init(log, config, elementalEnum)
     abilityValues["Purification"].APCost = config.PurificationAPCost
     abilityValues["Purification"].ChargesConsumed = config.PurificationChargesConsumed
     abilityValues["Purification"].ChargesMultiplier = config.PurificationDamagePerCharge
+    abilityValues["Purification"].OverchargeName = "Cold Heart"
+    abilityValues["Purification"].PerfectionName = "Purification"
     abilityValues["Purification"].OverchargeDescription = "Consumes up to " .. (config.PurificationChargesConsumed) .. " <keyword id=\"Gustave_Charges\">Charges</> for increased damage."
     abilityValues["Purification"].PerfectionDescription = "<img id=\"Rank_B\"/>: Increased damage."
     abilityValues["Purification"].Description = "Deals medium single target damage. 2 hits.\n" ..
@@ -392,6 +438,8 @@ local function Init(log, config, elementalEnum)
     abilityValues["AngelsEyes"].APCost = 3 -- This is the gradient cost, modifiying this is not recommended.
     abilityValues["AngelsEyes"].ChargesConsumed = nil
     abilityValues["AngelsEyes"].ChargesMultiplier = nil
+    abilityValues["AngelsEyes"].OverchargeName = nil
+    abilityValues["AngelsEyes"].PerfectionName = nil
     abilityValues["AngelsEyes"].OverchargeDescription = "Generates " .. (config.AngelsEyesAdditionalChargesPerHit or 3) .. " additional <keyword id=\"Gustave_Charges\">Charge(s)</> per hit."
     abilityValues["AngelsEyes"].PerfectionDescription = "Generates 1 additional <keyword id=\"Perfection\">Perfection</> per hit."
     abilityValues["AngelsEyes"].Description =   "Deals extreme single target <keyword id=\"Element_Physical\">Physical</> Damage. 8 hits.\n" ..
@@ -406,6 +454,7 @@ local function Init(log, config, elementalEnum)
     log("Initialized abilityValues array in skills.lua successfully!")
 end
 
+-- This function returns the settings of the requested ability like AP cost, consumed charges, damage multiplier per charge and dynamic descriptions.
 local function GetAbilityValues(abilityNameID)
     return abilityValues[abilityNameID]
 end

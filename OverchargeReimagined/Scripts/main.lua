@@ -89,30 +89,30 @@ else
 end
 
 -- This is our custom charge limit, can be set to any number but it should NOT be negative.
-local virtualMaxCharges = config.VirtualMaxCharges or 100
+local virtualMaxCharges = config.VirtualMaxCharges
 
 -- Charge generation values.
 -- NOTE: All those settings can be negative as well, so our character loses charges instead when those events occur.
 -- If no config exists, then all values are set to what the base game does for charge generation.
 
-local startingCharges = config.StartingCharges or 0 -- Amount of charges received when a battle begins.
-local chargesPerTurn = config.ChargesPerTurn or 0 -- Amount of charges received when our character plays his turn.
+local startingCharges = config.StartingCharges -- Amount of charges received when a battle begins.
+local chargesPerTurn = config.ChargesPerTurn -- Amount of charges received when our character plays his turn.
 
-local chargesOnDodge = config.ChargesOnDodge or 1 -- Charges per dodge.
-local chargesOnParry = config.ChargesOnParry or 1 -- Charges per parry.
-local chargesOnBaseAttacks = config.ChargesOnBaseAttacks or 1 -- Charges per base attack hit.
-local chargesOnCounterAttacks = config.ChargesOnCounterAttacks or 1 -- Charges per counter attack.
-local chargesOnJumpCounter = config.ChargesOnJumpCounter or 1 -- Charges per jump counter.
-local chargesOnGradientCounter = config.ChargesOnGradientCounter or 1 -- Charges per gradient counter.
-local chargesFromSkillDamage = config.ChargesFromSkillDamage or 1 -- Charges per ability hit.
-local chargesOnLuminaDamage = config.ChargesOnLuminaDamage or 0 -- Charges per lumina hit (Simoso ethereal light sword effect uses this).
-local chargesOnFreeAim = config.ChargesOnFreeAim or 0 -- Charges per free aim hit.
-local chargesOnBuffDamage = config.ChargesOnBuffDamage or 0 -- Charges per buff hit (e.g. burn damage).
-local chargesOnReceivedHit = config.ChargesOnReceivedHit or 0 -- Charges when receiving a hit from an enemy.
+local chargesOnDodge = config.ChargesOnDodge -- Charges per dodge.
+local chargesOnParry = config.ChargesOnParry -- Charges per parry.
+local chargesOnBaseAttacks = config.ChargesOnBaseAttacks -- Charges per base attack hit.
+local chargesOnCounterAttacks = config.ChargesOnCounterAttacks -- Charges per counter attack.
+local chargesOnJumpCounter = config.ChargesOnJumpCounter -- Charges per jump counter.
+local chargesOnGradientCounter = config.ChargesOnGradientCounter -- Charges per gradient counter.
+local chargesFromSkillDamage = config.ChargesFromSkillDamage -- Charges per ability hit.
+local chargesOnLuminaDamage = config.ChargesOnLuminaDamage -- Charges per lumina hit (Simoso ethereal light sword effect uses this).
+local chargesOnFreeAim = config.ChargesOnFreeAim -- Charges per free aim hit.
+local chargesOnBuffDamage = config.ChargesOnBuffDamage -- Charges per buff hit (e.g. burn damage).
+local chargesOnReceivedHit = config.ChargesOnReceivedHit -- Charges when receiving a hit from an enemy.
 
 -- Independent from Lumiere Assault's and Strike Storm's bonus charges on critical hits.
 -- This does NOT affect free aim shots by default.
-local chargesOnCritical = config.ChargesOnCritical or 0
+local chargesOnCritical = config.ChargesOnCritical
 
 -- This allows bonus charges generated from criticals to trigger when shooting at enemies using free aim.
 local freeAimAffectedByCriticals = config.FreeAimAffectedByCriticals
@@ -123,40 +123,43 @@ if freeAimAffectedByCriticals == nil then
 end
 
 -- Ability settings that we need in this module of the mod.
-local shatterChargesPercentage = config.ShatterChargesPercentage or 0.15
-local overchargeChargesPercentage = config.OverchargeChargesPercentage or 0.25
-local phantomStarsChargesPercentage = config.PhantomStarsChargesPercentage or 0.1
-local overloadChargesPercentage = config.OverloadChargesPercentage or 0.5
-local recoveryChargesPercentage = config.RecoveryChargesPercentage or 0.1
+local shatterChargesPercentage = config.ShatterChargesPercentage
+local overchargeChargesPercentage = config.OverchargeChargesPercentage
+local phantomStarsChargesPercentage = config.PhantomStarsChargesPercentage
+local overloadChargesPercentage = config.OverloadChargesPercentage
+local recoveryChargesPercentage = config.RecoveryChargesPercentage
 
-local overchargeMaxChargesBonus = config.OverchargeMaxChargesBonus or 0.25
-local shatterMaxChargesBonus = config.ShatterMaxChargesBonus or 0.15
+local overchargeMaxChargesBonus = config.OverchargeMaxChargesBonus
+local shatterMaxChargesBonus = config.ShatterMaxChargesBonus
 
-local lightHolderDamagePerHealthChunk = config.LightHolderDamagePerHealthChunk or 0.01
-local lightHolderHealthChunkSize = config.LightHolderHealthChunkSize or 100
+local lightHolderDamagePerHealthChunk = config.LightHolderDamagePerHealthChunk
+local lightHolderHealthChunkSize = config.LightHolderHealthChunkSize
 
-local lightHolderChargesPerCritical = config.LightHolderChargesPerCritical or 2
-local lumiereAssaultChargesPerCritical = config.LumiereAssaultChargesPerCritical or 1
-local strikeStormChargesPerCritical = config.StrikeStormChargesPerCritical or 2
-local fromFireChargesPerCritical = config.FromFireChargesPerCritical or 2
-local endbringerChargesPerStunnedHit = config.EndbringerChargesPerStunnedHit or 5
-local speedBurstChargesPerHit = config.SpeedBurstChargesPerHit or 1
-local angelsEyesAdditionalChargesPerHit = config.AngelsEyesAdditionalChargesPerHit or 3
+local lightHolderChargesPerCritical = config.LightHolderChargesPerCritical
+local lumiereAssaultChargesPerCritical = config.LumiereAssaultChargesPerCritical
+local strikeStormChargesPerCritical = config.StrikeStormChargesPerCritical
+local fromFireChargesPerCritical = config.FromFireChargesPerCritical
+local endbringerChargesPerStunnedHit = config.EndbringerChargesPerStunnedHit
+local speedBurstChargesPerHit = config.SpeedBurstChargesPerHit
+local angelsEyesAdditionalChargesPerHit = config.AngelsEyesAdditionalChargesPerHit
 
-local fromFireHealPerCharge = config.FromFireHealPerCharge or 0.01
-local paradigmShiftAPPerCharge = config.ParadigmShiftAPPerCharge or 1
+local fromFireHealPerCharge = config.FromFireHealPerCharge
+local paradigmShiftAPPerCharge = config.ParadigmShiftAPPerCharge
 
-local followUpAPReducedCost = config.FollowUpAPReducedCost or 2
-local followUpChargesConsumed = config.FollowUpChargesConsumed or 15
+local markingShotStunChance = config.MarkingShotStunChance
+local markingShotChargesConsumed = config.MarkingShotChargesConsumed
 
-local ascendingAssaultAPReducedCost = config.AscendingAssaultAPReducedCost or 2
-local ascendingAssaultChargesConsumed = config.AscendingAssaultChargesConsumed or 20
+local followUpAPReducedCost = config.FollowUpAPReducedCost
+local followUpChargesConsumed = config.FollowUpChargesConsumed
 
-local phantomStarsAPReducedCost = config.PhantomStarsAPReducedCost or 5
-local phantomStarsChargesConsumed = config.PhantomStarsChargesConsumed or 40
+local ascendingAssaultAPReducedCost = config.AscendingAssaultAPReducedCost
+local ascendingAssaultChargesConsumed = config.AscendingAssaultChargesConsumed
 
-local berserkScaleSize = config.BerserkScaleSize or 1
-local berserkScaleTime = config.BerserkScaleTime or 0.05
+local phantomStarsAPReducedCost = config.PhantomStarsAPReducedCost
+local phantomStarsChargesConsumed = config.PhantomStarsChargesConsumed
+
+local berserkScaleSize = config.BerserkScaleSize
+local berserkScaleTime = config.BerserkScaleTime
 
 -- These values SHOULD NOT BE MODIFIED.
 local virtualCurrentCharges = 0 -- Our own charge counter.
@@ -229,6 +232,7 @@ local firstTurn = false
 local overchargeCharacterTurn = false
 local fullChargeBonus = false
 local steeledStrikeExecuted = false
+local selectedFreyInMenu = false
 
 -- Booleans that we use to monitor when a specific skill was used or triggers.
 -- Even more stuff we must monitor!
@@ -270,6 +274,9 @@ local dynamicWeaponElement = ElementsHelper.ElementEnum.Physical
 -- Our general hook paths that allow us to modify the game.
 local CLIENT_RESTART = "/Script/Engine.PlayerController:ClientRestart"
 local BATTLE_FULLY_LOADED = "/Game/jRPGTemplate/Blueprints/Components/AC_jRPG_BattleManager.AC_jRPG_BattleManager_C:OnBattleDependenciesFullyLoaded"
+local BATTLE_STARTED = "/Game/jRPGTemplate/Blueprints/Components/AC_jRPG_BattleManager.AC_jRPG_BattleManager_C:StartBattleNEW"
+local MENU_LOAD_CHARACTER_DATA = "/Game/UI/Widgets/InGame_Menu/CharacterSheet/WBP_GM_CharacterSheet.WBP_GM_CharacterSheet_C:LoadCharacterData"
+local SKILLPANEL_LOAD_CHARACTER = "/Game/UI/Widgets/InGame_Menu/Skill_Panel/WBP_GM_SkillsPanel.WBP_GM_SkillsPanel_C:LoadCharacter"
 
 -- Those are our hooks related to the Overcharge component so we can intercept charge generation and consumption.
 local RECEIVE_BEGIN_PLAY = "/Game/Gameplay/Battle/UniqueMechanics/Charge/BP_UniqueMechanic_Charge_Component.BP_UniqueMechanic_Charge_Component_C:ReceiveBeginPlay"
@@ -452,6 +459,8 @@ local function FTextCustom(skillObject, propertyName, newDescription, abilityNam
                 trackedAbilities[abilityNameID].Description = newDescription
             elseif propertyName == "ShortDescription" then
                 trackedAbilities[abilityNameID].ShortDescription = newDescription
+            elseif propertyName == "name" then
+                trackedAbilities[abilityNameID].Name = newDescription
             end
         end
     end)
@@ -511,12 +520,31 @@ local function ModifyAbilityCostAndDescription(param)
         trackedAbilities[abilityNameID] = {}
         trackedAbilities[abilityNameID].Description = nil
         trackedAbilities[abilityNameID].ShortDescription = nil
+        trackedAbilities[abilityNameID].name = nil
     end
 
     -- Modifiy AP cost of this ability to our new value if it differs from our custom value.
     if self.APCost ~= abilityValues.APCost then
         self.APCost = abilityValues.APCost
         Log("Modified AP cost of ability: " .. tostring(abilityNameID))
+    end
+
+    -- Build the name string for the ability.
+    -- If we're outside of battle it will contain both names in the skilltree.
+    -- In battle it will only contain each character's respective name.
+    local assembledName = ""
+
+    -- We're in battle, only display each character's respective ability name.
+    if (IsValidChargeComponent() and overchargeCharacterTurn or selectedFreyInMenu) and abilityValues.OverchargeName then
+        assembledName = abilityValues.OverchargeName
+    elseif abilityValues.PerfectionName then
+        assembledName = abilityValues.PerfectionName
+    end
+
+    -- Set the skill's name.
+    if trackedAbilities[abilityNameID] and assembledName ~= "" and trackedAbilities[abilityNameID].Name ~= assembledName then
+        FTextCustom(self, "name", assembledName, abilityNameID)
+        Log("Modified name of ability: " .. tostring(abilityNameID))
     end
 
     -- Set the skill's long description which is shown in the character/skill tree menus and at the top left window during target selection in battle.
@@ -2071,6 +2099,16 @@ local function TryRegisterChargeComponentHooks()
                         elseif usedSpeedBurst then
                             chargeComponent.ChangeCharge(speedBurstChargesPerHit)
                             Log("Speed Burst Damage: +" .. speedBurstChargesPerHit .. " charges added.")
+                        
+                        -- Marking Shot has a chance to stun an enemy.
+                        elseif usedMarkingShot and damageObject.TargetCharacter then
+                            -- Roll a number from 1-100. With default settings, it is a 10% chance.
+                            -- Only do this if we consumed the maximum charges this ability can consume.
+                            if consumedChargesFromAbility == markingShotChargesConsumed and math.random(1, 100) <= ( markingShotStunChance * 100 ) then
+                                -- Parameters: Inflicting character and reason 1: Skill. Resets break bar.
+                                damageObject.TargetCharacter:PerformBreakStun(damageObject.SourceCharacter, 1)
+                                Log("Marking Shot has stunned the target.")
+                            end
                         end
 
                     -- Damage Reason 2: Buffs such as burn.
@@ -2247,6 +2285,34 @@ RegisterHook(CLIENT_RESTART, function()
         RegisterHook(BATTLE_FULLY_LOADED, TryRegisterChargeComponentHooks)
     end
 
+    -- This hook runs when a battle started, so we can track it for ability names.
+    RegisterHook(BATTLE_STARTED, function(param)
+        Log("BATTLE_STARTED")
+        selectedFreyInMenu = false
+    end)
+
+    RegisterHook(MENU_LOAD_CHARACTER_DATA, function(param, characterData)        
+        local character = unwrap(characterData)
+
+        if character:IsValid() then
+            Log("CHARACTER NAME: " .. tostring(character.HardcodedNameID:ToString()))
+
+            if character.HardcodedNameID:ToString() == "Frey" then
+                selectedFreyInMenu = true
+            else
+                selectedFreyInMenu = false
+            end
+        end
+    end)
+
+    RegisterHook(SKILLPANEL_LOAD_CHARACTER, function(param, characterData)
+        local skillPanel = unwrap(param)
+
+        if skillPanel:IsValid() then
+            skillPanel:InitializeSlotsData()
+        end
+    end)
+
     -- This hook runs whenever the game is calculating the damage multiplier of an ability - usually when someone gets hit.
     -- We will also use this function to modify the elemental damage type of abilities since this is early enough for the game to accept the new value.
     RegisterHook(GET_ATTACK_MULTIPLIER, function(param)
@@ -2407,6 +2473,10 @@ RegisterHook(CLIENT_RESTART, function()
     -- This hook runs on any character's turn start.
     -- We will use it in order to grab the elemental damage type of our character's weapon for abilities that use it.
     RegisterHook(GENERIC_CHARACTER_TURN_START, function(param)
+        if not IsValidChargeComponent() then
+            return
+        end
+
         local self = unwrap(param)
 
         if not self then
