@@ -21,7 +21,7 @@ return
     -- Maximum charges that Overcharge can carry. Default: 100 / Default in Vanilla: 10
     -- This also increases the maximum damage done by Overcharge for each additional charge it can hold.
     -- NOTE: DO NOT SET THIS TO A NEGATIVE VALUE OR 0, otherwise your character will be unable to generate any charges!
-    VirtualMaxCharges = 100,
+    VirtualMaxCharges = 10,
 
     ------------------------------------------------------------------------
     -- Charge generation settings below.
@@ -114,7 +114,7 @@ return
 
     -- AP cost of this ability. Default: 6 / Default in Vanilla: 4
     -- Since Overcharge is quite a bit stronger in this mod, a higher AP cost is only fair.
-    OverchargeAPCost = 6,
+    OverchargeAPCost = 4,
 
     ------------------------------------------------------------------------
 
@@ -214,7 +214,7 @@ return
 
     -- Maximum amount of charges this ability can consume for extra buffs on the casting character. Default: 50
     -- If set to 0, Powerful no longer grants any additional buffs anymore.
-    PowerfulChargesConsumed = 50,
+    PowerfulChargesConsumed = 10,
 
     -- AP cost of this ability. Default: 4 / Default in Vanilla: 3
     -- The higher AP cost is justified because it gives Berserk and Rage with enough charges, which is very powerful.
