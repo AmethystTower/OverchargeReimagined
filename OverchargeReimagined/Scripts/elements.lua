@@ -34,7 +34,7 @@ local function Init(log, config)
 
     abilityElement["UnleashCharge"] = config.OverchargeElement
     abilityElement["PerfectBreak_Gustave"] = config.ShatterElement
-    abilityElement["MarkingShot_Gustave"] = config.MarkingShot
+    abilityElement["MarkingShot_Gustave"] = config.MarkingShotElement
     abilityElement["Combo1_Gustave"] = config.LumiereAssaultElement
     abilityElement["StrikeStorm_Gustave"] = config.StrikeStormElement
     abilityElement["FromFire_Gustave"] = config.FromFireElement

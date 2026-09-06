@@ -529,16 +529,36 @@ local function ModifyAbilityCostAndDescription(param)
         Log("Modified AP cost of ability: " .. tostring(abilityNameID))
     end
 
-    -- Build the name string for the ability.
-    -- If we're outside of battle it will contain both names in the skilltree.
-    -- In battle it will only contain each character's respective name.
+    -- Build the name and long description string for the ability.
     local assembledName = ""
+    local assembledLongDescription = ""
+    local assembledShortDescription = ""
 
     -- We're in battle, only display each character's respective ability name.
-    if (IsValidChargeComponent() and overchargeCharacterTurn or selectedFreyInMenu) and abilityValues.OverchargeName then
-        assembledName = abilityValues.OverchargeName
-    elseif abilityValues.PerfectionName then
-        assembledName = abilityValues.PerfectionName
+    if (IsValidChargeComponent() and overchargeCharacterTurn or selectedFreyInMenu) then
+        if abilityValues.OverchargeName then
+            assembledName = abilityValues.OverchargeName
+        end
+
+        if abilityValues.OverchargeLongDescription then
+            assembledLongDescription = abilityValues.OverchargeLongDescription
+        end
+
+        if abilityValues.OverchargeShortDescription then
+            assembledShortDescription = abilityValues.OverchargeShortDescription
+        end
+    else
+        if abilityValues.PerfectionName then
+            assembledName = abilityValues.PerfectionName
+        end
+
+        if abilityValues.PerfectionLongDescription then
+            assembledLongDescription = abilityValues.PerfectionLongDescription
+        end
+
+        if abilityValues.PerfectionShortDescription then
+            assembledShortDescription = abilityValues.PerfectionShortDescription
+        end
     end
 
     -- Set the skill's name.
@@ -550,20 +570,9 @@ local function ModifyAbilityCostAndDescription(param)
     -- Set the skill's long description which is shown in the character/skill tree menus and at the top left window during target selection in battle.
     -- Only do this if the description from our tracked abilities array is different.
     -- Due to the UE4SS memory corruption issue from handling FText properties, we can't read the description directly otherwise it could return garbage and crash the game.
-    if trackedAbilities[abilityNameID] and trackedAbilities[abilityNameID].Description ~= abilityValues.Description then
-        FTextCustom(self, "Description", abilityValues.Description, abilityNameID)
+    if trackedAbilities[abilityNameID] and assembledLongDescription ~= "" and trackedAbilities[abilityNameID].Description ~= assembledLongDescription then
+        FTextCustom(self, "Description", assembledLongDescription, abilityNameID)
         Log("Modified long description of ability: " .. tostring(abilityNameID))
-    end
-
-    -- Build the short description string.
-    local assembledShortDescription = ""
-
-    -- We currently have the Overcharge character's turn and are selecting his abilities, show Overcharge effect string if it exists.
-    if IsValidChargeComponent() and overchargeCharacterTurn and abilityValues.OverchargeShortDescription then
-        assembledShortDescription = abilityValues.OverchargeShortDescription
-    -- We currently have a different character's turn, show Perfection description instead if it exists.
-    elseif abilityValues.PerfectionShortDescription then
-        assembledShortDescription = abilityValues.PerfectionShortDescription
     end
 
     -- Since the game's arm UI counter is showing the custom charge counters now, this may have become obsolete.
@@ -576,7 +585,7 @@ local function ModifyAbilityCostAndDescription(param)
     -- Set the skill's short description to what we just assembled on the fly.
     -- Only do this if the short description from our tracked abilities array is different.
     -- Due to the UE4SS memory corruption issue from handling FText properties, we can't read the description directly otherwise it could return garbage and crash the game.
-    if trackedAbilities[abilityNameID] and trackedAbilities[abilityNameID].ShortDescription ~= assembledShortDescription then
+    if trackedAbilities[abilityNameID] and assembledShortDescription ~= "" and trackedAbilities[abilityNameID].ShortDescription ~= assembledShortDescription then
         FTextCustom(self, "ShortDescription", assembledShortDescription, abilityNameID)
         Log("Modified short description of ability: " .. tostring(abilityNameID))
     end
@@ -1701,6 +1710,22 @@ local function AreAllChargeComponentHooksRegistered()
         and changeChargeHookRegistered
 end
 
+local function FirePellets(currentPellet, maxPellets, damageBuilder, TargetCharacter)
+    if currentPellet > maxPellets - 1 then
+        return
+    end
+
+    local outParams = {}
+
+    damageBuilder.IgnoreMarkedRemoval = true
+    damageBuilder.DamageReason = 2
+    damageBuilder:DealDamages(outParams, outParams)
+
+    ExecuteWithDelay(10, function()
+        FirePellets(currentPellet + 1, maxPellets, damageBuilder, TargetCharacter)
+    end)
+end
+
 -- This will try to register all of our charge component hooks everytime a battle starts.
 local function TryRegisterChargeComponentHooks()
     -- Our hooks were already registered successfully, do nothing.
@@ -2082,7 +2107,7 @@ local function TryRegisterChargeComponentHooks()
                         end
 
                         -- Monitor Endbringer's hits when the target is stunned for bonus charges.
-                        if usedEndbringer and damageObject.TargetCharacter.IsStun then
+                        if usedEndbringer and statsComponentTarget.IsStun then
                             chargeComponent.ChangeCharge(endbringerChargesPerStunnedHit)
                             Log("Endbringer Stun Damage: +" .. endbringerChargesPerStunnedHit .. " charges added.")
 
@@ -2101,14 +2126,44 @@ local function TryRegisterChargeComponentHooks()
                             Log("Speed Burst Damage: +" .. speedBurstChargesPerHit .. " charges added.")
                         
                         -- Marking Shot has a chance to stun an enemy.
-                        elseif usedMarkingShot and damageObject.TargetCharacter then
+                        elseif usedMarkingShot then
                             -- Roll a number from 1-100. With default settings, it is a 10% chance.
                             -- Only do this if we consumed the maximum charges this ability can consume.
                             if consumedChargesFromAbility == markingShotChargesConsumed and math.random(1, 100) <= ( markingShotStunChance * 100 ) then
                                 -- Parameters: Inflicting character and reason 1: Skill. Resets break bar.
-                                damageObject.TargetCharacter:PerformBreakStun(damageObject.SourceCharacter, 1)
+                                statsComponentTarget:PerformBreakStun(statsComponentSource, 1)
                                 Log("Marking Shot has stunned the target.")
                             end
+
+                            usedMarkingShot = false
+
+                            FirePellets(1, 8, damageObject.SourceDamageBuilder, statsComponentTarget)
+                            --ExecuteWithDelay(250, function()
+                            --    local outParams = {}
+                            --    if damageObject.SourceDamageBuilder then
+                            --        local sourceDamageBuilder = damageObject.SourceDamageBuilder
+                            --        local outParams = {}
+                            --        sourceDamageBuilder.IgnoreMarkedRemoval = true
+                            --        sourceDamageBuilder:DealDamages(outParams, outParams)
+                            --        --damageObject.TargetCharacter:ReceiveDamage(sourceDamageBuilder.FinalDamageMultiplier, sourceDamageBuilder.DamageSource, sourceDamageBuilder.AttackElement, false, 0, false, sourceDamageBuilder.DamageReason, sourceDamageBuilder.INPUT_HitLocationOverride, sourceDamageBuilder.DebugReason, outParams, outParams, outParams, outParams, outParams, outParams)
+                            --        --Log("outParams.DamageDealt: " .. tostring(outParams.DamageDealt))
+                            --        --Log("outParams.HasHit: " .. tostring(outParams.HasHit))
+                            --        --Log("outParams.DodgeSuccess: " .. tostring(outParams.DodgeSuccess))
+                            --        --Log("outParams.ParrySuccess: " .. tostring(outParams.ParrySuccess))
+                            --        --Log("outParams.BattleDamages: " .. tostring(outParams.BattleDamages))
+                            --        --Log("sourceDamageBuilder.GetIgnoreMarkedRemoval: " .. tostring(sourceDamageBuilder:GetIgnoreMarkedRemoval()))
+                            --    end
+                            --end)
+
+                            --if damageObject.SourceDamageBuilder then
+                            --    damageObject.TargetCharacter:ReceiveDamageFromObject(damageObject.CurrentInputDamages_Base, damageObject.SourceDamageBuilder, outParams, outParams, outParams, outParams, outParams)
+                            --    Log("outParams.DamageDealt: " .. tostring(outParams.DamageDealt))
+                            --    Log("outParams.HasHit: " .. tostring(outParams.HasHit))
+                            --    Log("outParams.DodgeSuccess: " .. tostring(outParams.DodgeSuccess))
+                            --    Log("outParams.ParrySuccess: " .. tostring(outParams.ParrySuccess))
+                            --    Log("outParams.BattleDamages: " .. tostring(outParams.BattleDamages))
+                            --    Log("damageObject.SourceDamageBuilder.FinalDamageMultiplier: " .. tostring(damageObject.SourceDamageBuilder.FinalDamageMultiplier))
+                            --end
                         end
 
                     -- Damage Reason 2: Buffs such as burn.

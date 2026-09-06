@@ -65,7 +65,7 @@ return
 
     -- Charges added when a battle starts. Default: 0
     -- Also triggers again when our character was eaten and freed by an enemy during battle.
-    StartingCharges = 100,
+    StartingCharges = 0,
 
     -- Charges added per character's turn. Default: 0
     -- NOTE: This does NOT affect the character's very first turn.
@@ -129,8 +129,8 @@ return
     -- The default settings allow Shatter to do about 1/2 of what Overcharge does.
 
     -- Percentage amount of charges refilled when breaking an enemy with Shatter. Default: 0.20 (20%)
-    -- NOTE: The value works like this: 0.20 = 20% of max. charges, 0.33 = 33% of max. charges, 1.00 = 100% of max charges aka. complete refill.
-    ShatterChargesPercentage = 0.20,
+    -- NOTE: The value works like this: 0.15 = 15% of max. charges, 0.33 = 33% of max. charges, 1.00 = 100% of max charges aka. complete refill.
+    ShatterChargesPercentage = 0.15,
 
     -- Additional damage multiplier that Shatter gets for each charge it consumes. Default: 0.30 (30%)
     -- Overcharge gets 0.20 (~0.40 if hitting 2 perfect skillchecks) in the base game.
@@ -313,9 +313,9 @@ return
     -- Additional damage multiplier per consumed charge. Default: 0.20 (20%)
     SteeledStrikeDamagePerCharge = 0.20,
 
-    -- The elemental damage type of this ability. Default: 1 (Physical)
+    -- The elemental damage type of this ability. Default: 4 (Lightning) / Default in Vanilla: 1 (Physical)
     -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
-    SteeledStrikeElement = 1,
+    SteeledStrikeElement = 4,
 
     -- AP cost of this ability. Default: 9
     -- NOTE: This setting affects the Perfection character as well!
@@ -328,9 +328,9 @@ return
     -- Charges per hit on a stunned enemy with this ability. Default: 5
     EndbringerChargesPerStunnedHit = 5,
 
-    -- The elemental damage type of this ability. Default: 1 (Physical)
+    -- The elemental damage type of this ability. Default: 7 (Light) / Default in Vanilla: 1 (Physical)
     -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
-    EndbringerElement = 1,
+    EndbringerElement = 7,
 
     -- AP cost of this ability. Default: 9
     -- NOTE: This setting affects the Perfection character as well!
@@ -382,9 +382,9 @@ return
     -- Additional damage multiplier per consumed charge. Default: 0.20 (20%)
     BlitzDamagePerCharge = 0.20,
 
-    -- The elemental damage type of this ability. Default: 3 (Ice) / Default in Vanilla: 1 (Physical)
+    -- The elemental damage type of this ability. Default: 4 (Lightning) / Default in Vanilla: 1 (Physical)
     -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
-    BlitzElement = 3,
+    BlitzElement = 4,
 
     -- AP cost of this ability. Default: 3
     -- NOTE: This setting affects the Perfection character as well!
@@ -441,9 +441,9 @@ return
     -- Extra charges per hit with this ability. Default: 2
     SpeedBurstChargesPerHit = 2,
 
-    -- The elemental damage type of this ability. Default: 0 (Weapon's Element) / Default in Vanilla: 7 (Light)
+    -- The elemental damage type of this ability. Default: 4 (Lightning) / Default in Vanilla: 7 (Light)
     -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
-    SpeedBurstElement = 0,
+    SpeedBurstElement = 4,
 
     -- AP cost of this ability. Default: 6
     -- NOTE: This setting affects the Perfection character as well!
@@ -463,9 +463,9 @@ return
     -- Additional damage multiplier per consumed charge. Default: 0.20 (20%)
     PhantomStarsDamagePerCharge = 0.20,
 
-    -- The elemental damage type of this ability. Default: 4 (Lightning) / Default in Vanilla: 7 (Light)
+    -- The elemental damage type of this ability. Default: 3 (Ice) / Default in Vanilla: 7 (Light)
     -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
-    PhantomStarsElement = 4,
+    PhantomStarsElement = 3,
 
     -- AP cost of this ability. Default: 9
     -- NOTE: This setting affects the Perfection character as well!
@@ -504,9 +504,9 @@ return
     -- Additional damage multiplier per consumed charge. Default: 0.20 (20%)
     PurificationDamagePerCharge = 0.20,
 
-    -- The elemental damage type of this ability. Default: 7 (Light)
+    -- The elemental damage type of this ability. Default: 6 (Dark) / Default in Vanilla: 7 (Light)
     -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
-    PurificationElement = 7,
+    PurificationElement = 6,
 
     -- AP cost of this ability. Default: 4
     -- NOTE: This setting affects the Perfection character as well!
