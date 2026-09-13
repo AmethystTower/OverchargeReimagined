@@ -19,7 +19,7 @@ return
     ------------------------------------------------------------------------
 
     -- Maximum charges that Overcharge can carry. Default: 100 / Default in Vanilla: 10
-    -- This also increases the maximum damage done by Overcharge for each additional charge it can hold.
+    -- This also increases the maximum damage done by Overcharge, Shatter and Marking Shot for each additional charge they can hold.
     -- NOTE: DO NOT SET THIS TO A NEGATIVE VALUE OR 0, otherwise your character will be unable to generate any charges!
     VirtualMaxCharges = 100,
 
@@ -132,11 +132,11 @@ return
     -- Shatter: These are the settings for Shatter.
     -- The default settings allow Shatter to do about 1/2 of what Overcharge does.
 
-    -- Percentage amount of charges refilled when breaking an enemy with Shatter. Default: 0.20 (20%)
+    -- Percentage amount of charges refilled when breaking an enemy with Shatter. Default: 0.15 (15%)
     -- NOTE: The value works like this: 0.15 = 15% of max. charges, 0.33 = 33% of max. charges, 1.00 = 100% of max charges aka. complete refill.
     ShatterChargesPercentage = 0.15,
 
-    -- Additional damage multiplier that Shatter gets for each charge it consumes. Default: 0.25 (25%)
+    -- Additional damage multiplier that Shatter gets for each charge it consumes. Default: 0.30 (30%)
     -- Overcharge gets 0.20 (~0.40 if hitting 2 perfect skillchecks) in the base game.
     ShatterDamagePerCharge = 0.30,
 
@@ -166,7 +166,7 @@ return
     -- Overcharge gets 0.20 (~0.40 if hitting 2 perfect skillchecks) in the base game.
     MarkingShotDamagePerCharge = 0.20,
 
-    -- The extra amount of damage that Marked Shot gets if the charges are full. Default: 2.50 (250%)
+    -- The extra amount of damage that Marking Shot gets if the charges are full. Default: 2.50 (250%)
     -- Overcharge uses 0.25 in the base game.
     -- NOTE: Gets added, NOT multiplied since that would be too strong.
     MarkingShotMaxChargesBonus = 2.50,

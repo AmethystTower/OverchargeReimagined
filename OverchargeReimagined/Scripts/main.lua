@@ -201,6 +201,7 @@ local paradigmShiftHookRegistered = false
 local purificationHookRegistered = false
 local angelsEyesHookRegistered = false
 local strikerHookRegistered = false
+local sabotageHookRegistered = false
 local berserkHookRegistered = false
 local receiveBeginPlayHookRegistered = false
 local onTurnStartHookRegistered = false
@@ -248,6 +249,7 @@ local usedPhantomStars = false
 local usedPurification = false
 local usedAngelsEyes = false
 local usedStriker = false
+local usedSabotage = false
 local usedParadigmShift = false
 local usedRecovery = false
 local usedOverload = false
@@ -540,10 +542,12 @@ local function ModifyAbilityCostAndDescription(param, modifyAPCostOnly)
     -- Track this ability in our global array so we don't modify the descriptions unnecessarily if it never changes.
     if not trackedAbilities[abilityNameID] then
         -- Initialize the descriptions with null so that we will always receive and write the first description instance.
+        -- Also track the skill object incase we load multiple saves during our game instance, so we know the descriptions need to be refreshed as well.
         trackedAbilities[abilityNameID] = {}
         trackedAbilities[abilityNameID].Description = nil
         trackedAbilities[abilityNameID].ShortDescription = nil
         trackedAbilities[abilityNameID].name = nil
+        trackedAbilities[abilityNameID].skillObject = self
     end
 
     -- Set Powerful's targeting type to 0: "self", it is a pure self-buffing ability now.
@@ -584,8 +588,13 @@ local function ModifyAbilityCostAndDescription(param, modifyAPCostOnly)
         end
     end
 
+    -- This array field is null for some reason, do nothing.
+    if not trackedAbilities[abilityNameID] then
+        return
+    end
+
     -- Set the skill's name.
-    if trackedAbilities[abilityNameID] and assembledName ~= "" and trackedAbilities[abilityNameID].Name ~= assembledName then
+    if assembledName ~= "" and trackedAbilities[abilityNameID].Name ~= assembledName or not trackedAbilities[abilityNameID].skillObject:IsValid() then
         FTextCustom(self, "name", assembledName, abilityNameID)
         Log("Modified name of ability: " .. tostring(abilityNameID))
     end
@@ -593,7 +602,7 @@ local function ModifyAbilityCostAndDescription(param, modifyAPCostOnly)
     -- Set the skill's long description which is shown in the character/skill tree menus and at the top left window during target selection in battle.
     -- Only do this if the description from our tracked abilities array is different.
     -- Due to the UE4SS memory corruption issue from handling FText properties, we can't read the description directly otherwise it could return garbage and crash the game.
-    if trackedAbilities[abilityNameID] and assembledLongDescription ~= "" and trackedAbilities[abilityNameID].Description ~= assembledLongDescription then
+    if assembledLongDescription ~= "" and trackedAbilities[abilityNameID].Description ~= assembledLongDescription or not trackedAbilities[abilityNameID].skillObject:IsValid() then
         FTextCustom(self, "Description", assembledLongDescription, abilityNameID)
         Log("Modified long description of ability: " .. tostring(abilityNameID))
     end
@@ -606,10 +615,15 @@ local function ModifyAbilityCostAndDescription(param, modifyAPCostOnly)
     -- Set the skill's short description to what we just assembled on the fly.
     -- Only do this if the short description from our tracked abilities array is different.
     -- Due to the UE4SS memory corruption issue from handling FText properties, we can't read the description directly otherwise it could return garbage and crash the game.
-    if trackedAbilities[abilityNameID] and assembledShortDescription ~= "" and trackedAbilities[abilityNameID].ShortDescription ~= assembledShortDescription then
+    if assembledShortDescription ~= "" and trackedAbilities[abilityNameID].ShortDescription ~= assembledShortDescription or not trackedAbilities[abilityNameID].skillObject:IsValid() then
         FTextCustom(self, "ShortDescription", assembledShortDescription, abilityNameID)
         Log("Modified short description of ability: " .. tostring(abilityNameID))
     end
+
+    -- Update the skill object of this array entry so we know if we loaded a new save.
+    if not trackedAbilities[abilityNameID].skillObject:IsValid() then
+        trackedAbilities[abilityNameID].skillObject = self
+    end 
 
     -- This might no longer be needed since we circumvent UE4SS' FText bug that would corrupt this value.
     --self.TargetingType = targetingType
@@ -1805,6 +1819,32 @@ local function TryRegisterAbilityHooks()
         end
     end
 
+    -- Try to register Sabotage's hooks.
+    if not sabotageHookRegistered then
+        local ok = pcall(function()
+            -- This hook runs whenever someone uses Angel's Eyes.
+            RegisterHook(hooking.SABOTAGE_ON_EXECUTE, function(param)
+                if not IsValidChargeComponent() then
+                    return
+                end
+
+                -- A different character used this ability, do nothing.
+                if not overchargeCharacterTurn then
+                    return
+                end
+
+                Log("Sabotage used this turn.")
+                usedSabotage = true
+            end)
+        end)
+
+        -- If it was successful, mark the hooks registrations as true.
+        if ok then
+            sabotageHookRegistered = true
+            Log("Successfully registered Sabotage's ability execution hooks.")
+        end
+    end
+
     -- Try to register Striker's hooks.
     if not strikerHookRegistered then
         local ok = pcall(function()
@@ -1879,6 +1919,11 @@ local function TryRegisterAbilityHooks()
                 -- Not a big fan of using GetOuter but that is the easiest solution right now.
                 local berserkParent = berserk:GetOuter()
 
+                -- Incase the result was null or is an invalid object, do nothing.
+                if not berserkParent or not berserkParent:IsValid() then
+                    return
+                end
+
                 -- Get the owner of the berserk buff.
                 local berserkCharacter = berserkParent:GetOwner()
 
@@ -1887,7 +1932,7 @@ local function TryRegisterAbilityHooks()
 
                 -- Do nothing if any of these objects are invalid.
                 -- And compare the berserk character to the current character playing the turn, making sure the character without berserk doesn't get affected.
-                if not berserkCharacter:IsValid() or not currentCharacter:IsValid() or berserkCharacter:GetFullName() ~= currentCharacter:GetFullName() then
+                if not berserkCharacter or not currentCharacter or not berserkCharacter:IsValid() or not currentCharacter:IsValid() or berserkCharacter:GetFullName() ~= currentCharacter:GetFullName() then
                     Log("BERSERK_TURN_START: Preventing non-berserk character from being affected.")
                     return
                 end
@@ -2864,7 +2909,6 @@ RegisterHook(hooking.CLIENT_RESTART, function()
 
     -- This function gets executed whenever a skill triggers a voiceline.
     -- We will hijack this function and mute the original voiceline if we don't want it to play, while replacing it with our own custom ones.
-    -- TODO: Finish this.
     RegisterHook(hooking.PLAY_SKILL_BATTLE_LINE_INTERNAL, function(param, soundAsset)
         if not IsValidChargeComponent() then
             return
@@ -2902,7 +2946,7 @@ RegisterHook(hooking.CLIENT_RESTART, function()
         elseif usedSteeledStrike then
             voiceLine = voiceLinesList["takethemdown"]
         elseif usedEndbringer then
-            voiceLine = voiceLinesList["breakcycle"]
+            voiceLine = voiceLinesList["overcharge3"]
         elseif usedBerserkSlash then
             voiceLine = voiceLinesList["battlewon"]
         elseif usedDefiantStrike then
@@ -2913,8 +2957,10 @@ RegisterHook(hooking.CLIENT_RESTART, function()
             voiceLine = voiceLinesList["overcharge3"]
         elseif usedLightHolder then
             voiceLine = voiceLinesList["takethemdown"]
+        elseif usedSabotage then
+            voiceLine = voiceLinesList["battlewon"]
         elseif usedStriker then
-            voiceLine = voiceLinesList["overcharge3"]
+            voiceLine = voiceLinesList["breakcycle"]
         elseif usedAngelsEyes then
             voiceLine = voiceLinesList["overcharge4"]
         else
