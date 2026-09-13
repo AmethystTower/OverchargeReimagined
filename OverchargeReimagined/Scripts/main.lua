@@ -202,7 +202,6 @@ local purificationHookRegistered = false
 local angelsEyesHookRegistered = false
 local strikerHookRegistered = false
 local berserkHookRegistered = false
-local modifiedAllAbilities = false
 local receiveBeginPlayHookRegistered = false
 local onTurnStartHookRegistered = false
 local onTurnEndHookRegistered = false
@@ -224,6 +223,7 @@ local steeledStrikeExecuted = false
 local selectedFreyInMenu = false
 local voiceLinePlaying = false
 local loadingDependenciesGuard = false
+local updatedDynamicElement = false
 
 -- Booleans that we use to monitor when a specific skill was used or triggers.
 -- Even more stuff we must monitor!
@@ -259,7 +259,7 @@ local consumedChargesFromAbility = 0
 local chargeComponent = nil
 
 -- This will store the active portrait component during the battle that displays the number of charges along with the images of the arm.
-local chargePortrait_CurrentValue = nil
+local chargePortrait = nil
 
 -- This will store the audio manager component during battle, which will allow us to play battle lines for abilities that usually never play any (like Shatter or From Fire).
 local battleAudioManager = nil
@@ -323,7 +323,7 @@ end
 
 -- This function helps us find out if the overcharge portrait component is still valid.
 local function IsValidChargePortraitProperties()
-    return chargePortrait_CurrentValue and chargePortrait_CurrentValue:IsValid()
+    return chargePortrait and chargePortrait:IsValid()
 end
 
 -- This function helps us find out if the audio manager component is still valid.
@@ -388,7 +388,8 @@ local function GetAbilityOverrideElement(originalElementalType, abilityNameID)
     local abilityElementalOverride = ElementsHelper.GetAbilityElement(abilityNameID)
 
     if not abilityElementalOverride then
-        Log("Failed to call abilityElementalOverride() or no elemental value found for: " .. tostring(abilityNameID))
+        -- Don't log this since we don't want to spam the console output.
+        --Log("Failed to call abilityElementalOverride() or no elemental value found for: " .. tostring(abilityNameID))
         return originalElementalType
     elseif abilityElementalOverride == 0 then
         Log("Ability is using dynamic element, changing to value: " .. tostring(dynamicWeaponElement))
@@ -406,7 +407,8 @@ local function GetAbilityOverrideValues(abilityNameID)
     local abilityOverrides = SkillsHelper.GetAbilityValues(abilityNameID)
 
     if not abilityOverrides then
-        Log("Failed to call GetAbilityValues() or no values found for: " .. tostring(abilityNameID))
+        -- Don't log this since we don't want to spam the console output.
+        --Log("Failed to call GetAbilityValues() or no values found for: " .. tostring(abilityNameID))
         return nil
     end
 
@@ -481,7 +483,7 @@ local function FTextCustom(skillObject, propertyName, newDescription, abilityNam
 end
 
 -- This function modifies the AP cost and description of abilities.
-local function ModifyAbilityCostAndDescription(param)
+local function ModifyAbilityCostAndDescription(param, modifyAPCostOnly)
     -- Since we call this function from a hook that gives us a remote object and from upon loading a save with direct skill objects, we need to handle both possibilities.
     -- If it is a remote object then unwrap it, otherwise just use the param directly.
     local self = unwrap(param) or param
@@ -516,6 +518,17 @@ local function ModifyAbilityCostAndDescription(param)
         return
     end
 
+    -- Modifiy AP cost of this ability to our new value if it differs from our custom value.
+    if self.APCost ~= abilityValues.APCost then
+        self.APCost = abilityValues.APCost
+        Log("Modified AP cost of ability: " .. tostring(abilityNameID))
+    end
+
+    -- Do nothing else if we only want to modify the AP cost.
+    if modifyAPCostOnly then
+        return
+    end
+
     local abilityElement = ElementsHelper.GetAbilityElement(abilityNameID)
 
     if abilityElement and abilityElement == 0 and self.DynamicElementOverride ~= 1 then
@@ -531,12 +544,6 @@ local function ModifyAbilityCostAndDescription(param)
         trackedAbilities[abilityNameID].Description = nil
         trackedAbilities[abilityNameID].ShortDescription = nil
         trackedAbilities[abilityNameID].name = nil
-    end
-
-    -- Modifiy AP cost of this ability to our new value if it differs from our custom value.
-    if self.APCost ~= abilityValues.APCost then
-        self.APCost = abilityValues.APCost
-        Log("Modified AP cost of ability: " .. tostring(abilityNameID))
     end
 
     -- Set Powerful's targeting type to 0: "self", it is a pure self-buffing ability now.
@@ -608,34 +615,58 @@ local function ModifyAbilityCostAndDescription(param)
     --self.TargetingType = targetingType
 end
 
+-- Retrieve all skill data objects.
+local function GetAllSkillAssets()
+    local skill_assets = FindAllOf("BP_DataAsset_Skill_C")
+
+    if skill_assets then
+        return skill_assets
+    end
+
+    return nil
+end
+
+-- Modify all abilities so that they show their correct descriptions and AP cost immediately.
 local function ModifyAllDescriptionsAndCost()
-    -- Modify all ability descriptions the first time this function runs (usually when hovering over the skilltree or checking abilities).
-    -- It will also run during battle once to modify all short descriptions.
-    local ok, errorMessage = pcall(function()
+    local skill_assets = GetAllSkillAssets()
+    
+    if skill_assets then
+        -- Find all modifiable abilities and adjust their descriptions and AP cost for the skilltree or when entering a battle to avoid weird issues.
+        for _, asset in pairs(skill_assets) do
+            if asset and asset:IsValid() then
+                ModifyAbilityCostAndDescription(asset, true)
+            end
+        end
+        Log("Found all skill assets and modified their descriptions and AP cost.")
+    else
+        Log("Couldn't find skill assets and didn't modify anything.")
+    end
+end
 
-        -- Modify all abilities so that they show their correct descriptions and AP cost immediately.
-        local skill_assets = FindAllOf("BP_DataAsset_Skill_C")
+local function CacheOverchargeSkills()
+    local skill_assets = GetAllSkillAssets()
 
-        if skill_assets then
-            -- Find all modifiable abilities and adjust their descriptions and AP cost for the skilltree or when entering a battle to avoid weird issues.
-            for _, asset in pairs(skill_assets) do
-                if asset:IsValid() then
-                    ModifyAbilityCostAndDescription(asset)
+    if skill_assets then
+        -- Find all modifiable abilities and adjust their descriptions and AP cost for the skilltree or when entering a battle to avoid weird issues.
+        for _, asset in pairs(skill_assets) do
+            if asset and asset:IsValid() then
+                local abilityName = asset.NameID:ToString()
 
-                    -- Cache some of the skill assets that we need later in order to load some of the ability sounds that we need for battle lines.
-                    if asset.NameID:ToString() == "UnleashCharge" or asset.NameID:ToString() == "MarkingShot_Gustave" or asset.NameID:ToString() == "StrikeStorm_Gustave"
-                    or asset.NameID:ToString() == "PerfectRecovery_Gustave" or asset.NameID:ToString() == "Powerful_Gustave" then
-                        cachedSkills[asset.NameID:ToString()] = asset
-                    end
+                -- Of course Lua doesn't have continue... I HATE LUA.
+                -- Cache one of these abilities if the ones in our list are outdated or simply don't exist.
+                if (abilityName == "UnleashCharge"
+                or abilityName == "MarkingShot_Gustave"
+                or abilityName == "StrikeStorm_Gustave"
+                or abilityName == "PerfectRecovery_Gustave"
+                or abilityName == "Powerful_Gustave")
+                and (not cachedSkills[abilityName] or not cachedSkills[abilityName]:IsValid()) then
+                    cachedSkills[abilityName] = asset
                 end
             end
         end
-    end)
-
-    if ok then
-        Log("Successfully modified all descriptions and AP cost at once.")
+        Log("Found all skill assets and refreshed cachedSkills list.")
     else
-        Log("Failed to modify all descriptions at once: " .. tostring(errorMessage))
+        Log("Couldn't find skill assets and didn't refresh cachedSkills list.")
     end
 end
 
@@ -645,7 +676,7 @@ local function ModifyAbilityCostAndDescriptionUnwrapper(param)
         local skill = unwrap(param)
 
         if skill then
-            ModifyAbilityCostAndDescription(skill)
+            ModifyAbilityCostAndDescription(skill, false)
         end
     end
 end
@@ -1930,13 +1961,13 @@ local function TryRegisterChargeComponentHooks()
 
                 if self:IsValid() then
                     -- Cache the portrait text property for the charge counter for this fight so that we can call it from any of our hooks.
-                    chargePortrait_CurrentValue = self.TextBlock_CurrentValue
+                    chargePortrait = self
 
                     -- Modify the portrait's charge counter.
                     -- Since we are using the game's native SetText() function which handles the writing into the property, using UE4SS' FText() function should be safe here.
                     if self.TextBlock_MaxValue:IsValid() then
+                        Log("Modifying Overcharge's arm UI widget to " .. tostring(virtualMaxCharges) .. " max charges.")
                         self.TextBlock_MaxValue:SetText(FText("/" .. tostring(virtualMaxCharges)))
-                        Log("Modified Overcharge's arm UI widget to " .. tostring(virtualMaxCharges) .. " max charges.")
                     end
                 end
             end)
@@ -1960,8 +1991,8 @@ local function TryRegisterChargeComponentHooks()
 
                 -- Fix the arm widget's charge counter so it displays the correct amount.
                 if IsValidChargePortraitProperties() then
-                    chargePortrait_CurrentValue:SetText(FText(tostring(virtualCurrentCharges)))
-                    Log("Game thinks max charges were reached, updated widget UI counter via UPDATE_CURRENT_VALUE.")
+                    Log("Game thinks max charges were reached, update widget UI counter via UPDATE_CURRENT_VALUE.")
+                    chargePortrait.TextBlock_CurrentValue:SetText(FText(tostring(virtualCurrentCharges)))
                 end
             end)
         end)
@@ -2493,7 +2524,8 @@ local function TryRegisterChargeComponentHooks()
 
                 -- Update the existing charge portrait's current counter to the current charges from our custom own counter.
                 if IsValidChargePortraitProperties() then
-                    chargePortrait_CurrentValue:SetText(FText(tostring(virtualCurrentCharges)))
+                    Log("Update widget UI counter via CHANGE_CHARGE.")
+                    chargePortrait.TextBlock_CurrentValue:SetText(FText(tostring(virtualCurrentCharges)))
                 end
 
                 updatingNativeCharge = false
@@ -2530,9 +2562,13 @@ RegisterHook(hooking.CLIENT_RESTART, function()
 
     -- This hook runs when a battle started, so we can track it for our ability names hook.
     RegisterHook(hooking.BATTLE_STARTED, function(param)
-        Log("BATTLE_STARTED")
+        Log("BATTLE STARTED")
         selectedFreyInMenu = false
         loadingSystemComponent = nil
+        updatedDynamicElement = false
+
+        -- Cache the Overcharge skills we need for the sounds when a new battle begins.
+        CacheOverchargeSkills()
     end)
 
     -- This hook runs when opening the character menu and selecting a specific character.
@@ -2722,7 +2758,7 @@ RegisterHook(hooking.CLIENT_RESTART, function()
     -- This hook runs on any character's turn start.
     -- We will use it in order to grab the elemental damage type of our character's weapon for abilities that use it.
     RegisterHook(hooking.GENERIC_CHARACTER_TURN_START, function(param)
-        if not IsValidChargeComponent() then
+        if not IsValidChargeComponent() or updatedDynamicElement then
             return
         end
 
@@ -2736,7 +2772,7 @@ RegisterHook(hooking.CLIENT_RESTART, function()
         local owner = self:GetOwner()
 
         -- Somehow owner doesn't exist or this character is not the one we need, do nothing.
-        if not owner or not chargeComponent:IsCharacterOwner(owner) then
+        if not owner or not owner:IsValid() or not chargeComponent:IsCharacterOwner(owner) then
             return
         end
 
@@ -2745,6 +2781,7 @@ RegisterHook(hooking.CLIENT_RESTART, function()
 
         if newElement ~= dynamicWeaponElement then
             dynamicWeaponElement = newElement
+            updatedDynamicElement = true
             Log("Updated weapon elemental type: " .. tostring(dynamicWeaponElement))
         end
     end)
@@ -2807,8 +2844,8 @@ RegisterHook(hooking.CLIENT_RESTART, function()
         end
     end)
 
-    -- This function runs when the game initializes the audio manager.
-    -- We will use this in order to cache its live instance so we can play our custom voicelines during battle.
+    -- This function runs when the game creates a new audio manager.
+    -- We will use this in order to cache its live instance so that we can play our custom voicelines during battle.
     RegisterHook(hooking.AUDIO_MANAGER_INIT, function(param)
         if not IsValidChargeComponent() or IsValidAudioComponent() then
             return
@@ -2910,20 +2947,39 @@ RegisterHook(hooking.CLIENT_RESTART, function()
 
         -- Technically this guard isn't needed because we check if we cached the loading system component and then never enter this part of the code anymore.
         -- But you can never be safe enough.
+        loadingDependenciesGuard = true
+
         -- TODO: This works and since we use the game's proper way of loading dependencies it will cause no issues and the game will handle everything else regarding lifetime and whatnot.
         -- But if we don't have an overcharge component (character missing) then it would be nice to check if we really need to load them for the current fight.
         -- Again, this would be a very small but nice optimization to respect the game's loading patterns, but this is something for a future clean-up update.
         -- This causes no performance issues or much increased memory usage, it's just a few extra abilities that always get loaded so we can use their tied voicelines.
         -- Comparing the fact that using 3 characters with 6 skils each loads 18 of them in a battle, this isn't a big deal.
-        loadingDependenciesGuard = true
-        self:LoadDependenciesFromObject(cachedSkills["UnleashCharge"])
-        self:LoadDependenciesFromObject(cachedSkills["MarkingShot_Gustave"])
-        self:LoadDependenciesFromObject(cachedSkills["StrikeStorm_Gustave"])
-        self:LoadDependenciesFromObject(cachedSkills["PerfectRecovery_Gustave"])
-        self:LoadDependenciesFromObject(cachedSkills["Powerful_Gustave"])
-        loadingDependenciesGuard = false
+        if cachedSkills["UnleashCharge"] and cachedSkills["UnleashCharge"]:IsValid() then
+            self:LoadDependenciesFromObject(cachedSkills["UnleashCharge"])
+            Log("Loaded skill and sound dependencies for UnleashCharge skill.")
+        end
 
-        Log("Loaded skill and sound dependencies for Overcharge character skills.")
+        if cachedSkills["UnleashCharge"] and cachedSkills["MarkingShot_Gustave"]:IsValid() then
+            self:LoadDependenciesFromObject(cachedSkills["MarkingShot_Gustave"])
+            Log("Loaded skill and sound dependencies for MarkingShot_Gustave skill.")
+        end
+
+        if cachedSkills["UnleashCharge"] and cachedSkills["StrikeStorm_Gustave"]:IsValid() then
+            self:LoadDependenciesFromObject(cachedSkills["StrikeStorm_Gustave"])
+            Log("Loaded skill and sound dependencies for StrikeStorm_Gustave skill.")
+        end
+
+        if cachedSkills["UnleashCharge"] and cachedSkills["PerfectRecovery_Gustave"]:IsValid() then
+            self:LoadDependenciesFromObject(cachedSkills["PerfectRecovery_Gustave"])
+            Log("Loaded skill and sound dependencies for PerfectRecovery_Gustave skill.")
+        end
+
+        if cachedSkills["UnleashCharge"] and cachedSkills["Powerful_Gustave"]:IsValid() then
+            self:LoadDependenciesFromObject(cachedSkills["Powerful_Gustave"])
+            Log("Loaded skill and sound dependencies for Powerful_Gustave skill.")
+        end
+
+        loadingDependenciesGuard = false
     end)
 
     -- This hook modifies the AP cost and description of abilities.
@@ -2931,8 +2987,5 @@ RegisterHook(hooking.CLIENT_RESTART, function()
 
     -- For the first time we load into a save: Attempt to modify all descriptions and AP costs so that they are correct right away.
     -- We also cache the a few abilities related to voicelines that are tied to them for later use.
-    if not modifiedAllAbilities then
-        modifiedAllAbilities = true
-        ModifyAllDescriptionsAndCost()
-    end
+    ModifyAllDescriptionsAndCost()
 end)
