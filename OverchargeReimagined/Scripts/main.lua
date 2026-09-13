@@ -54,14 +54,25 @@ end
 Log("Loading...\n")
 
 -- Load our config.
-local ok, config = pcall(require, "config")
+local configOK, config = pcall(require, "config")
 
-if not ok then
+if not configOK then
     -- Create an empty list as fallback.
     config = {}
     Log("Failed to load config.lua, using default values.")
 else
     Log("config.lua loaded successfully!")
+end
+
+-- Load our hook paths.
+local hookingOK, hooking = pcall(require, "hooking")
+
+if not hookingOK then
+    -- Create an empty list as fallback.
+    hooking = {}
+    Log("Failed to load hooking.lua, using default values.")
+else
+    Log("hooking.lua loaded successfully!")
 end
 
 -- This loads our elements.lua module, providing us a table that converts elemental values into human readable enums and a few helper functions.
@@ -159,6 +170,9 @@ local trackedAbilities = {}
 -- This list stores a table of all skill voiceline audio assets.
 local voiceLinesList = {}
 
+-- These will cache and store some skill assets that we need to access later during battle in order to load some skill related voicelines.
+local cachedSkills = {}
+
 -- These booleans that tell us if a hook is now in place or not.
 -- Quite a lot we have to monitor isn't it?
 local clientHookRegistered = false
@@ -186,6 +200,7 @@ local phantomStarsHookRegistered = false
 local paradigmShiftHookRegistered = false
 local purificationHookRegistered = false
 local angelsEyesHookRegistered = false
+local strikerHookRegistered = false
 local berserkHookRegistered = false
 local modifiedAllAbilities = false
 local receiveBeginPlayHookRegistered = false
@@ -197,6 +212,7 @@ local onBreakStunHookRegistered = false
 local onReceivedDamageHookRegistered = false
 local changeChargeHookRegistered = false
 local updateCurrentValueHookRegistered = false
+local constructPortraitHookRegistered = false
 
 -- Booleans that we need to monitor states.
 local updatingNativeCharge = false
@@ -206,7 +222,6 @@ local overchargeCharacterTurn = false
 local fullChargeBonus = false
 local steeledStrikeExecuted = false
 local selectedFreyInMenu = false
-local overloadSkipFirstInstance = false
 local voiceLinePlaying = false
 local loadingDependenciesGuard = false
 
@@ -232,6 +247,7 @@ local usedSpeedBurst = false
 local usedPhantomStars = false
 local usedPurification = false
 local usedAngelsEyes = false
+local usedStriker = false
 local usedParadigmShift = false
 local usedRecovery = false
 local usedOverload = false
@@ -260,75 +276,11 @@ local temp_SkillScript = nil
 -- Initialize it with value physical (1).
 local dynamicWeaponElement = ElementsHelper.ElementEnum.Physical
 
--- These will cache and store some skill assets that we need to access later during battle in order to load some skill related voicelines.
-local cachedSkills = {}
+local overloadAddedCharges = 0
 
 -- This will cache the game's loading system component used to load and manage assets.
 -- It will effectively be used as a bool to see if it's valid between battles.
 local loadingSystemComponent = nil
-
--- Our general hook paths that allow us to modify the game.
-local CLIENT_RESTART = "/Script/Engine.PlayerController:ClientRestart"
-local BATTLE_FULLY_LOADED = "/Game/jRPGTemplate/Blueprints/Components/AC_jRPG_BattleManager.AC_jRPG_BattleManager_C:OnBattleDependenciesFullyLoaded"
-local BATTLE_STARTED = "/Game/jRPGTemplate/Blueprints/Components/AC_jRPG_BattleManager.AC_jRPG_BattleManager_C:StartBattleNEW"
-local MENU_LOAD_CHARACTER_DATA = "/Game/UI/Widgets/InGame_Menu/CharacterSheet/WBP_GM_CharacterSheet.WBP_GM_CharacterSheet_C:LoadCharacterData"
-local SKILLPANEL_LOAD_CHARACTER = "/Game/UI/Widgets/InGame_Menu/Skill_Panel/WBP_GM_SkillsPanel.WBP_GM_SkillsPanel_C:LoadCharacter"
-
--- Those are our hooks related to the Overcharge component so we can intercept charge generation and consumption.
-local RECEIVE_BEGIN_PLAY = "/Game/Gameplay/Battle/UniqueMechanics/Charge/BP_UniqueMechanic_Charge_Component.BP_UniqueMechanic_Charge_Component_C:ReceiveBeginPlay"
-local ON_TURN_START = "/Game/Gameplay/Battle/UniqueMechanics/Charge/BP_UniqueMechanic_Charge_Component.BP_UniqueMechanic_Charge_Component_C:OnTurnStart"
-local ON_TURN_END = "/Game/Gameplay/Battle/UniqueMechanics/Charge/BP_UniqueMechanic_Charge_Component.BP_UniqueMechanic_Charge_Component_C:OnTurnEnd"
-local CHANGE_CHARGE = "/Game/Gameplay/Battle/UniqueMechanics/Charge/BP_UniqueMechanic_Charge_Component.BP_UniqueMechanic_Charge_Component_C:ChangeCharge"
-local DODGE_SUCCESSFUL = "/Game/Gameplay/Battle/UniqueMechanics/Charge/BP_UniqueMechanic_Charge_Component.BP_UniqueMechanic_Charge_Component_C:OnDodgeSuccessful_Event"
-local PARRY_SUCCESSFUL = "/Game/Gameplay/Battle/UniqueMechanics/Charge/BP_UniqueMechanic_Charge_Component.BP_UniqueMechanic_Charge_Component_C:OnParrySuccessful_Event"
-local ON_RECEIVED_DAMAGE = "/Game/Gameplay/Battle/UniqueMechanics/Charge/BP_UniqueMechanic_Charge_Component.BP_UniqueMechanic_Charge_Component_C:OnCharacterReceivedDamage"
-local ON_BREAK_STUN = "/Game/jRPGTemplate/Blueprints/Components/AC_jRPG_CharacterBattleStats.AC_jRPG_CharacterBattleStats_C:PerformBreakStun"
-local OVERCHARGE_WIDGET_CONSTRUCT = "/Game/Gameplay/Battle/UniqueMechanics/Charge/WBP_UniqueMechanic_Charge.WBP_UniqueMechanic_Charge_C:Construct"
-local UPDATE_CURRENT_VALUE = "/Game/Gameplay/Battle/UniqueMechanics/Charge/WBP_UniqueMechanic_Charge.WBP_UniqueMechanic_Charge_C:UpdateCurrentValue"
-
--- These are all ability hooks that we use so that they can have additional effects as well as consume and generate charges.
--- Quite a few hooks we have there... :D
--- But it's done in the most stable way, I promise! Unlike these horrible AI mods people have been releasing lately.
-local UNLEASH_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Gustave/BP_Battle_SkillScript_Gustave_UnleashCharge.BP_Battle_SkillScript_Gustave_UnleashCharge_C:OnExecuteSkill"
-local SHATTER_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Gustave/BP_Battle_SkillScript_Gustave_PerfectBreak.BP_Battle_SkillScript_Gustave_PerfectBreak_C:OnExecuteSkill"
-local LIGHT_HOLDER_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_LightHolder.BP_Battle_SkillScript_LightHolder_C:OnExecuteSkill"
-local RADIANT_STRIKE_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_Verso_RadiantStrike.BP_Battle_SkillScript_Verso_RadiantStrike_C:OnExecuteSkill"
-local OVERLOAD_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_Verso_Overcharge.BP_Battle_SkillScript_Verso_Overcharge_C:OnExecuteSkill"
-local OVERLOAD_ON_EFFECT = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_Verso_Overcharge.BP_Battle_SkillScript_Verso_Overcharge_C:OnActionEffect"
-local MARKING_SHOT_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Gustave/BP_Battle_SkillScript_Gustave_MarkingShot.BP_Battle_SkillScript_Gustave_MarkingShot_C:OnExecuteSkill"
-local LUMIERE_ASSAULT_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Gustave/BP_Battle_SkillScript_Gustave_Combo1.BP_Battle_SkillScript_Gustave_Combo1_C:OnExecuteSkill"
-local STRIKE_STORM_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Gustave/BP_Battle_SkillScript_Gustave_StrikeStorm.BP_Battle_SkillScript_Gustave_StrikeStorm_C:OnExecuteSkill"
-local FROM_FIRE_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Gustave/BP_Battle_SkillScript_Gustave_FromFire.BP_Battle_SkillScript_Gustave_FromFire_C:OnExecuteSkill"
-local RECOVERY_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Gustave/BP_Battle_SkillScript_Gustave_PerfectRecovery.BP_Battle_SkillScript_Gustave_PerfectRecovery_C:OnExecuteSkill"
-local RECOVERY_ON_EFFECT = "/Game/Gameplay/Battle/Skills/Content/Gustave/BP_Battle_SkillScript_Gustave_PerfectRecovery.BP_Battle_SkillScript_Gustave_PerfectRecovery_C:OnActionEffect"
-local POWERFUL_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Gustave/BP_Battle_SkillScript_Gustave_Powerful.BP_Battle_SkillScript_Gustave_Powerful_C:OnExecuteSkill"
-local POWERFUL_ON_EFFECT = "/Game/Gameplay/Battle/Skills/Content/Gustave/BP_Battle_SkillScript_Gustave_Powerful.BP_Battle_SkillScript_Gustave_Powerful_C:OnActionEffect"
-local STEELED_STRIKE_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_Verso_SteeledStrike.BP_Battle_SkillScript_Verso_SteeledStrike_C:OnExecuteSkill"
-local ENDBRINGER_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_Verso_EndBringer.BP_Battle_SkillScript_Verso_EndBringer_C:OnExecuteSkill"
-local BERSERK_SLASH_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_Verso_BerserkSlash.BP_Battle_SkillScript_Verso_BerserkSlash_C:OnExecuteSkill"
-local DEFIANT_STRIKE_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_Verso_DefiantStrike.BP_Battle_SkillScript_Verso_DefiantStrike_C:OnExecuteSkill"
-local BLITZ_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_Blitz.BP_Battle_SkillScript_Blitz_C:OnExecuteSkill"
-local FOLLOW_UP_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_Verso_Followup.BP_Battle_SkillScript_Verso_Followup_C:OnExecuteSkill"
-local FOLLOW_UP_COST_OVERRIDE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_Verso_Followup.BP_Battle_SkillScript_Verso_Followup_C:GetSkillCostOverride"
-local ASCENDING_ASSAULT_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_Verso_AscendingAssault.BP_Battle_SkillScript_Verso_AscendingAssault_C:OnExecuteSkill"
-local ASCENDING_ASSAULT_COST_OVERRIDE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_Verso_AscendingAssault.BP_Battle_SkillScript_Verso_AscendingAssault_C:GetSkillCostOverride"
-local SPEED_BURST_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_Verso_SpeedBurst.BP_Battle_SkillScript_Verso_SpeedBurst_C:OnExecuteSkill"
-local PHANTOM_STARS_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_Verso_PhantomStars.BP_Battle_SkillScript_Verso_PhantomStars_C:OnExecuteSkill"
-local PHANTOM_STARS_COST_OVERRIDE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_Verso_PhantomStars.BP_Battle_SkillScript_Verso_PhantomStars_C:GetSkillCostOverride"
-local PARADIGM_SHIFT_ON_EFFECT = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_Verso_ParadigmShift.BP_Battle_SkillScript_Verso_ParadigmShift_C:OnActionEffect"
-local PARADIGM_SHIFT_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_Verso_ParadigmShift.BP_Battle_SkillScript_Verso_ParadigmShift_C:OnExecuteSkill"
-local PURIFICATION_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_NEW_15.BP_Battle_SkillScript_NEW_15_C:OnExecuteSkill"
-local ANGELS_EYES_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_Verso_AngelsEyes.BP_Battle_SkillScript_Verso_AngelsEyes_C:OnExecuteSkill"
-
--- Our modifier hooks that allow us to manipulate the cost and damage multiplier of abilities on the fly.
-local GET_BASE_COST = "/Game/Gameplay/SkillTree/BP_DataAsset_Skill.BP_DataAsset_Skill_C:GetSkillBaseCost"
-local GET_COST = "/Game/Gameplay/SkillTree/BP_DataAsset_Skill.BP_DataAsset_Skill_C:GetSkillCost"
-local GET_ATTACK_MULTIPLIER = "/Game/Gameplay/Battle/BP_BattleDamageBuilder.BP_BattleDamageBuilder_C:GetAttackPowerMultiplier"
-local GENERIC_CHARACTER_TURN_START = "/Game/jRPGTemplate/Blueprints/Components/AC_jRPG_CharacterBattleStats.AC_jRPG_CharacterBattleStats_C:OnCharacterTurnStart"
-local BERSERK_TURN_START = "/Game/Gameplay/Buffs/GenericBuff/BP_BattleBuff_Berserk.BP_BattleBuff_Berserk_C:OnCharacterTurnStart"
-local AUDIO_MANAGER_INIT = "/Game/Audio/Blueprints/BP_AudioCharacter_BattleManager.BP_AudioCharacter_BattleManager_C:Init"
-local PLAY_SKILL_BATTLE_LINE_INTERNAL = "/Game/Audio/Blueprints/BP_AudioCharacter_BattleManager.BP_AudioCharacter_BattleManager_C:PlaySkillBattleLineInternal"
-local LOAD_DEPENDENCIES_FROM_OBJECT = "/Game/Gameplay/LoadingSystem/BP_LoadingSystemComponent.BP_LoadingSystemComponent_C:LoadDependenciesFromObject"
 
 -- This function lets us unwrap UE4 objects as proper values.
 local function unwrap(param)
@@ -769,10 +721,10 @@ local function ResetAbilityStates()
     usedPhantomStars = false
     usedPurification = false
     usedAngelsEyes = false
+    usedStriker = false
     usedParadigmShift = false
     usedRecovery = false
     usedOverload = false
-    overloadSkipFirstInstance = true
     fullChargeBonus = false
 
     -- Only reset it at the end of our turn if we actually executed the ability.
@@ -802,7 +754,10 @@ local function LoadSoundAssets()
     voiceLinesList["counter"] = StaticFindObject("/Game/Audio/MetaSound/VO/Noah/BattleLine/VO_BL_Battle_Counter_Gustave.VO_BL_Battle_Counter_Gustave")
     voiceLinesList["battlewon"] = StaticFindObject("/Game/Audio/MetaSound/VO/Noah/BattleLine/VO_BL_Battle_DeathLune_Gustave.VO_BL_Battle_DeathLune_Gustave")
 
-    Log("Initialized all sound assets.")
+    -- Clear the cached loading system component, we no longer need it for this fight.
+    loadingSystemComponent = nil
+
+    Log("Initialized all sound assets and unloaded loading system component.")
 end
 
 -- The following hooks we need to be careful because they don't get registed if we don't have the needed character participating in the first battle.
@@ -813,7 +768,7 @@ local function TryRegisterAbilityHooks()
     if not unleashHookRegistered then
         local ok = pcall(function()
             -- This hook runs at the start of Overcharge's execution.
-            RegisterHook(UNLEASH_ON_EXECUTE, function(param)
+            RegisterHook(hooking.UNLEASH_ON_EXECUTE, function(param)
                 if not IsValidChargeComponent() then
                     return
                 end
@@ -858,7 +813,7 @@ local function TryRegisterAbilityHooks()
     if not shatterHookRegistered then
         local ok = pcall(function()
             -- This hook runs whenever someone uses the ability Shatter.
-            RegisterHook(SHATTER_ON_EXECUTE, function(param)
+            RegisterHook(hooking.SHATTER_ON_EXECUTE, function(param)
                 if not IsValidChargeComponent() then
                     return
                 end
@@ -874,7 +829,6 @@ local function TryRegisterAbilityHooks()
                 fullChargeBonus = virtualCurrentCharges == virtualMaxCharges
 
                 -- Always play the Overcharge voicelines depending on the amount of charges, just like how Overcharge plays them.
-                -- TODO: This won't play if Overcharge isn't equipped due to the sound not being loaded, need to fix.
                 if IsValidAudioComponent() then
                     -- 100%: Full Strength.
                     if fullChargeBonus then
@@ -906,7 +860,7 @@ local function TryRegisterAbilityHooks()
     if not markingShotHookRegistered then
         local ok = pcall(function()
             -- This hook runs whenever someone uses Marking Shot.
-            RegisterHook(MARKING_SHOT_EXECUTE, function(param)
+            RegisterHook(hooking.MARKING_SHOT_EXECUTE, function(param)
                 if not IsValidChargeComponent() then
                     return
                 end
@@ -922,7 +876,6 @@ local function TryRegisterAbilityHooks()
                 fullChargeBonus = virtualCurrentCharges == virtualMaxCharges
 
                 -- Always play the Overcharge voicelines depending on the amount of charges, just like how Overcharge plays them.
-                -- TODO: This won't play if Overcharge isn't equipped due to the sound not being loaded, need to fix.
                 if IsValidAudioComponent() then
                     -- 100%: Full Strength.
                     if fullChargeBonus then
@@ -957,7 +910,7 @@ local function TryRegisterAbilityHooks()
     if not lumiereAssaultHookRegistered then
         local ok = pcall(function()
             -- This hook runs whenever someone uses Lumiere Assault.
-            RegisterHook(LUMIERE_ASSAULT_EXECUTE, function(param)
+            RegisterHook(hooking.LUMIERE_ASSAULT_EXECUTE, function(param)
                 if not IsValidChargeComponent() then
                     return
                 end
@@ -988,7 +941,7 @@ local function TryRegisterAbilityHooks()
     if not strikeStormHookRegistered then
         local ok = pcall(function()
             -- This hook runs whenever someone uses Strike Storm.
-            RegisterHook(STRIKE_STORM_EXECUTE, function(param)
+            RegisterHook(hooking.STRIKE_STORM_EXECUTE, function(param)
                 if not IsValidChargeComponent() then
                     return
                 end
@@ -1014,7 +967,7 @@ local function TryRegisterAbilityHooks()
     if not fromFireHookRegistered then
         local ok = pcall(function()
             -- This hook runs whenever someone uses From Fire.
-            RegisterHook(FROM_FIRE_EXECUTE, function(param)
+            RegisterHook(hooking.FROM_FIRE_EXECUTE, function(param)
                 if not IsValidChargeComponent() then
                     return
                 end
@@ -1029,9 +982,9 @@ local function TryRegisterAbilityHooks()
 
                 CalculateAmountOfConsumedCharges("FromFire_Gustave", "From Fire")
 
-                -- 50% chance to play a voiceline.
+                -- 50% chance to play the voiceline.
                 if math.random(1, 100) <= 50 then
-                    PlayVoiceLine(battleAudioManager, "takethemdown")
+                    PlayVoiceLine(battleAudioManager, "breakcycle")
                 end
             end)
         end)
@@ -1047,7 +1000,7 @@ local function TryRegisterAbilityHooks()
     if not recoveryHookRegistered then
         local ok = pcall(function()
             -- This hook runs whenever someone uses Recovery.
-            RegisterHook(RECOVERY_ON_EXECUTE, function(param)
+            RegisterHook(hooking.RECOVERY_ON_EXECUTE, function(param)
                 if not IsValidChargeComponent() then
                     return
                 end
@@ -1061,7 +1014,7 @@ local function TryRegisterAbilityHooks()
             end)
 
             -- This hook runs when Recovery's effect plays.
-            RegisterHook(RECOVERY_ON_EFFECT, function(param)
+            RegisterHook(hooking.RECOVERY_ON_EFFECT, function(param)
                 if not IsValidChargeComponent() then
                     return
                 end
@@ -1108,7 +1061,7 @@ local function TryRegisterAbilityHooks()
     if not powerfulHookRegistered then
         local ok = pcall(function()
             -- This hook runs whenever someone uses Powerful.
-            RegisterHook(POWERFUL_ON_EXECUTE, function(param)
+            RegisterHook(hooking.POWERFUL_ON_EXECUTE, function(param)
                 if not IsValidChargeComponent() then
                     return
                 end
@@ -1127,14 +1080,14 @@ local function TryRegisterAbilityHooks()
                     usedPowerful = true
                 end
 
-                -- 50% chance to play a voiceline.
+                -- 50% chance to play the voiceline.
                 if math.random(1, 100) <= 50 then
                     PlayVoiceLine(battleAudioManager, "overcharge3")
                 end
             end)
 
             -- This hook runs when Powerful's effects trigger.
-            RegisterHook(POWERFUL_ON_EFFECT, function(param)
+            RegisterHook(hooking.POWERFUL_ON_EFFECT, function(param)
                 if not IsValidChargeComponent() then
                     return
                 end
@@ -1280,7 +1233,7 @@ local function TryRegisterAbilityHooks()
     if not lightHolderHookRegistered then
         local ok = pcall(function()
             -- This hook runs whenever someone uses the unused ability Light Holder.
-            RegisterHook(LIGHT_HOLDER_EXECUTE, function(param)
+            RegisterHook(hooking.LIGHT_HOLDER_EXECUTE, function(param)
                 if not IsValidChargeComponent() then
                     return
                 end
@@ -1292,11 +1245,6 @@ local function TryRegisterAbilityHooks()
 
                 Log("Unused Light Holder used this turn.")
                 usedLightHolder = true
-
-                -- 50% chance to play a voiceline.
-                if math.random(1, 100) <= 50 then
-                    PlayVoiceLine(battleAudioManager, "takethemdown")
-                end
             end)
         end)
 
@@ -1311,7 +1259,7 @@ local function TryRegisterAbilityHooks()
     if not radiantStrikeHookRegistered then
         local ok = pcall(function()
             -- This hook runs whenever someone uses the unused ability Radiant Strike.
-            RegisterHook(RADIANT_STRIKE_EXECUTE, function(param)
+            RegisterHook(hooking.RADIANT_STRIKE_EXECUTE, function(param)
                 if not IsValidChargeComponent() then
                     return
                 end
@@ -1326,9 +1274,9 @@ local function TryRegisterAbilityHooks()
 
                 CalculateAmountOfConsumedCharges("RadiantStrike", "Radiant Strike")
 
-                -- 50% chance to play a voiceline.
+                -- 50% chance to play the voiceline.
                 if math.random(1, 100) <= 50 then
-                    PlayVoiceLine(battleAudioManager, "counter")
+                    PlayVoiceLine(battleAudioManager, "battlewon")
                 end
             end)
         end)
@@ -1344,7 +1292,7 @@ local function TryRegisterAbilityHooks()
     if not overloadHookRegistered then
         local ok = pcall(function()
             -- This hook runs whenever someone uses Overload.
-            RegisterHook(OVERLOAD_ON_EXECUTE, function(param)
+            RegisterHook(hooking.OVERLOAD_ON_EXECUTE, function(param)
                 if not IsValidChargeComponent() then
                     return
                 end
@@ -1355,10 +1303,14 @@ local function TryRegisterAbilityHooks()
                 end
 
                 usedOverload = true
+                Log("Overload used this turn.")
+
+                -- Calculate amount of given charges based off % of missing charges and divide by 2 since Overload's effect triggers twice.
+                overloadAddedCharges = math.floor(((virtualMaxCharges - virtualCurrentCharges) * overloadChargesPercentage) / 2)
             end)
 
             -- This hook runs whenever Overload's effects trigger.
-            RegisterHook(OVERLOAD_ON_EFFECT, function(param)
+            RegisterHook(hooking.OVERLOAD_ON_EFFECT, function(param)
                 if not IsValidChargeComponent() then
                     return
                 end
@@ -1368,22 +1320,8 @@ local function TryRegisterAbilityHooks()
                     return
                 end
 
-                Log("Overload used this turn.")
-
-                -- Skip the first instance of Overload since this hook triggers twice during the ability's animation.
-                -- We need to do this now since we restore charges based on what we miss and not the total anymore, so this would mess up calculations otherwise.
-                if overloadSkipFirstInstance then
-                    overloadSkipFirstInstance = false
-                    return
-                else
-                    overloadSkipFirstInstance = true
-                end
-
-                -- Calculate amount of given charges based off % of missing charges.
-                local addedCharges = math.floor(((virtualMaxCharges - virtualCurrentCharges) * overloadChargesPercentage))
-
-                chargeComponent.ChangeCharge(addedCharges)
-                Log("Overload: Adding " .. addedCharges .. " charges to the counter.")
+                chargeComponent.ChangeCharge(overloadAddedCharges)
+                Log("Overload: Adding " .. overloadAddedCharges .. " charges to the counter.")
             end)
         end)
 
@@ -1398,7 +1336,7 @@ local function TryRegisterAbilityHooks()
     if not steeledStrikeHookRegistered then
         local ok = pcall(function()
             -- This hook runs whenever someone uses Steeled Strike.
-            RegisterHook(STEELED_STRIKE_EXECUTE, function(param)
+            RegisterHook(hooking.STEELED_STRIKE_EXECUTE, function(param)
                 if not IsValidChargeComponent() then
                     return
                 end
@@ -1426,7 +1364,7 @@ local function TryRegisterAbilityHooks()
     if not endbringerHookRegistered then
         local ok = pcall(function()
             -- This hook runs whenever someone uses Endbringer.
-            RegisterHook(ENDBRINGER_ON_EXECUTE, function(param)
+            RegisterHook(hooking.ENDBRINGER_ON_EXECUTE, function(param)
                 if not IsValidChargeComponent() then
                     return
                 end
@@ -1452,7 +1390,7 @@ local function TryRegisterAbilityHooks()
     if not berserkSlashHookRegistered then
         local ok = pcall(function()
             -- This hook runs whenever someone uses Berserk Slash.
-            RegisterHook(BERSERK_SLASH_ON_EXECUTE, function(param)
+            RegisterHook(hooking.BERSERK_SLASH_ON_EXECUTE, function(param)
                 if not IsValidChargeComponent() then
                     return
                 end
@@ -1480,7 +1418,7 @@ local function TryRegisterAbilityHooks()
     if not defiantStrikeHookRegistered then
         local ok = pcall(function()
             -- This hook runs whenever someone uses Defiant Strike.
-            RegisterHook(DEFIANT_STRIKE_ON_EXECUTE, function(param)
+            RegisterHook(hooking.DEFIANT_STRIKE_ON_EXECUTE, function(param)
                 if not IsValidChargeComponent() then
                     return
                 end
@@ -1508,7 +1446,7 @@ local function TryRegisterAbilityHooks()
     if not blitzHookRegistered then
         local ok = pcall(function()
             -- This hook runs whenever someone uses Blitz.
-            RegisterHook(BLITZ_ON_EXECUTE, function(param)
+            RegisterHook(hooking.BLITZ_ON_EXECUTE, function(param)
                 if not IsValidChargeComponent() then
                     return
                 end
@@ -1522,7 +1460,8 @@ local function TryRegisterAbilityHooks()
                 usedBlitz = true
 
                 -- Temporarily cache this skill script object so we can apply Stormcaller to an enemy.
-                temp_SkillScript = unwrap(param)
+                -- TODO: Stormcaller doesn't work yet, don't use it for now.
+                --temp_SkillScript = unwrap(param)
 
                 CalculateAmountOfConsumedCharges("Blitz", "Blitz")
             end)
@@ -1539,7 +1478,7 @@ local function TryRegisterAbilityHooks()
     if not followUpHookRegistered then
         local ok = pcall(function()
             -- This hook runs whenever someone uses Follow Up.
-            RegisterHook(FOLLOW_UP_ON_EXECUTE, function(param)
+            RegisterHook(hooking.FOLLOW_UP_ON_EXECUTE, function(param)
                 if not IsValidChargeComponent() then
                     return
                 end
@@ -1552,7 +1491,7 @@ local function TryRegisterAbilityHooks()
                 Log("Follow Up used this turn.")
                 usedFollowUp = true
 
-                -- 50% chance to play a voiceline.
+                -- 50% chance to play the voiceline.
                 if math.random(1, 100) <= 50 then
                     PlayVoiceLine(battleAudioManager, "takethemdown")
                 end
@@ -1561,7 +1500,7 @@ local function TryRegisterAbilityHooks()
             end)
 
             -- This hook runs whenever Follow Up checks its requirement for reduced AP cost.
-            RegisterHook(FOLLOW_UP_COST_OVERRIDE, function(param, override, newValue)
+            RegisterHook(hooking.FOLLOW_UP_COST_OVERRIDE, function(param, override, newValue)
                 if not IsValidChargeComponent() then
                     return
                 end
@@ -1597,7 +1536,7 @@ local function TryRegisterAbilityHooks()
     if not ascendingAssaultHookRegistered then
         local ok = pcall(function()
             -- This hook runs whenever someone uses Ascending Assault.
-            RegisterHook(ASCENDING_ASSAULT_ON_EXECUTE, function(param)
+            RegisterHook(hooking.ASCENDING_ASSAULT_ON_EXECUTE, function(param)
                 if not IsValidChargeComponent() then
                     return
                 end
@@ -1610,16 +1549,16 @@ local function TryRegisterAbilityHooks()
                 Log("Ascending Assault used this turn.")
                 usedAscendingAssault = true
 
-                -- 50% chance to play a voiceline.
+                -- 50% chance to play the voiceline.
                 if math.random(1, 100) <= 50 then
-                    PlayVoiceLine(battleAudioManager, "takethemdown")
+                    PlayVoiceLine(battleAudioManager, "battlewon")
                 end
 
                 CalculateAmountOfConsumedCharges("AscendingAssault", "Ascending Assault")
             end)
 
             -- This hook runs whenever Ascending Assault checks its requirement for reduced AP cost.
-            RegisterHook(ASCENDING_ASSAULT_COST_OVERRIDE, function(param, override, newValue)
+            RegisterHook(hooking.ASCENDING_ASSAULT_COST_OVERRIDE, function(param, override, newValue)
                 if not IsValidChargeComponent() then
                     return
                 end
@@ -1655,7 +1594,7 @@ local function TryRegisterAbilityHooks()
     if not speedBurstHookRegistered then
         local ok = pcall(function()
             -- This hook runs whenever someone uses Speed Burst.
-            RegisterHook(SPEED_BURST_ON_EXECUTE, function(param)
+            RegisterHook(hooking.SPEED_BURST_ON_EXECUTE, function(param)
                 if not IsValidChargeComponent() then
                     return
                 end
@@ -1681,7 +1620,7 @@ local function TryRegisterAbilityHooks()
     if not phantomStarsHookRegistered then
         local ok = pcall(function()
             -- This hook runs whenever someone uses Phantom Stars.
-            RegisterHook(PHANTOM_STARS_ON_EXECUTE, function(param)
+            RegisterHook(hooking.PHANTOM_STARS_ON_EXECUTE, function(param)
                 if not IsValidChargeComponent() then
                     return
                 end
@@ -1696,7 +1635,7 @@ local function TryRegisterAbilityHooks()
 
                 -- For some reason Phantom Stars seems to calculate the consumed AP after we already consumed our charges.
                 -- And because of the charges already being consumed, we might fall under the required amount and it would eat all AP no matter what.
-                -- We'll wait a frame before consuming the charges so it takes the reduced AP cost instead of the regular cost.
+                -- Wait a frame before consuming the charges so it takes the reduced AP cost instead of the regular cost.
                 -- Why do Follow up and Ascending Assault not have this weirdness? Enjoyable game!
                 ExecuteWithDelay(50, function()
                     CalculateAmountOfConsumedCharges("PhantomStars", "Phantom Stars")
@@ -1704,7 +1643,7 @@ local function TryRegisterAbilityHooks()
             end)
 
             -- This hook runs whenever Phantom Stars checks its requirement for reduced AP cost.
-            RegisterHook(PHANTOM_STARS_COST_OVERRIDE, function(param, override, newValue)
+            RegisterHook(hooking.PHANTOM_STARS_COST_OVERRIDE, function(param, override, newValue)
                 if not IsValidChargeComponent() then
                     return
                 end
@@ -1740,7 +1679,7 @@ local function TryRegisterAbilityHooks()
     if not paradigmShiftHookRegistered then
         local ok = pcall(function()
             -- This hook runs whenever someone uses Paradigm Shift.
-            RegisterHook(PARADIGM_SHIFT_ON_EXECUTE, function(param)
+            RegisterHook(hooking.PARADIGM_SHIFT_ON_EXECUTE, function(param)
                 if not IsValidChargeComponent() then
                     return
                 end
@@ -1755,7 +1694,7 @@ local function TryRegisterAbilityHooks()
             end)
 
             -- This hook runs everytime an enemy gets hit by Paradigm Shift.
-            RegisterHook(PARADIGM_SHIFT_ON_EFFECT, function(param)
+            RegisterHook(hooking.PARADIGM_SHIFT_ON_EFFECT, function(param)
                 if not IsValidChargeComponent() then
                     return
                 end
@@ -1808,7 +1747,7 @@ local function TryRegisterAbilityHooks()
     if not purificationHookRegistered then
         local ok = pcall(function()
             -- This hook runs whenever someone uses Purification.
-            RegisterHook(PURIFICATION_ON_EXECUTE, function(param)
+            RegisterHook(hooking.PURIFICATION_ON_EXECUTE, function(param)
                 if not IsValidChargeComponent() then
                     return
                 end
@@ -1821,6 +1760,7 @@ local function TryRegisterAbilityHooks()
                 Log("Purification used this turn.")
                 usedPurification = true
 
+                -- Cache the skill script for this instance so that we can apply Powerless to the enemy.
                 temp_SkillScript = unwrap(param)
 
                 CalculateAmountOfConsumedCharges("Purification", "Purification")
@@ -1834,11 +1774,37 @@ local function TryRegisterAbilityHooks()
         end
     end
 
+    -- Try to register Striker's hooks.
+    if not strikerHookRegistered then
+        local ok = pcall(function()
+            -- This hook runs whenever someone uses Angel's Eyes.
+            RegisterHook(hooking.STRIKER_ON_EXECUTE, function(param)
+                if not IsValidChargeComponent() then
+                    return
+                end
+
+                -- A different character used this ability, do nothing.
+                if not overchargeCharacterTurn then
+                    return
+                end
+
+                Log("Striker used this turn.")
+                usedStriker = true
+            end)
+        end)
+
+        -- If it was successful, mark the hooks registrations as true.
+        if ok then
+            strikerHookRegistered = true
+            Log("Successfully registered Striker's ability execution hooks.")
+        end
+    end
+
     -- Try to register Angel's Eyes' hooks.
     if not angelsEyesHookRegistered then
         local ok = pcall(function()
             -- This hook runs whenever someone uses Angel's Eyes.
-            RegisterHook(ANGELS_EYES_ON_EXECUTE, function(param)
+            RegisterHook(hooking.ANGELS_EYES_ON_EXECUTE, function(param)
                 if not IsValidChargeComponent() then
                     return
                 end
@@ -1867,7 +1833,7 @@ local function TryRegisterAbilityHooks()
             -- We have to be careful here so we don't affect the characters that DO NOT have the "Berserk" buff.
             -- I DID NOT KNOW THAT BERSERK SLOWLY MAKES AFFECTED CHARACTERS GROW, I fought the chromatic lampmaster for an hour in the randomizer in spring meadows and suddenly noticed that Gustave was LARGE.
             -- This should fix it while not taking away this feature from enemies BUT you can turn off this fix with a config setting if you like to meme around... :)
-            RegisterHook(BERSERK_TURN_START, function(param, characterStats, turnStartDependencies)
+            RegisterHook(hooking.BERSERK_TURN_START, function(param, characterStats, turnStartDependencies)
                 if not IsValidChargeComponent() then
                     return
                 end
@@ -1955,28 +1921,39 @@ local function TryRegisterChargeComponentHooks()
 
     Log("Trying to register charge component hooks...")
 
-    RegisterHook(OVERCHARGE_WIDGET_CONSTRUCT, function(param)
-        -- This is the full widget object responsible for the UI.
-        local self = unwrap(param)
+    -- This hook gets called when the game is constructing the Overcharge widget, responsible for drawing the current amount of charges, max charges and the arm image.
+    if not constructPortraitHookRegistered then
+        local ok = pcall(function()
+            RegisterHook(hooking.OVERCHARGE_WIDGET_CONSTRUCT, function(param)
+                -- This is the full widget object responsible for the UI.
+                local self = unwrap(param)
 
-        if self:IsValid() then
-            -- Cache the portrait text property for the charge counter for this fight so that we can call it from any of our hooks.
-            chargePortrait_CurrentValue = self.TextBlock_CurrentValue
+                if self:IsValid() then
+                    -- Cache the portrait text property for the charge counter for this fight so that we can call it from any of our hooks.
+                    chargePortrait_CurrentValue = self.TextBlock_CurrentValue
 
-            -- Modify the portrait's charge counter.
-            -- Since we are using the game's native SetText() function which handles the writing into the property, using UE4SS' FText() function should be safe here.
-            if self.TextBlock_MaxValue:IsValid() then
-                self.TextBlock_MaxValue:SetText(FText("/" .. tostring(virtualMaxCharges)))
-                Log("Modified Overcharge's arm UI widget to " .. tostring(virtualMaxCharges) .. " max charges.")
-            end
+                    -- Modify the portrait's charge counter.
+                    -- Since we are using the game's native SetText() function which handles the writing into the property, using UE4SS' FText() function should be safe here.
+                    if self.TextBlock_MaxValue:IsValid() then
+                        self.TextBlock_MaxValue:SetText(FText("/" .. tostring(virtualMaxCharges)))
+                        Log("Modified Overcharge's arm UI widget to " .. tostring(virtualMaxCharges) .. " max charges.")
+                    end
+                end
+            end)
+        end)
+
+        -- If it was successful, mark the hooks registrations as true.
+        if ok then
+            constructPortraitHookRegistered = true
+            Log("Successfully registered OVERCHARGE_WIDGET_CONSTRUCT execution hook.")
         end
-    end)
+    end
 
     -- This hook gets called when the game thinks we reached the maximum charge amount and slightly moves the text and plays the "fully charged" sound.
     -- It messes up our custom charge counter in the UI once we reach the maximum charges so we have to fix it here.
     if not updateCurrentValueHookRegistered then
         local ok = pcall(function()
-            RegisterHook(UPDATE_CURRENT_VALUE, function(param)
+            RegisterHook(hooking.UPDATE_CURRENT_VALUE, function(param)
                 if not IsValidChargeComponent() then
                     return
                 end
@@ -2000,7 +1977,7 @@ local function TryRegisterChargeComponentHooks()
     -- And it turns out this hook runs when he was eaten by an enemy and freed during battle as well.
     if not receiveBeginPlayHookRegistered then
         local ok = pcall(function()
-            RegisterHook(RECEIVE_BEGIN_PLAY, function(param)
+            RegisterHook(hooking.RECEIVE_BEGIN_PLAY, function(param)
                 local self = unwrap(param)
 
                 -- Check if the charge component exists, if yes then cache it.
@@ -2053,7 +2030,7 @@ local function TryRegisterChargeComponentHooks()
     -- This hook runs whenever our character gets his turn.
     if not onTurnStartHookRegistered then
         local ok = pcall(function()
-            RegisterHook(ON_TURN_START, function(param)
+            RegisterHook(hooking.ON_TURN_START, function(param)
                 -- This is a safety incase we somehow ever lose the current charge component, get it when a new turn starts.
                 -- Although this should NEVER happen.
                 if not IsValidChargeComponent() then
@@ -2097,7 +2074,7 @@ local function TryRegisterChargeComponentHooks()
     -- This hook runs whenever the turn of our character ends.
     if not onTurnEndHookRegistered then
         local ok = pcall(function()
-            RegisterHook(ON_TURN_END, function(param)
+            RegisterHook(hooking.ON_TURN_END, function(param)
                 -- This is a safety incase we somehow ever lose the current charge component, get it when a new turn starts.
                 -- Although this should NEVER happen.
                 if not IsValidChargeComponent() then
@@ -2130,7 +2107,7 @@ local function TryRegisterChargeComponentHooks()
     -- This hook runs whenever someone dodges.
     if not dodgeSuccessfulHookRegistered then
         local ok = pcall(function()
-            RegisterHook(DODGE_SUCCESSFUL, function(param, character, enemy)
+            RegisterHook(hooking.DODGE_SUCCESSFUL, function(param, character, enemy)
                 -- We have kept the default value of +1 charge per successful dodge, do nothing.
                 if config.ChargesOnDodge == 1 then
                     return
@@ -2165,7 +2142,7 @@ local function TryRegisterChargeComponentHooks()
     -- This hook runs whenever someone parries.
     if not parrySuccessfulHookRegistered then
         local ok = pcall(function()
-            RegisterHook(PARRY_SUCCESSFUL, function(param, character, enemy)
+            RegisterHook(hooking.PARRY_SUCCESSFUL, function(param, character, enemy)
                 -- We have kept the default value of +1 charge per successful parry, do nothing.
                 if config.ChargesOnParry == 1 then
                     return
@@ -2200,7 +2177,7 @@ local function TryRegisterChargeComponentHooks()
     -- This hook runs whenever someone gets broken/stunned.
     if not onBreakStunHookRegistered then
         local ok = pcall(function()
-            RegisterHook(ON_BREAK_STUN, function(selfParam, sourceParam, reasonParam)
+            RegisterHook(hooking.ON_BREAK_STUN, function(selfParam, sourceParam, reasonParam)
                 if not IsValidChargeComponent() then
                     return
                 end
@@ -2260,7 +2237,7 @@ local function TryRegisterChargeComponentHooks()
     -- This hook runs whenever someone takes damage.
     if not onReceivedDamageHookRegistered then
         local ok = pcall(function()
-            RegisterHook(ON_RECEIVED_DAMAGE, function(param, damageParam)
+            RegisterHook(hooking.ON_RECEIVED_DAMAGE, function(param, damageParam)
                 if not IsValidChargeComponent() then
                     return
                 end
@@ -2448,7 +2425,7 @@ local function TryRegisterChargeComponentHooks()
     -- This hook runs whenever charges get added/removed.
     if not changeChargeHookRegistered then
         local ok = pcall(function()
-            RegisterHook(CHANGE_CHARGE, function(param, amount)
+            RegisterHook(hooking.CHANGE_CHARGE, function(param, amount)
                 -- Since we call ChangeCharge() in our hook, this prevents an infinite recursive call.
                 if updatingNativeCharge then
                     return
@@ -2532,7 +2509,7 @@ local function TryRegisterChargeComponentHooks()
 end
 
 -- This hook runs when loading a save.
-RegisterHook(CLIENT_RESTART, function()
+RegisterHook(hooking.CLIENT_RESTART, function()
     if clientHookRegistered then
         return 
     end
@@ -2548,16 +2525,18 @@ RegisterHook(CLIENT_RESTART, function()
     -- Although it seems like the hooks always register on the first battle so all of the checks and repeated attempts are just for safety incase it ever fails on first battle.
     if not AreAllChargeComponentHooksRegistered() then
         Log("Failed to register all charge component hooks due to missing overcharge character in party, hooking BATTLE_FULLY_LOADED to attempt to load them at start of each battle...")
-        RegisterHook(BATTLE_FULLY_LOADED, TryRegisterChargeComponentHooks)
+        RegisterHook(hooking.BATTLE_FULLY_LOADED, TryRegisterChargeComponentHooks)
     end
 
-    -- This hook runs when a battle started, so we can track it for ability names.
-    RegisterHook(BATTLE_STARTED, function(param)
+    -- This hook runs when a battle started, so we can track it for our ability names hook.
+    RegisterHook(hooking.BATTLE_STARTED, function(param)
         Log("BATTLE_STARTED")
         selectedFreyInMenu = false
+        loadingSystemComponent = nil
     end)
 
-    RegisterHook(MENU_LOAD_CHARACTER_DATA, function(param, characterData)        
+    -- This hook runs when opening the character menu and selecting a specific character.
+    RegisterHook(hooking.MENU_LOAD_CHARACTER_DATA, function(param, characterData)        
         local character = unwrap(characterData)
 
         if character:IsValid() then
@@ -2571,7 +2550,8 @@ RegisterHook(CLIENT_RESTART, function()
         end
     end)
 
-    RegisterHook(SKILLPANEL_LOAD_CHARACTER, function(param, characterData)
+    -- This hook runs when opening the skills menu in the character selection menu and update all of the skill values after changing names/description.
+    RegisterHook(hooking.SKILLPANEL_LOAD_CHARACTER, function(param, characterData)
         local skillPanel = unwrap(param)
 
         if skillPanel:IsValid() then
@@ -2581,7 +2561,7 @@ RegisterHook(CLIENT_RESTART, function()
 
     -- This hook runs whenever the game is calculating the damage multiplier of an ability - usually when someone gets hit.
     -- We will also use this function to modify the elemental damage type of abilities since this is early enough for the game to accept the new value.
-    RegisterHook(GET_ATTACK_MULTIPLIER, function(param)
+    RegisterHook(hooking.GET_ATTACK_MULTIPLIER, function(param)
         if not IsValidChargeComponent() then
             return
         end
@@ -2741,7 +2721,7 @@ RegisterHook(CLIENT_RESTART, function()
 
     -- This hook runs on any character's turn start.
     -- We will use it in order to grab the elemental damage type of our character's weapon for abilities that use it.
-    RegisterHook(GENERIC_CHARACTER_TURN_START, function(param)
+    RegisterHook(hooking.GENERIC_CHARACTER_TURN_START, function(param)
         if not IsValidChargeComponent() then
             return
         end
@@ -2771,7 +2751,7 @@ RegisterHook(CLIENT_RESTART, function()
 
     -- This hook runs when we're in battle and open the ability menu.
     -- We will use this function to decide if an ability should be highlighted in orange because we have the optimal charge counts for them.
-    RegisterHook(GET_COST, function(param, RemoteSkillState)
+    RegisterHook(hooking.GET_COST, function(param, RemoteSkillState)
         if not IsValidChargeComponent() then
             return
         end
@@ -2829,7 +2809,7 @@ RegisterHook(CLIENT_RESTART, function()
 
     -- This function runs when the game initializes the audio manager.
     -- We will use this in order to cache its live instance so we can play our custom voicelines during battle.
-    RegisterHook(AUDIO_MANAGER_INIT, function(param)
+    RegisterHook(hooking.AUDIO_MANAGER_INIT, function(param)
         if not IsValidChargeComponent() or IsValidAudioComponent() then
             return
         end
@@ -2848,8 +2828,7 @@ RegisterHook(CLIENT_RESTART, function()
     -- This function gets executed whenever a skill triggers a voiceline.
     -- We will hijack this function and mute the original voiceline if we don't want it to play, while replacing it with our own custom ones.
     -- TODO: Finish this.
-    RegisterHook(PLAY_SKILL_BATTLE_LINE_INTERNAL, function(param, soundAsset)
-        Log("PLAY_SKILL_BATTLE_LINE_INTERNAL triggered")
+    RegisterHook(hooking.PLAY_SKILL_BATTLE_LINE_INTERNAL, function(param, soundAsset)
         if not IsValidChargeComponent() then
             return
         end
@@ -2865,7 +2844,7 @@ RegisterHook(CLIENT_RESTART, function()
             return
         end
 
-        -- This is the audio manager instance.
+        -- This is the current audio manager instance.
         local self = unwrap(param)
 
         -- Do nothing if it doesn't exist for whatever reason.
@@ -2876,6 +2855,7 @@ RegisterHook(CLIENT_RESTART, function()
         -- Silence the original voicelines of this ability.
         local interrupted = {}
         self:TryInterruptActiveSkillBattleLine(interrupted)
+        Log("Silenced current battle line.")
 
         local voiceLine
 
@@ -2887,15 +2867,19 @@ RegisterHook(CLIENT_RESTART, function()
         elseif usedEndbringer then
             voiceLine = voiceLinesList["breakcycle"]
         elseif usedBerserkSlash then
-            voiceLine = voiceLinesList["overcharge3"]
+            voiceLine = voiceLinesList["battlewon"]
         elseif usedDefiantStrike then
-            voiceLine = voiceLinesList["breakcycle"]
+            voiceLine = voiceLinesList["battlewon"]
         elseif usedBlitz then
             voiceLine = voiceLinesList["buffteam"]
         elseif usedPurification then
             voiceLine = voiceLinesList["overcharge3"]
         elseif usedLightHolder then
             voiceLine = voiceLinesList["takethemdown"]
+        elseif usedStriker then
+            voiceLine = voiceLinesList["overcharge3"]
+        elseif usedAngelsEyes then
+            voiceLine = voiceLinesList["overcharge4"]
         else
             return
         end
@@ -2903,12 +2887,13 @@ RegisterHook(CLIENT_RESTART, function()
         if voiceLine and voiceLine:IsValid() then
             voiceLinePlaying = true
             self:PlaySkillBattleLineInternal(voiceLine)
+            Log("Replaced battle line with custom value.")
             voiceLinePlaying = false
         end
     end)
 
     -- This hook runs at the start of a battle, registering all objects used by objects such as skills, luminas and actors (e.g. enemies).
-    RegisterHook(LOAD_DEPENDENCIES_FROM_OBJECT, function(param, object)
+    RegisterHook(hooking.LOAD_DEPENDENCIES_FROM_OBJECT, function(param, object)
         if IsValidLoadingComponent() or loadingDependenciesGuard then
             return
         end
@@ -2925,6 +2910,11 @@ RegisterHook(CLIENT_RESTART, function()
 
         -- Technically this guard isn't needed because we check if we cached the loading system component and then never enter this part of the code anymore.
         -- But you can never be safe enough.
+        -- TODO: This works and since we use the game's proper way of loading dependencies it will cause no issues and the game will handle everything else regarding lifetime and whatnot.
+        -- But if we don't have an overcharge component (character missing) then it would be nice to check if we really need to load them for the current fight.
+        -- Again, this would be a very small but nice optimization to respect the game's loading patterns, but this is something for a future clean-up update.
+        -- This causes no performance issues or much increased memory usage, it's just a few extra abilities that always get loaded so we can use their tied voicelines.
+        -- Comparing the fact that using 3 characters with 6 skils each loads 18 of them in a battle, this isn't a big deal.
         loadingDependenciesGuard = true
         self:LoadDependenciesFromObject(cachedSkills["UnleashCharge"])
         self:LoadDependenciesFromObject(cachedSkills["MarkingShot_Gustave"])
@@ -2937,9 +2927,10 @@ RegisterHook(CLIENT_RESTART, function()
     end)
 
     -- This hook modifies the AP cost and description of abilities.
-    RegisterHook(GET_BASE_COST, ModifyAbilityCostAndDescriptionUnwrapper)
+    RegisterHook(hooking.GET_BASE_COST, ModifyAbilityCostAndDescriptionUnwrapper)
 
     -- For the first time we load into a save: Attempt to modify all descriptions and AP costs so that they are correct right away.
+    -- We also cache the a few abilities related to voicelines that are tied to them for later use.
     if not modifiedAllAbilities then
         modifiedAllAbilities = true
         ModifyAllDescriptionsAndCost()
