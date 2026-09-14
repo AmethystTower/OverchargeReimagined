@@ -767,6 +767,7 @@ local function ResetAbilityStates()
     usedPurification = false
     usedAngelsEyes = false
     usedStriker = false
+    usedSabotage = false
     usedParadigmShift = false
     usedRecovery = false
     usedOverload = false
@@ -1126,6 +1127,8 @@ local function TryRegisterAbilityHooks()
                 end
 
                 -- 50% chance to play the voiceline.
+                -- Powerful already says a voiceline halfway through casting it but let's put it to the start of the animation.
+                -- Sinde this voiceline is quite lengthy it covers the whole animation which makes it better if we play it earlier!
                 if math.random(1, 100) <= 50 then
                     PlayVoiceLine(battleAudioManager, "overcharge3")
                 end
@@ -1651,6 +1654,11 @@ local function TryRegisterAbilityHooks()
 
                 Log("Speed Burst used this turn.")
                 usedSpeedBurst = true
+
+                -- 50% chance to play the voiceline.
+                if math.random(1, 100) <= 50 then
+                    PlayVoiceLine(battleAudioManager, "overcharge2")
+                end
             end)
         end)
 
@@ -1736,6 +1744,11 @@ local function TryRegisterAbilityHooks()
 
                 Log("Paradigm Shift used this turn.")
                 usedParadigmShift = true
+
+                -- 50% chance to play the voiceline.
+                if math.random(1, 100) <= 50 then
+                    PlayVoiceLine(battleAudioManager, "overcharge1")
+                end
             end)
 
             -- This hook runs everytime an enemy gets hit by Paradigm Shift.
@@ -2937,6 +2950,12 @@ RegisterHook(hooking.CLIENT_RESTART, function()
         local interrupted = {}
         self:TryInterruptActiveSkillBattleLine(interrupted)
         Log("Silenced current battle line.")
+
+        -- 50% chance to play no voiceline still since this function seems to trigger all the time, even if nothing is said.
+        -- Otherwise we'd hear the voicelines with every cast.
+        if math.random(1, 100) <= 50 then
+            return
+        end
 
         local voiceLine
 
