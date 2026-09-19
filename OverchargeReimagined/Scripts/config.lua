@@ -594,7 +594,7 @@ return
 
     -- The custom name for this ability displayed in-game.
     -- NOTE: Don't remove the quotes otherwise the config will fail to load. They don't get shown in-game.
-    ParadigmShiftName = "Calculated Attack",
+    ParadigmShiftName = "Calculated Shift",
 
     ------------------------------------------------------------------------
 

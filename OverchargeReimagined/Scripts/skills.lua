@@ -84,6 +84,7 @@ local function Init(log, config, elementalEnum)
     abilityValues["MarkingShot_Gustave"].OverchargeName = config.MarkingShotName
     abilityValues["MarkingShot_Gustave"].OverchargeBonusDescription = "Applies <keyword id=\"StatusEffect_Mark\">Mark</> at the end of the barrage."
     abilityValues["MarkingShot_Gustave"].OverchargeLongDescription = "Deals high single target " .. GetElementString(config.MarkingShotElement, elementalEnum, false) .. " damage. 1 hit.\n" .. "Consumes all <keyword id=\"Gustave_Charges\">Charges</> for increased damage and a higher chance to instantly <keyword id=\"Break\">Break</>\n" .. abilityValues["MarkingShot_Gustave"].OverchargeBonusDescription
+    abilityValues["MarkingShot_Gustave"].OverchargeDynamicDescriptionPiece = "% chance to instantly <keyword id=\"Break\">Break</>\n" .. abilityValues["MarkingShot_Gustave"].OverchargeBonusDescription
     -- Do not add bonus description to short description here, this ability's short description is built dynamically to show the current stun chance in module main.lua in function ModifyAbilityCostAndDescription() during battle.
     abilityValues["MarkingShot_Gustave"].OverchargeShortDescription = "High " .. GetElementString(config.MarkingShotElement, elementalEnum, true) .. " damage based on the amount of <keyword id=\"Gustave_Charges\">Charges</> 1 hit."
     abilityValues["MarkingShot_Gustave"].PerfectionName = nil
@@ -309,6 +310,7 @@ local function Init(log, config, elementalEnum)
     abilityValues["AscendingAssault"].OverchargeName = config.AscendingAssaultName
     abilityValues["AscendingAssault"].OverchargeBonusDescription = "Costs " .. (config.AscendingAssaultAPReducedCost) .. " <keyword id=\"APShard\">AP</> if all charges are available."
     abilityValues["AscendingAssault"].OverchargeLongDescription = "Deals low single target " .. GetElementString(config.AscendingAssaultElement, elementalEnum, false) .. " damage. 1 hit.\n" .. "Increased damage and consumed charges at each cast.\nInitially consumes up to " .. (config.AscendingAssaultChargesConsumed) .. " <keyword id=\"Gustave_Charges\">Charges</> and consumes up to " .. (config.AscendingAssaultAdditionalChargesConsumed) .. " more <keyword id=\"Gustave_Charges\">Charges</> after each cast.\n" .. abilityValues["AscendingAssault"].OverchargeBonusDescription
+    abilityValues["AscendingAssault"].OverchargeDynamicDescriptionPiece = abilityValues["AscendingAssault"].OverchargeBonusDescription .. "\n"
     -- Do not add bonus description to short description here, this ability's short description is built dynamically to show the current amount of consumed charges in module main.lua in function ModifyAbilityCostAndDescription() during battle.
     abilityValues["AscendingAssault"].OverchargeShortDescription = "Low " .. GetElementString(config.AscendingAssaultElement, elementalEnum, true) .. " damage. 1 hit.\n" .. "Increased damage and consumed charges at each cast.\n"
     abilityValues["AscendingAssault"].PerfectionName = "Ascending Assault"
@@ -350,7 +352,7 @@ local function Init(log, config, elementalEnum)
     abilityValues["ParadigmShift"].ChargesConsumed = config.ParadigmShiftChargesConsumed
     abilityValues["ParadigmShift"].ChargesMultiplier = nil
     abilityValues["ParadigmShift"].OverchargeName = config.ParadigmShiftName
-    abilityValues["ParadigmShift"].OverchargeBonusDescription = "Consumes " .. (config.ParadigmShiftChargesConsumed) .. " <keyword id=\"Gustave_Charges\">Charge(s)</> per hit to give " .. (config.ParadigmShiftAPPerCharge) .. " <keyword id=\"APShard\">AP</> per charge."
+    abilityValues["ParadigmShift"].OverchargeBonusDescription = "Consumes " .. (config.ParadigmShiftChargesConsumed) .. " <keyword id=\"Gustave_Charges\">Charge(s)</> per hit to give +" .. (config.ParadigmShiftAPPerCharge) .. " <keyword id=\"APShard\">AP</> per charge."
     abilityValues["ParadigmShift"].OverchargeLongDescription = "Deals low single target " .. GetElementString(config.ParadigmShiftElement, elementalEnum, false) .. " damage and gives 1-3 <keyword id=\"APShard\">AP</> back. 3 hits.\n" .. abilityValues["ParadigmShift"].OverchargeBonusDescription
     abilityValues["ParadigmShift"].OverchargeShortDescription = "Low " .. GetElementString(config.ParadigmShiftElement, elementalEnum, true) .. " damage and gives 1-3 <keyword id=\"APShard\">AP</> back. 3 hits.\n" .. abilityValues["ParadigmShift"].OverchargeBonusDescription
     abilityValues["ParadigmShift"].PerfectionName = "Paradigm Shift"

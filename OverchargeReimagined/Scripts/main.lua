@@ -621,7 +621,7 @@ local function ModifyAbilityCostAndDescription(param, modifyAPCostOnly)
     if overchargeCharacterTurn and IsValidChargeComponent() then
         -- Dynamically update Marking Shot's short description with the current stun chance we have based off the available amount of charges.
         if abilityNameID == "MarkingShot_Gustave" then
-            assembledShortDescription = assembledShortDescription .. ("\nHas a " .. string.format("%g", (virtualCurrentCharges / virtualMaxCharges * markingShotMaxStunChance) * 100) .. "% chance to instantly <keyword id=\"Break\">Break</>\n" .. abilityValues.OverchargeBonusDescription)
+            assembledShortDescription = assembledShortDescription .. ("\nHas a " .. string.format("%g", (virtualCurrentCharges / virtualMaxCharges * markingShotMaxStunChance) * 100) .. " " .. abilityValues.OverchargeDynamicDescriptionPiece)
         -- Dynamically update the current amount of consumed charges for Ascending Assault.
         elseif abilityNameID == "AscendingAssault" then
             local consumedCharges = ascendingAssaultChargesConsumed + (ascendingAssaultCounter * ascendingAssaultAdditionalChargesConsumed)
@@ -630,7 +630,7 @@ local function ModifyAbilityCostAndDescription(param, modifyAPCostOnly)
                 consumedCharges = virtualMaxCharges
             end
 
-            assembledShortDescription = assembledShortDescription .. ("Consumes up to " .. consumedCharges .. " <keyword id=\"Gustave_Charges\">Charges</> for increased damage.\n" .. abilityValues.OverchargeBonusDescription)
+            assembledShortDescription = assembledShortDescription .. ("Consumes up to " .. consumedCharges .. " <keyword id=\"Gustave_Charges\">Charges</> " .. abilityValues.OverchargeDynamicDescriptionPiece)
         end
     end
 
