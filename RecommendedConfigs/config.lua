@@ -1,11 +1,11 @@
 
 --[[
-------- Overcharge Reimagined v2.4 - By Killera -------
+------- Overcharge Reimagined v3.0 - By Killera -------
 
-        Overcharge Reimagined v2.4 configuration file.
+        Overcharge Reimagined configuration file.
 
         If you created a cool template with this config that offers unique gameplay, feel free to suggest it and maybe it will get added to this mod's official repository!
-        It would have your name on it and others could find it useful!
+        It would have your name on it in the credits and others might thank you for sharing it!
 
         PS:
         I do NOT recommend modifying the settings for the Berserk buff at the bottom of this file.
@@ -19,7 +19,7 @@ return
     ------------------------------------------------------------------------
 
     -- Maximum charges that Overcharge can carry. Default: 100 / Default in Vanilla: 10
-    -- This also increases the maximum damage done by Overcharge for each additional charge it can hold.
+    -- This also increases the maximum damage done by Overcharge, Shatter and Marking Shot for each additional charge they can hold.
     -- NOTE: DO NOT SET THIS TO A NEGATIVE VALUE OR 0, otherwise your character will be unable to generate any charges!
     VirtualMaxCharges = 100,
 
@@ -95,61 +95,99 @@ return
     FreeAimAffectedByCriticals = false,
 
     ------------------------------------------------------------------------
-    -- ABILITIES: These are the settings that define all abilities in regards of: AP cost, generated charges, consumed charges and bonus damage per charges.
+    -- ABILITIES: These are the settings that define all abilities in regards of: AP cost, generated charges, consumed charges, bonus damage per charges and elemental damage type.
     -- The abilities Lumiere Assault and Strike Storm were adjusted to generate more charges to keep up with other abilities that do this.
-    -- Overcharge and Shatter both cost 6 AP, From Fire costs 1 more AP.
+    -- Overcharge, Shatter and Marking Shot both cost 6 AP, From Fire, Radiant Strike, Light Holder and Powerful cost 1 more AP by default.
+    -- By default Overcharge and Shatter also do void damage now, while a lot of other abilities have their base element changed or use the weapon's element to offer more variety.
+    -- All the settings below are personal recommendations that fit the game's balance the best and make our character on par with the others.
     ------------------------------------------------------------------------
 
     -- Overcharge: These are the settings for Overcharge.
+    -- The default settings allow it to do up to x65.125 damage.
     
     -- Percentage amount of charges refilled when breaking an enemy with Overcharge. Default: 0.25 (25%)
     -- NOTE: The value works like this: 0.25 = 25% of max. charges, 0.33 = 33% of max. charges, 1.00 = 100% of max charges aka. complete refill.
     OverchargeChargesPercentage = 0.25,
 
-    -- This adds ontop of Overcharge's default 0.20 damage per charge from the base game. Default: 0.20 (+20%)
-    OverchargeDamagePerCharge = 0.20,
+    -- This adds ontop of Overcharge's default 0.20 (up to ~0.40 if hitting 2 perfect skillchecks at full charges) damage per charge from the base game.
+    -- Default: 0.05 (+5%)
+    OverchargeDamagePerCharge = 0.05,
 
-    -- This adds ontop of Overcharge's default 0.25 "fully charged" bonus from the base game. Default: 0.25 (+25%)
-    OverchargeMaxChargesBonus = 0.25,
+    -- This adds ontop of Overcharge's default x1.25 "fully charged" bonus from the base game. Default: 5.00 (500%)
+    -- NOTE: Gets added, NOT multiplied since that would be too strong.
+    OverchargeMaxChargesBonus = 5.00,
+
+    -- The elemental damage type of this ability. Default: 8 (Void) / Default in Vanilla: 4 (Lightning)
+    -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
+    OverchargeElement = 8,
 
     -- AP cost of this ability. Default: 6 / Default in Vanilla: 4
-    -- Since Overcharge is quite a bit stronger in this mod, a higher AP cost is only fair.
+    -- Since Overcharge is quite a bit stronger in this mod and uses void damage as default, a higher AP cost is only fair.
     OverchargeAPCost = 6,
+
+    -- The custom name for this ability displayed in-game.
+    -- NOTE: Don't remove the quotes otherwise the config will fail to load. They don't get shown in-game.
+    OverchargeName = "Fist of Lumière",
 
     ------------------------------------------------------------------------
 
     -- Shatter: These are the settings for Shatter.
-    -- NOTE: Shatter has some higher default settings for its damage per charge because it is an overall weaker ability.
-    -- The default settings allow Shatter to do about 1/3 of what Overcharge does.
+    -- The default settings allow Shatter to do up to x37.45 damage (about ~57% of what Overcharge does with default settings).
 
-    -- Percentage amount of charges refilled when breaking an enemy with Shatter. Default: 0.20 (20%)
-    -- NOTE: The value works like this: 0.20 = 20% of max. charges, 0.33 = 33% of max. charges, 1.00 = 100% of max charges aka. complete refill.
-    ShatterChargesPercentage = 0.20,
+    -- Percentage amount of charges refilled when breaking an enemy with Shatter. Default: 0.15 (15%)
+    -- NOTE: The value works like this: 0.15 = 15% of max. charges, 0.33 = 33% of max. charges, 1.00 = 100% of max charges aka. complete refill.
+    ShatterChargesPercentage = 0.15,
 
     -- Additional damage multiplier that Shatter gets for each charge it consumes. Default: 0.30 (30%)
-    -- Overcharge gets 0.20 in the base game.
+    -- Overcharge gets 0.20 (up to ~0.40 if hitting 2 perfect skillchecks at full charges) damage per charge from the base game.
     ShatterDamagePerCharge = 0.30,
 
-    -- The extra amount of damage that Shatter gets if the charges are full. Default: 0.35 (30%)
-    -- Overcharge uses 0.25 in the base game.
-    ShatterMaxChargesBonus = 0.35,
+    -- The extra amount of damage that Shatter gets if the charges are full. Default: 5.00 (500%)
+    -- Overcharge uses x1.25 in the base game.
+    -- NOTE: Gets added, NOT multiplied since that would be too strong.
+    ShatterMaxChargesBonus = 5.00,
+
+    -- The elemental damage type of this ability. Default: 8 (Void) / Default in Vanilla: 4 (Lightning)
+    -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
+    ShatterElement = 8,
 
     -- AP cost of this ability. Default: 6 / Default in Vanilla: 5
     -- Shatter is basically like Overcharge that hits all enemies so it is VERY strong in this mod, a higher AP cost is only fair.
     ShatterAPCost = 6,
 
+    -- The custom name for this ability displayed in-game.
+    -- NOTE: Don't remove the quotes otherwise the config will fail to load. They don't get shown in-game.
+    ShatterName = "Sword of Lumière",
+
     ------------------------------------------------------------------------
 
     -- Marking Shot: These are the settings for Marking Shot.
+    -- The default settings allow Marking Shot to do up to x36.2 damage (about ~55% of what Overcharge does with default settings).
 
-    -- Maximum amount of charges this ability can consume for bonus damage. Default: 10
-    MarkingShotChargesConsumed = 10,
+    -- Additional damage multiplier per consumed charge. Default: 0.30 (30%)
+    -- Overcharge gets 0.20 (up to ~0.40 if hitting 2 perfect skillchecks at full charges) damage per charge from the base game.
+    MarkingShotDamagePerCharge = 0.30,
 
-    -- Additional damage multiplier per consumed charge. Default: 0.20 (20%)
-    MarkingShotDamagePerCharge = 0.20,
+    -- The extra amount of damage that Marking Shot gets if the charges are full. Default: 5.00 (500%)
+    -- Overcharge uses x1.25 in the base game.
+    -- NOTE: Gets added, NOT multiplied since that would be too strong.
+    MarkingShotMaxChargesBonus = 5.00,
 
-    -- AP cost of this ability. Default: 2
-    MarkingShotAPCost = 2,
+    -- The maximum stun chance that this ability has when at max charges. Default: 1.00 (100%)
+    -- NOTE: If you reduced the max charges to less than 100 then it's recommended to reduce this chance otherwise stun-locking enemies is easily possible.
+    MarkingShotMaxStunChance = 1.00,
+
+    -- The elemental damage type of this ability. Default: 1 (Physical) / Default in Vanilla: 4 (Lightning)
+    -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
+    MarkingShotElement = 1,
+
+    -- AP cost of this ability. Default: 6 / Default in Vanilla: 2
+    -- Marking Shot is also like Overcharge that doesn't do too much damage compared to the others, but the instant break is strong so higher cost is valid.
+    MarkingShotAPCost = 6,
+
+    -- The custom name for this ability displayed in-game.
+    -- NOTE: Don't remove the quotes otherwise the config will fail to load. They don't get shown in-game.
+    MarkingShotName = "Gunslinger of Lumière",
 
     ------------------------------------------------------------------------
 
@@ -158,8 +196,16 @@ return
     -- Charges per critical hit with this ability. Default: 2 / Default in Vanilla: 1
     LumiereAssaultChargesPerCritical = 2,
 
+    -- The elemental damage type of this ability. Default: 0 (Weapon's Element)
+    -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
+    LumiereAssaultElement = 0,
+
     -- AP cost of this ability. Default: 3
     LumiereAssaultAPCost = 3,
+
+    -- The custom name for this ability displayed in-game.
+    -- NOTE: Don't remove the quotes otherwise the config will fail to load. They don't get shown in-game.
+    LumiereAssaultName = "Lumière Assault",
 
     ------------------------------------------------------------------------
 
@@ -168,8 +214,16 @@ return
     -- Charges per critical hit with this ability. Default: 3 / Default in Vanilla: 2
     StrikeStormChargesPerCritical = 3,
 
+    -- The elemental damage type of this ability. Default: 0 (Weapon's Element)
+    -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
+    StrikeStormElement = 0,
+
     -- AP cost of this ability. Default: 7
     StrikeStormAPCost = 7,
+
+    -- The custom name for this ability displayed in-game.
+    -- NOTE: Don't remove the quotes otherwise the config will fail to load. They don't get shown in-game.
+    StrikeStormName = "Blade Storm",
 
     ------------------------------------------------------------------------
 
@@ -178,8 +232,9 @@ return
     -- Maximum amount of charges this ability can consume for bonus damage. Default: 15
     FromFireChargesConsumed = 15,
 
-    -- Additional damage multiplier per consumed charge. Default: 0.20 (20%)
-    FromFireDamagePerCharge = 0.20,
+    -- Additional damage multiplier per consumed charge. Default: 0.15 (15%)
+    -- NOTE: This is added for each hit and not just the total damage.
+    FromFireDamagePerCharge = 0.15,
 
     -- Additional health per hit. Default: 0.01
     -- NOTE: A value of 0.01 for example means 1% of max health healed per hit per charge.
@@ -189,8 +244,16 @@ return
     -- Charges per critical hit with this ability. Default: 2
     FromFireChargesPerCritical = 2,
 
+    -- The elemental damage type of this ability. Default: 0 (Weapon's Element)
+    -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
+    FromFireElement = 0,
+
     -- AP cost of this ability. Default: 5 / Default in Vanilla: 4
     FromFireAPCost = 5,
+
+    -- The custom name for this ability displayed in-game.
+    -- NOTE: Don't remove the quotes otherwise the config will fail to load. They don't get shown in-game.
+    FromFireName = "Burning Hatred",
 
     ------------------------------------------------------------------------
 
@@ -202,6 +265,10 @@ return
 
     -- AP cost of this ability. Default: 3
     RecoveryAPCost = 3,
+
+    -- The custom name for this ability displayed in-game.
+    -- NOTE: Don't remove the quotes otherwise the config will fail to load. They don't get shown in-game.
+    RecoveryName = "Second Wind",
 
     ------------------------------------------------------------------------
 
@@ -220,6 +287,10 @@ return
     -- The higher AP cost is justified because it gives Berserk and Rage with enough charges, which is very powerful.
     PowerfulAPCost = 4,
 
+    -- The custom name for this ability displayed in-game.
+    -- NOTE: Don't remove the quotes otherwise the config will fail to load. They don't get shown in-game.
+    PowerfulName = "Blind Rage",
+
     ------------------------------------------------------------------------
 
     -- Light Holder: These are the settings for the unused version of Light Holder, exclusive to Gustave only.
@@ -229,28 +300,45 @@ return
     LightHolderChargesPerCritical = 2,
 
     -- Additional damage multiplier for each x amount of health. Default: 0.01 (1%)
+    -- NOTE: This is added for each hit and not just the total damage.
     LightHolderDamagePerHealthChunk = 0.01,
 
     -- The size of the health chunk that increases the damage multiplier. Default: 100
-    -- Example: If the setting is 100 and our character has 1000 health, the damage multiplier will increase 10 times.
+    -- Example: If the setting is 100 and our character has 1000 health, the damage will increase by +0.10 (+10%).
     LightHolderHealthChunkSize = 100,
+
+    -- The elemental damage type of this ability. Default: 6 (Dark)
+    -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
+    LightHolderElement = 6,
 
     -- AP cost of this ability. Default: 5 / Default in Vanilla: 4
     -- This ability can be quite strong with enough max health, so the higher cost is justified.
     LightHolderAPCost = 5,
 
+    -- The custom name for this ability displayed in-game.
+    -- NOTE: Don't remove the quotes otherwise the config will fail to load. They don't get shown in-game.
+    LightHolderName = "Fading Hope",
+
     ------------------------------------------------------------------------
 
     -- Radiant Strike: These are the settings for the unused version of Radiant Slash, exclusive to Gustave only.
 
-    -- Maximum amount of charges this ability can consume for bonus damage. Default: 20
-    RadiantStrikeChargesConsumed = 20,
+    -- Maximum amount of charges this ability can consume for bonus damage. Default: 15
+    RadiantStrikeChargesConsumed = 15,
 
     -- Additional damage multiplier per consumed charge. Default: 0.20 (20%)
     RadiantStrikeDamagePerCharge = 0.20,
 
+    -- The elemental damage type of this ability. Default: 2 (Fire) / Default in Vanilla: 7 (Light)
+    -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
+    RadiantStrikeElement = 2,
+
     -- AP cost of this ability. Default: 5 / Default in Vanilla: 4
     RadiantStrikeAPCost = 5,
+
+    -- The custom name for this ability displayed in-game.
+    -- NOTE: Don't remove the quotes otherwise the config will fail to load. They don't get shown in-game.
+    RadiantStrikeName = "Infernal Storm",
 
     ------------------------------------------------------------------------
     -- PERFECTION ABILITIES: Shared with the other character.
@@ -258,11 +346,17 @@ return
 
     -- Overload: These are the settings for Overload.
 
-    -- Percentage amount of charges refilled when using the ability "Overload". Default: 0.50 (50%)
+    -- Percentage amount of missing charges refilled when using the ability "Overload". Default: 0.50 (50%)
+    -- NOTE: The more charges you have, the less this ability generates. If Overload is set to 50% and is used twice, you will end up with 75% charges (0% -> 50% -> 75%).
     OverloadChargesPercentage = 0.50,
 
     -- AP cost of this ability. Default: 6
+    -- NOTE: This setting affects the Perfection character as well!
     OverloadAPCost = 6,
+
+    -- The custom name for this ability displayed in-game.
+    -- NOTE: Don't remove the quotes otherwise the config will fail to load. They don't get shown in-game.
+    OverloadName = "Overclock",
 
     ------------------------------------------------------------------------
 
@@ -271,11 +365,21 @@ return
     -- Maximum amount of charges this ability can consume for bonus damage. Default: 50
     SteeledStrikeChargesConsumed = 50,
 
-    -- Additional damage multiplier per consumed charge. Default: 0.20 (20%)
-    SteeledStrikeDamagePerCharge = 0.20,
+    -- Additional damage multiplier per consumed charge. Default: 0.05 (5%)
+    -- NOTE: This is added for each hit and not just the total damage.
+    SteeledStrikeDamagePerCharge = 0.05,
+
+    -- The elemental damage type of this ability. Default: 4 (Lightning) / Default in Vanilla: 1 (Physical)
+    -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
+    SteeledStrikeElement = 4,
 
     -- AP cost of this ability. Default: 9
+    -- NOTE: This setting affects the Perfection character as well!
     SteeledStrikeAPCost = 9,
+
+    -- The custom name for this ability displayed in-game.
+    -- NOTE: Don't remove the quotes otherwise the config will fail to load. They don't get shown in-game.
+    SteeledStrikeName = "Rolling Thunder",
 
     ------------------------------------------------------------------------
 
@@ -284,8 +388,17 @@ return
     -- Charges per hit on a stunned enemy with this ability. Default: 5
     EndbringerChargesPerStunnedHit = 5,
 
+    -- The elemental damage type of this ability. Default: 7 (Light) / Default in Vanilla: 1 (Physical)
+    -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
+    EndbringerElement = 7,
+
     -- AP cost of this ability. Default: 9
+    -- NOTE: This setting affects the Perfection character as well!
     EndbringerAPCost = 9,
+
+    -- The custom name for this ability displayed in-game.
+    -- NOTE: Don't remove the quotes otherwise the config will fail to load. They don't get shown in-game.
+    EndbringerName = "Final Judgement",
 
     ------------------------------------------------------------------------
 
@@ -295,10 +408,20 @@ return
     BerserkSlashChargesConsumed = 10,
 
     -- Additional damage multiplier per consumed charge. Default: 0.20 (20%)
+    -- NOTE: This is added for each hit and not just the total damage.
     BerserkSlashDamagePerCharge = 0.20,
 
+    -- The elemental damage type of this ability. Default: 0 / Default in Vanilla: 1 (Physical)
+    -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
+    BerserkSlashElement = 0,
+
     -- AP cost of this ability. Default: 4
+    -- NOTE: This setting affects the Perfection character as well!
     BerserkSlashAPCost = 4,
+
+    -- The custom name for this ability displayed in-game.
+    -- NOTE: Don't remove the quotes otherwise the config will fail to load. They don't get shown in-game.
+    BerserkSlashName = "Engineer's Wrath",
 
     ------------------------------------------------------------------------
 
@@ -308,10 +431,20 @@ return
     DefiantStrikeChargesConsumed = 15,
 
     -- Additional damage multiplier per consumed charge. Default: 0.20 (20%)
+    -- NOTE: This is added for each hit and not just the total damage.
     DefiantStrikeDamagePerCharge = 0.20,
 
+    -- The elemental damage type of this ability. Default: 6 (Dark) / Default in Vanilla: 1 (Physical)
+    -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
+    DefiantStrikeElement = 6,
+
     -- AP cost of this ability. Default: 3
+    -- NOTE: This setting affects the Perfection character as well!
     DefiantStrikeAPCost = 3,
+
+    -- The custom name for this ability displayed in-game.
+    -- NOTE: Don't remove the quotes otherwise the config will fail to load. They don't get shown in-game.
+    DefiantStrikeName = "Vengeful Strike",
 
     ------------------------------------------------------------------------
 
@@ -320,45 +453,76 @@ return
     -- Maximum amount of charges this ability can consume for bonus damage. Default: 5
     BlitzChargesConsumed = 5,
 
-    -- Additional damage multiplier per consumed charge. Default: 0.20 (20%)
-    BlitzDamagePerCharge = 0.20,
+    -- Additional damage multiplier per consumed charge. Default: 0.25 (25%)
+    BlitzDamagePerCharge = 0.25,
+
+    -- The elemental damage type of this ability. Default: 4 (Lightning) / Default in Vanilla: 1 (Physical)
+    -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
+    BlitzElement = 4,
 
     -- AP cost of this ability. Default: 3
+    -- NOTE: This setting affects the Perfection character as well!
     BlitzAPCost = 3,
+
+    -- The custom name for this ability displayed in-game.
+    -- NOTE: Don't remove the quotes otherwise the config will fail to load. They don't get shown in-game.
+    BlitzName = "Sturm",
 
     ------------------------------------------------------------------------
 
     -- Follow Up: These are the settings for Follow Up.
 
-    -- Maximum amount of charges this ability can consume for bonus damage. Default: 15
-    FollowUpChargesConsumed = 15,
+    -- Maximum amount of charges this ability can consume for bonus damage. Default: 20
+    FollowUpChargesConsumed = 20,
 
     -- Additional damage multiplier per consumed charge. Default: 0.20 (20%)
     FollowUpDamagePerCharge = 0.20,
 
     -- AP cost of this ability. Default: 5
+    -- NOTE: This setting affects the Perfection character as well!
     FollowUpAPCost = 5,
+
+    -- The elemental damage type of this ability. Default: 4 (Lightning) / Default in Vanilla: 7 (Light)
+    -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
+    FollowUpElement = 4,
 
     -- Reduced AP cost of this ability. Default: 2
     -- NOTE: This value is used when all required charges from FollowUpChargesConsumed are available.
     FollowUpAPReducedCost = 2,
 
+    -- The custom name for this ability displayed in-game.
+    -- NOTE: Don't remove the quotes otherwise the config will fail to load. They don't get shown in-game.
+    FollowUpAPName = "Volt Strike",
+
     ------------------------------------------------------------------------
 
     -- Ascending Assault: These are the settings for Ascending Assault.
 
-    -- Maximum amount of charges this ability can consume for bonus damage. Default: 20
-    AscendingAssaultChargesConsumed = 20,
+    -- Maximum amount of charges this ability can consume for bonus damage. Default: 5
+    AscendingAssaultChargesConsumed = 5,
 
     -- Additional damage multiplier per consumed charge. Default: 0.20 (20%)
     AscendingAssaultDamagePerCharge = 0.20,
 
     -- AP cost of this ability. Default: 5
+    -- NOTE: This setting affects the Perfection character as well!
     AscendingAssaultAPCost = 5,
+
+    -- The elemental damage type of this ability. Default: 0 (Weapon's Element) / Default in Vanilla: 0 (Weapon's Element)
+    -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
+    AscendingAssaultElement = 0,
 
     -- Reduced AP cost of this ability. Default: 2
     -- NOTE: This value is used when all required charges from AscendingAssaultChargesConsumed are available.
     AscendingAssaultAPReducedCost = 2,
+
+    -- The amount of additional charges that get consumed after each time this ability gets cast.
+    -- NOTE: Formula: Base Charges + (Additional Charges * Times Used)
+    AscendingAssaultAdditionalChargesConsumed = 5,
+
+    -- The custom name for this ability displayed in-game.
+    -- NOTE: Don't remove the quotes otherwise the config will fail to load. They don't get shown in-game.
+    AscendingAssaultName = "Relentless Assault",
 
     ------------------------------------------------------------------------
 
@@ -367,8 +531,17 @@ return
     -- Extra charges per hit with this ability. Default: 2
     SpeedBurstChargesPerHit = 2,
 
+    -- The elemental damage type of this ability. Default: 4 (Lightning) / Default in Vanilla: 7 (Light)
+    -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
+    SpeedBurstElement = 4,
+
     -- AP cost of this ability. Default: 6
+    -- NOTE: This setting affects the Perfection character as well!
     SpeedBurstAPCost = 6,
+
+    -- The custom name for this ability displayed in-game.
+    -- NOTE: Don't remove the quotes otherwise the config will fail to load. They don't get shown in-game.
+    SpeedBurstName = "Lightning Rush",
 
     ------------------------------------------------------------------------
 
@@ -381,15 +554,25 @@ return
     -- Maximum amount of charges this ability can consume for bonus damage. Default: 40
     PhantomStarsChargesConsumed = 40,
 
-    -- Additional damage multiplier per consumed charge. Default: 0.20 (20%)
-    PhantomStarsDamagePerCharge = 0.20,
+    -- Additional damage multiplier per consumed charge. Default: 0.05 (5%)
+    -- NOTE: This is added for each hit and not just the total damage.
+    PhantomStarsDamagePerCharge = 0.05,
+
+    -- The elemental damage type of this ability. Default: 3 (Ice) / Default in Vanilla: 7 (Light)
+    -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
+    PhantomStarsElement = 3,
 
     -- AP cost of this ability. Default: 9
+    -- NOTE: This setting affects the Perfection character as well!
     PhantomStarsAPCost = 9,
 
     -- Reduced AP cost of this ability. Default: 5
     -- NOTE: This value is used when all required charges from PhantomStarsChargesConsumed are available.
     PhantomStarsAPReducedCost = 5,
+
+    -- The custom name for this ability displayed in-game.
+    -- NOTE: Don't remove the quotes otherwise the config will fail to load. They don't get shown in-game.
+    PhantomStarsName = "Absolute Zero",
 
     ------------------------------------------------------------------------
 
@@ -402,8 +585,17 @@ return
     -- Amount of AP given per consumed charge. Default: 1
     ParadigmShiftAPPerCharge = 1,
 
+    -- The elemental damage type of this ability. Default: 0 (Weapon's Element) / Default in Vanilla: 1 (Physical)
+    -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
+    ParadigmShiftElement = 0,
+
     -- AP cost of this ability. Default: 1
+    -- NOTE: This setting affects the Perfection character as well!
     ParadigmShiftAPCost = 1,
+
+    -- The custom name for this ability displayed in-game.
+    -- NOTE: Don't remove the quotes otherwise the config will fail to load. They don't get shown in-game.
+    ParadigmShiftName = "Calculated Shift",
 
     ------------------------------------------------------------------------
 
@@ -412,17 +604,28 @@ return
     -- Maximum amount of charges this ability can consume for bonus damage. Default: 10
     PurificationChargesConsumed = 10,
 
-    -- Additional damage multiplier per consumed charge. Default: 0.20 (20%)
-    PurificationDamagePerCharge = 0.20,
+    -- Additional damage multiplier per consumed charge. Default: 0.15 (15%)
+    -- NOTE: This is added for each hit and not just the total damage.
+    PurificationDamagePerCharge = 0.15,
+
+    -- The elemental damage type of this ability. Default: 6 (Dark) / Default in Vanilla: 7 (Light)
+    -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
+    PurificationElement = 6,
 
     -- AP cost of this ability. Default: 4
+    -- NOTE: This setting affects the Perfection character as well!
     PurificationAPCost = 4,
+
+    -- The custom name for this ability displayed in-game.
+    -- NOTE: Don't remove the quotes otherwise the config will fail to load. They don't get shown in-game.
+    PurificationName = "Grim Embrace",
 
     ------------------------------------------------------------------------
 
     -- Angel's Eyes: These are the settings for Angel's Eyes.
     -- This is a gradient ability and it's the only one that interacts with Perfection, so it will interact with Overcharge as well.
-    -- No cost settings though, there is no reason to modify it since gradients are special.
+    -- No cost or elemental damage settings though, there is no reason to modify it since gradients are special.
+    -- Maybe if this mod overhauls the gradients too in the future so they feel unique, but not right now.
 
     -- Extra charges per hit with this ability. Default: 3
     AngelsEyesAdditionalChargesPerHit = 3,
