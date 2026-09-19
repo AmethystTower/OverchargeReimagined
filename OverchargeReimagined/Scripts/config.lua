@@ -25,8 +25,7 @@ return
 
     ------------------------------------------------------------------------
     -- Charge generation settings below.
-    -- This is a config with recommended charge generation settings for the best balance:
-    -- Parries and all types of counter attacks generate 2 charges and free aim shots generate 1 charge per hit.
+    -- All charge generation default settings match the base game.
 
     -- IMPORTANT NOTE: ALL SETTINGS ACCEPT BOTH POSITIVE AND NEGATIVE VALUES.
     -- This means that depending on the settings, they can ADD OR REMOVE charges.
@@ -97,23 +96,25 @@ return
     ------------------------------------------------------------------------
     -- ABILITIES: These are the settings that define all abilities in regards of: AP cost, generated charges, consumed charges, bonus damage per charges and elemental damage type.
     -- The abilities Lumiere Assault and Strike Storm were adjusted to generate more charges to keep up with other abilities that do this.
-    -- Overcharge and Shatter both cost 6 AP, From Fire costs 1 more AP by default.
-    -- By default Overcharge and Shatter also do void damage now, while some other abilities have their base element changed or use the weapon's element to offer more variety.
-    -- These settings are personal recommendations that fit the game's balance the best.
+    -- Overcharge, Shatter and Marking Shot both cost 6 AP, From Fire, Radiant Strike, Light Holder and Powerful cost 1 more AP by default.
+    -- By default Overcharge and Shatter also do void damage now, while a lot of other abilities have their base element changed or use the weapon's element to offer more variety.
+    -- All the settings below are personal recommendations that fit the game's balance the best and make our character on par with the others.
     ------------------------------------------------------------------------
 
     -- Overcharge: These are the settings for Overcharge.
+    -- The default settings allow it to do up to x65.125 damage.
     
     -- Percentage amount of charges refilled when breaking an enemy with Overcharge. Default: 0.25 (25%)
     -- NOTE: The value works like this: 0.25 = 25% of max. charges, 0.33 = 33% of max. charges, 1.00 = 100% of max charges aka. complete refill.
     OverchargeChargesPercentage = 0.25,
 
-    -- This adds ontop of Overcharge's default 0.20 (~0.40 if hitting 2 perfect skillchecks) damage per charge from the base game. Default: 0.10 (+10%)
-    OverchargeDamagePerCharge = 0.10,
+    -- This adds ontop of Overcharge's default 0.20 (up to ~0.40 if hitting 2 perfect skillchecks at full charges) damage per charge from the base game.
+    -- Default: 0.05 (+5%)
+    OverchargeDamagePerCharge = 0.05,
 
-    -- This adds ontop of Overcharge's default 0.25 "fully charged" bonus from the base game. Default: 2.50 (+250%)
+    -- This adds ontop of Overcharge's default x1.25 "fully charged" bonus from the base game. Default: 5.00 (500%)
     -- NOTE: Gets added, NOT multiplied since that would be too strong.
-    OverchargeMaxChargesBonus = 2.50,
+    OverchargeMaxChargesBonus = 5.00,
 
     -- The elemental damage type of this ability. Default: 8 (Void) / Default in Vanilla: 4 (Lightning)
     -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
@@ -130,20 +131,20 @@ return
     ------------------------------------------------------------------------
 
     -- Shatter: These are the settings for Shatter.
-    -- The default settings allow Shatter to do about 1/2 of what Overcharge does.
+    -- The default settings allow Shatter to do up to x37.45 damage (about ~57% of what Overcharge does with default settings).
 
     -- Percentage amount of charges refilled when breaking an enemy with Shatter. Default: 0.15 (15%)
     -- NOTE: The value works like this: 0.15 = 15% of max. charges, 0.33 = 33% of max. charges, 1.00 = 100% of max charges aka. complete refill.
     ShatterChargesPercentage = 0.15,
 
     -- Additional damage multiplier that Shatter gets for each charge it consumes. Default: 0.30 (30%)
-    -- Overcharge gets 0.20 (~0.40 if hitting 2 perfect skillchecks) in the base game.
+    -- Overcharge gets 0.20 (up to ~0.40 if hitting 2 perfect skillchecks at full charges) damage per charge from the base game.
     ShatterDamagePerCharge = 0.30,
 
-    -- The extra amount of damage that Shatter gets if the charges are full. Default: 2.50 (250%)
-    -- Overcharge uses 0.25 in the base game.
+    -- The extra amount of damage that Shatter gets if the charges are full. Default: 5.00 (500%)
+    -- Overcharge uses x1.25 in the base game.
     -- NOTE: Gets added, NOT multiplied since that would be too strong.
-    ShatterMaxChargesBonus = 2.50,
+    ShatterMaxChargesBonus = 5.00,
 
     -- The elemental damage type of this ability. Default: 8 (Void) / Default in Vanilla: 4 (Lightning)
     -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
@@ -160,16 +161,16 @@ return
     ------------------------------------------------------------------------
 
     -- Marking Shot: These are the settings for Marking Shot.
-    -- The default settings allow Marking Shot to do about 2/3 of what Shatter and 1/3 of what Overcharge does.
+    -- The default settings allow Marking Shot to do up to x36.2 damage (about ~55% of what Overcharge does with default settings).
 
-    -- Additional damage multiplier per consumed charge. Default: 0.20 (20%)
-    -- Overcharge gets 0.20 (~0.40 if hitting 2 perfect skillchecks) in the base game.
-    MarkingShotDamagePerCharge = 0.20,
+    -- Additional damage multiplier per consumed charge. Default: 0.30 (30%)
+    -- Overcharge gets 0.20 (up to ~0.40 if hitting 2 perfect skillchecks at full charges) damage per charge from the base game.
+    MarkingShotDamagePerCharge = 0.30,
 
-    -- The extra amount of damage that Marking Shot gets if the charges are full. Default: 2.50 (250%)
-    -- Overcharge uses 0.25 in the base game.
+    -- The extra amount of damage that Marking Shot gets if the charges are full. Default: 5.00 (500%)
+    -- Overcharge uses x1.25 in the base game.
     -- NOTE: Gets added, NOT multiplied since that would be too strong.
-    MarkingShotMaxChargesBonus = 2.50,
+    MarkingShotMaxChargesBonus = 5.00,
 
     -- The maximum stun chance that this ability has when at max charges. Default: 1.00 (100%)
     -- NOTE: If you reduced the max charges to less than 100 then it's recommended to reduce this chance otherwise stun-locking enemies is easily possible.
@@ -230,8 +231,9 @@ return
     -- Maximum amount of charges this ability can consume for bonus damage. Default: 15
     FromFireChargesConsumed = 15,
 
-    -- Additional damage multiplier per consumed charge. Default: 0.20 (20%)
-    FromFireDamagePerCharge = 0.20,
+    -- Additional damage multiplier per consumed charge. Default: 0.15 (15%)
+    -- NOTE: This is added for each hit and not just the total damage.
+    FromFireDamagePerCharge = 0.15,
 
     -- Additional health per hit. Default: 0.01
     -- NOTE: A value of 0.01 for example means 1% of max health healed per hit per charge.
@@ -297,10 +299,11 @@ return
     LightHolderChargesPerCritical = 2,
 
     -- Additional damage multiplier for each x amount of health. Default: 0.01 (1%)
+    -- NOTE: This is added for each hit and not just the total damage.
     LightHolderDamagePerHealthChunk = 0.01,
 
     -- The size of the health chunk that increases the damage multiplier. Default: 100
-    -- Example: If the setting is 100 and our character has 1000 health, the damage multiplier will increase 10 times.
+    -- Example: If the setting is 100 and our character has 1000 health, the damage will increase by +0.10 (+10%).
     LightHolderHealthChunkSize = 100,
 
     -- The elemental damage type of this ability. Default: 6 (Dark)
@@ -319,8 +322,8 @@ return
 
     -- Radiant Strike: These are the settings for the unused version of Radiant Slash, exclusive to Gustave only.
 
-    -- Maximum amount of charges this ability can consume for bonus damage. Default: 20
-    RadiantStrikeChargesConsumed = 20,
+    -- Maximum amount of charges this ability can consume for bonus damage. Default: 15
+    RadiantStrikeChargesConsumed = 15,
 
     -- Additional damage multiplier per consumed charge. Default: 0.20 (20%)
     RadiantStrikeDamagePerCharge = 0.20,
@@ -343,7 +346,7 @@ return
     -- Overload: These are the settings for Overload.
 
     -- Percentage amount of missing charges refilled when using the ability "Overload". Default: 0.50 (50%)
-    -- NOTE: The more charges, the less this ability gives. If Overload is set to 50% and is used twice, you will end up with 75/100 charges (0 -> 50 -> 75).
+    -- NOTE: The more charges you have, the less this ability generates. If Overload is set to 50% and is used twice, you will end up with 75% charges (0% -> 50% -> 75%).
     OverloadChargesPercentage = 0.50,
 
     -- AP cost of this ability. Default: 6
@@ -361,8 +364,9 @@ return
     -- Maximum amount of charges this ability can consume for bonus damage. Default: 50
     SteeledStrikeChargesConsumed = 50,
 
-    -- Additional damage multiplier per consumed charge. Default: 0.20 (20%)
-    SteeledStrikeDamagePerCharge = 0.20,
+    -- Additional damage multiplier per consumed charge. Default: 0.05 (5%)
+    -- NOTE: This is added for each hit and not just the total damage.
+    SteeledStrikeDamagePerCharge = 0.05,
 
     -- The elemental damage type of this ability. Default: 4 (Lightning) / Default in Vanilla: 1 (Physical)
     -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
@@ -403,6 +407,7 @@ return
     BerserkSlashChargesConsumed = 10,
 
     -- Additional damage multiplier per consumed charge. Default: 0.20 (20%)
+    -- NOTE: This is added for each hit and not just the total damage.
     BerserkSlashDamagePerCharge = 0.20,
 
     -- The elemental damage type of this ability. Default: 0 / Default in Vanilla: 1 (Physical)
@@ -415,7 +420,7 @@ return
 
     -- The custom name for this ability displayed in-game.
     -- NOTE: Don't remove the quotes otherwise the config will fail to load. They don't get shown in-game.
-    BerserkSlashName = "Raging Slice",
+    BerserkSlashName = "Engineer's Wrath",
 
     ------------------------------------------------------------------------
 
@@ -425,6 +430,7 @@ return
     DefiantStrikeChargesConsumed = 15,
 
     -- Additional damage multiplier per consumed charge. Default: 0.20 (20%)
+    -- NOTE: This is added for each hit and not just the total damage.
     DefiantStrikeDamagePerCharge = 0.20,
 
     -- The elemental damage type of this ability. Default: 6 (Dark) / Default in Vanilla: 1 (Physical)
@@ -446,8 +452,8 @@ return
     -- Maximum amount of charges this ability can consume for bonus damage. Default: 5
     BlitzChargesConsumed = 5,
 
-    -- Additional damage multiplier per consumed charge. Default: 0.20 (20%)
-    BlitzDamagePerCharge = 0.20,
+    -- Additional damage multiplier per consumed charge. Default: 0.25 (25%)
+    BlitzDamagePerCharge = 0.25,
 
     -- The elemental damage type of this ability. Default: 4 (Lightning) / Default in Vanilla: 1 (Physical)
     -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
@@ -465,8 +471,8 @@ return
 
     -- Follow Up: These are the settings for Follow Up.
 
-    -- Maximum amount of charges this ability can consume for bonus damage. Default: 15
-    FollowUpChargesConsumed = 15,
+    -- Maximum amount of charges this ability can consume for bonus damage. Default: 20
+    FollowUpChargesConsumed = 20,
 
     -- Additional damage multiplier per consumed charge. Default: 0.20 (20%)
     FollowUpDamagePerCharge = 0.20,
@@ -491,8 +497,8 @@ return
 
     -- Ascending Assault: These are the settings for Ascending Assault.
 
-    -- Maximum amount of charges this ability can consume for bonus damage. Default: 20
-    AscendingAssaultChargesConsumed = 20,
+    -- Maximum amount of charges this ability can consume for bonus damage. Default: 5
+    AscendingAssaultChargesConsumed = 5,
 
     -- Additional damage multiplier per consumed charge. Default: 0.20 (20%)
     AscendingAssaultDamagePerCharge = 0.20,
@@ -508,6 +514,10 @@ return
     -- Reduced AP cost of this ability. Default: 2
     -- NOTE: This value is used when all required charges from AscendingAssaultChargesConsumed are available.
     AscendingAssaultAPReducedCost = 2,
+
+    -- The amount of additional charges that get consumed after each time this ability gets cast.
+    -- NOTE: Formula: Base Charges + (Additional Charges * Times Used)
+    AscendingAssaultAdditionalChargesConsumed = 5,
 
     -- The custom name for this ability displayed in-game.
     -- NOTE: Don't remove the quotes otherwise the config will fail to load. They don't get shown in-game.
@@ -543,8 +553,9 @@ return
     -- Maximum amount of charges this ability can consume for bonus damage. Default: 40
     PhantomStarsChargesConsumed = 40,
 
-    -- Additional damage multiplier per consumed charge. Default: 0.20 (20%)
-    PhantomStarsDamagePerCharge = 0.20,
+    -- Additional damage multiplier per consumed charge. Default: 0.05 (5%)
+    -- NOTE: This is added for each hit and not just the total damage.
+    PhantomStarsDamagePerCharge = 0.05,
 
     -- The elemental damage type of this ability. Default: 3 (Ice) / Default in Vanilla: 7 (Light)
     -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
@@ -583,7 +594,7 @@ return
 
     -- The custom name for this ability displayed in-game.
     -- NOTE: Don't remove the quotes otherwise the config will fail to load. They don't get shown in-game.
-    ParadigmShiftName = "Charge Shift",
+    ParadigmShiftName = "Calculated Attack",
 
     ------------------------------------------------------------------------
 
@@ -592,8 +603,9 @@ return
     -- Maximum amount of charges this ability can consume for bonus damage. Default: 10
     PurificationChargesConsumed = 10,
 
-    -- Additional damage multiplier per consumed charge. Default: 0.20 (20%)
-    PurificationDamagePerCharge = 0.20,
+    -- Additional damage multiplier per consumed charge. Default: 0.15 (15%)
+    -- NOTE: This is added for each hit and not just the total damage.
+    PurificationDamagePerCharge = 0.15,
 
     -- The elemental damage type of this ability. Default: 6 (Dark) / Default in Vanilla: 7 (Light)
     -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)

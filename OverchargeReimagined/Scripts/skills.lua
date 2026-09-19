@@ -84,7 +84,7 @@ local function Init(log, config, elementalEnum)
     abilityValues["MarkingShot_Gustave"].OverchargeName = config.MarkingShotName
     abilityValues["MarkingShot_Gustave"].OverchargeBonusDescription = "Applies <keyword id=\"StatusEffect_Mark\">Mark</> at the end of the barrage."
     abilityValues["MarkingShot_Gustave"].OverchargeLongDescription = "Deals high single target " .. GetElementString(config.MarkingShotElement, elementalEnum, false) .. " damage. 1 hit.\n" .. "Consumes all <keyword id=\"Gustave_Charges\">Charges</> for increased damage and a higher chance to instantly <keyword id=\"Break\">Break</>\n" .. abilityValues["MarkingShot_Gustave"].OverchargeBonusDescription
-    -- Do not add bonus description to short description here, this ability's short description is built dynamically to show the current stun chance.
+    -- Do not add bonus description to short description here, this ability's short description is built dynamically to show the current stun chance in module main.lua in function ModifyAbilityCostAndDescription() during battle.
     abilityValues["MarkingShot_Gustave"].OverchargeShortDescription = "High " .. GetElementString(config.MarkingShotElement, elementalEnum, true) .. " damage based on the amount of <keyword id=\"Gustave_Charges\">Charges</> 1 hit."
     abilityValues["MarkingShot_Gustave"].PerfectionName = nil
     abilityValues["MarkingShot_Gustave"].PerfectionBonusDescription = nil
@@ -154,13 +154,13 @@ local function Init(log, config, elementalEnum)
     abilityValues["Powerful_Gustave"].ChargesMultiplier = nil
     abilityValues["Powerful_Gustave"].OverchargeName = config.PowerfulName
     abilityValues["Powerful_Gustave"].OverchargeBonusDescription = "Consumes <keyword id=\"Gustave_Charges\">Charges</> to empower Gustave:\n"
-    abilityValues["Powerful_Gustave"].OverchargeLongDescription = "Applies <keyword id=\"Buff_Powerful\">Powerful</> to 1-3 allies for 3 turns.\n" .. abilityValues["Powerful_Gustave"].OverchargeBonusDescription ..
+    abilityValues["Powerful_Gustave"].OverchargeLongDescription = "Applies <keyword id=\"Buff_Powerful\">Powerful</> to self and 0-2 allies for 3 turns.\n" .. abilityValues["Powerful_Gustave"].OverchargeBonusDescription ..
                                                                 string.format("%g", (config.PowerfulChargesConsumed) * 0.2) .. " Charges: Apply <keyword id=\"Buff_Shell_Left\">Shell</> for 3 turns.\n" ..
                                                                 string.format("%g", (config.PowerfulChargesConsumed) * 0.4) .. " Charges: Apply <keyword id=\"Buff_Rush_Left\">Rush</> for 3 turns.\n" ..
                                                                 string.format("%g", (config.PowerfulChargesConsumed) * 0.6) .. " Charges: Apply <keyword id=\"StatusEffect_Berserk_Left\">Berserk</> for 3 turns.\n" ..
                                                                 string.format("%g", (config.PowerfulChargesConsumed) * 0.8) .. " Charges: Increase turn duration to 6.\n" ..
                                                                 (config.PowerfulChargesConsumed) .. " Charges: Apply <keyword id=\"StatusEffect_Enraged_Left\">Rage</> for 1 turn."
-    abilityValues["Powerful_Gustave"].OverchargeShortDescription = "Applies <keyword id=\"Buff_Powerful\">Powerful</> to 1-3 allies for 3 turns.\n" .. abilityValues["Powerful_Gustave"].OverchargeBonusDescription ..
+    abilityValues["Powerful_Gustave"].OverchargeShortDescription = "Applies <keyword id=\"Buff_Powerful\">Powerful</> to self and 0-2 allies for 3 turns.\n" .. abilityValues["Powerful_Gustave"].OverchargeBonusDescription ..
                                                                 "<keyword id=\"Element_Lightning\">" .. string.format("%g", (config.PowerfulChargesConsumed) * 0.2) .. "</>: <keyword id=\"Buff_Shell_Left\">Shell</> / " ..
                                                                 "<keyword id=\"Element_Lightning\">" .. string.format("%g", (config.PowerfulChargesConsumed) * 0.4) .. "</>: <keyword id=\"Buff_Rush_Left\">Rush</> /\n" ..
                                                                 "<keyword id=\"Element_Lightning\">" .. string.format("%g", (config.PowerfulChargesConsumed) * 0.6) .. "</>: <keyword id=\"StatusEffect_Berserk_Left\">Berserk</> / " ..
@@ -307,9 +307,10 @@ local function Init(log, config, elementalEnum)
     abilityValues["AscendingAssault"].ChargesConsumed = config.AscendingAssaultChargesConsumed
     abilityValues["AscendingAssault"].ChargesMultiplier = config.AscendingAssaultDamagePerCharge
     abilityValues["AscendingAssault"].OverchargeName = config.AscendingAssaultName
-    abilityValues["AscendingAssault"].OverchargeBonusDescription = "Consumes up to " .. (config.AscendingAssaultChargesConsumed) .. " <keyword id=\"Gustave_Charges\">Charges</> for increased damage.\nCosts " .. (config.AscendingAssaultAPReducedCost) .. " <keyword id=\"APShard\">AP</> if all charges are available."
-    abilityValues["AscendingAssault"].OverchargeLongDescription = "Deals low single target " .. GetElementString(config.AscendingAssaultElement, elementalEnum, false) .. " damage. 1 hit.\n" .. "Increased damage at each cast.\n" .. abilityValues["AscendingAssault"].OverchargeBonusDescription
-    abilityValues["AscendingAssault"].OverchargeShortDescription = "Low " .. GetElementString(config.AscendingAssaultElement, elementalEnum, true) .. " damage. 1 hit.\n" .. "Increased damage at each cast.\n" .. abilityValues["AscendingAssault"].OverchargeBonusDescription
+    abilityValues["AscendingAssault"].OverchargeBonusDescription = "Costs " .. (config.AscendingAssaultAPReducedCost) .. " <keyword id=\"APShard\">AP</> if all charges are available."
+    abilityValues["AscendingAssault"].OverchargeLongDescription = "Deals low single target " .. GetElementString(config.AscendingAssaultElement, elementalEnum, false) .. " damage. 1 hit.\n" .. "Increased damage and consumed charges at each cast.\nInitially consumes up to " .. (config.AscendingAssaultChargesConsumed) .. " <keyword id=\"Gustave_Charges\">Charges</> and consumes up to " .. (config.AscendingAssaultAdditionalChargesConsumed) .. " more <keyword id=\"Gustave_Charges\">Charges</> after each cast.\n" .. abilityValues["AscendingAssault"].OverchargeBonusDescription
+    -- Do not add bonus description to short description here, this ability's short description is built dynamically to show the current amount of consumed charges in module main.lua in function ModifyAbilityCostAndDescription() during battle.
+    abilityValues["AscendingAssault"].OverchargeShortDescription = "Low " .. GetElementString(config.AscendingAssaultElement, elementalEnum, true) .. " damage. 1 hit.\n" .. "Increased damage and consumed charges at each cast.\n"
     abilityValues["AscendingAssault"].PerfectionName = "Ascending Assault"
     abilityValues["AscendingAssault"].PerfectionBonusDescription = "<img id=\"Rank_S\"/>: Costs 2 <keyword id=\"APShard\">AP</>"
     abilityValues["AscendingAssault"].PerfectionLongDescription = "Deals low single target Weapon's Element damage. 1 hit.\n" .. "Increased damage at each cast.\n" .. abilityValues["AscendingAssault"].PerfectionBonusDescription

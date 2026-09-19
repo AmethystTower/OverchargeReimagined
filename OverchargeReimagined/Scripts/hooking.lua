@@ -2,7 +2,7 @@
 --[[
 ------- Overcharge Reimagined v3.0 - By Killera -------
 
-        This module initializes all the hook paths that we need to modify the game's functionality.
+        This module holds strings of all the hook paths that we need to modify the game's functionality.
 
         DO NOT MODIFY THIS MODULE IF YOU SIMPLY WANT TO CUSTOMIZE THIS MOD.
         Use the config.lua for that instead!
