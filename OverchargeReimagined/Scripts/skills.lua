@@ -310,7 +310,7 @@ local function Init(log, config, elementalEnum)
     abilityValues["AscendingAssault"].OverchargeName = config.AscendingAssaultName
     abilityValues["AscendingAssault"].OverchargeBonusDescription = "Costs " .. (config.AscendingAssaultAPReducedCost) .. " <keyword id=\"APShard\">AP</> if all charges are available."
     abilityValues["AscendingAssault"].OverchargeLongDescription = "Deals low single target " .. GetElementString(config.AscendingAssaultElement, elementalEnum, false) .. " damage. 1 hit.\n" .. "Increased damage and consumed charges at each cast.\nInitially consumes up to " .. (config.AscendingAssaultChargesConsumed) .. " <keyword id=\"Gustave_Charges\">Charges</> and consumes up to " .. (config.AscendingAssaultAdditionalChargesConsumed) .. " more <keyword id=\"Gustave_Charges\">Charges</> after each cast.\n" .. abilityValues["AscendingAssault"].OverchargeBonusDescription
-    abilityValues["AscendingAssault"].OverchargeDynamicDescriptionPiece = abilityValues["AscendingAssault"].OverchargeBonusDescription .. "\n"
+    abilityValues["AscendingAssault"].OverchargeDynamicDescriptionPiece = "for increased damage.\n" .. abilityValues["AscendingAssault"].OverchargeBonusDescription
     -- Do not add bonus description to short description here, this ability's short description is built dynamically to show the current amount of consumed charges in module main.lua in function ModifyAbilityCostAndDescription() during battle.
     abilityValues["AscendingAssault"].OverchargeShortDescription = "Low " .. GetElementString(config.AscendingAssaultElement, elementalEnum, true) .. " damage. 1 hit.\n" .. "Increased damage and consumed charges at each cast.\n"
     abilityValues["AscendingAssault"].PerfectionName = "Ascending Assault"
