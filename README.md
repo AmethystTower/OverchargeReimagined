@@ -2,6 +2,7 @@
 
 This is an UE4SS mod for Expedition 33 that overhauls Gustave as a character and allows all of his skills to interact with his Overcharge mechanic.
 Does NOT interfere with Verso's gameplay like other mods do.
+The ability receive new names, descriptions, elemental damage types, new effects and more!
 
 The mod is written in LUA and simply adds our own modifications to the game's runtime functions as an addition to existing mechanics rather than replacing them.
 
@@ -11,22 +12,30 @@ Being a simple UE4SS script mod has the advantage that it is less prone to break
 
 Download the latest release version [here](https://github.com/AmethystTower/OverchargeReimagined/releases).
 
-## Features
-
-- [x] Fully configurable through `config.lua`
-- [x] Supports custom maximum charge count
-- [x] All skills interact with the Overcharge mechanic
-- [x] Charge generation per custom events (Critical hits, free aim hits, lumina hits, buff damage)
-- [x] Passive charge generation
-- [x] Negative charge generation (lose charges)
-- [x] Runtime hooking (doesn't replace game files and should be compatible with most other mods)
-
 ## Customization Options
 
-The mod adds a lot of customization options via its config.lua file.
+The mod adds a lot of customization options via its config.lua file:
 
-### All skills used by the character can be customized.
-Customizations include the AP cost, charge generation amount, charge consumption amount, damage per charge and other unique settings.
+- [x] Charge generation amount
+- [x] Charge generation events
+- [x] Ability AP Cost
+- [x] Charge Consumption per Ability
+- [x] Damage per Charge
+- [x] Elemental Damage Type
+- [x] Ability Name
+- [x] Unique Settings per Ability
+
+## Features
+
+- [x] All settings are configurable through the config.lua file
+- [x] Maximum charges setting that lets you decide how many charges Gustave can hold
+- [x] Different charge generation settings that let you decide when to gain or lose charges
+- [x] Ability settings that let you decide how much AP an ability should cost or how much charges it should consume/generate and more!
+- [x] Reworks for some abilities like Shatter to be a viable alternative to Overcharge
+- [x] The cut versions of Light Holder and Radiant Strike in Gustave's skill tree are fully utilized
+- [x] Additions feel natural: Ability names glow in orange when their optimal conditions are met
+- [x] Ability descriptions during battle display the actual charge counter for each ability that can consume them
+- [x] Runtime hooking (doesn't replace game files and should be compatible with most other mods and possible future game updates
 
 The mod adds the following customization options to the Overcharge charge generation mechanic:
 
@@ -59,30 +68,8 @@ The mod adds the following customization options to the Overcharge charge genera
   - Do you want Simoso's "ethereal sword" double hit effect to generate charges? You can do that as well!
   - Do you want 100 charges to feel like you're playing with only 10 charges but keep the same damage? Very possible!
   - Want buff effects like "Burn" to generate charges? Also possible!
+  - Do you want to turn Gustave into a pure fire wizard, ice mage, god of thunder or weapon master? Also possible!
 You can do all of that and more!
-
-## Notes
-
-Since this is a LUA script mod the in-game charge counter will still show 10 max charges because the in-game counter only displays the rounded-down vanilla charge values.
-
-For example, an actual charge count of 30–39 will appear as 3 charges in-game.\
-If you have 39 charges and use the ability, you will still do the full damage of 39 charges!
-
-### Example table of the in-game vs. the actual Overcharge counter:
-
-| In-Game Charges | Actual Charges |
-|------------|------------|
-| 0 | 0 - 9 |
-| 1 | 10 - 19 |
-| 2 | 20 - 29 |
-| 3 | 30 - 39 |
-| 4 | 40 - 49 |
-| 5 | 50 - 59 |
-| 6 | 60 - 69 |
-| 7 | 70 - 79 |
-| 8 | 80 - 89 |
-| 9 | 90 - 99 |
-| 10 | 100 |
 
 ## Donate
 
