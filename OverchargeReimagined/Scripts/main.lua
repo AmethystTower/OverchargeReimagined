@@ -667,10 +667,17 @@ local function ModifyAllDescriptionsAndCost()
     local skill_assets = GetAllSkillAssets()
     
     if skill_assets then
+        -- Force this to true for the initialization of all abilities, so that light holder and radiant strike get their descriptions.
+        selectedFreyInMenu = true
         -- Find all modifiable abilities and adjust their descriptions and AP cost for the skilltree or when entering a battle to avoid weird issues.
         for _, asset in pairs(skill_assets) do
+            -- If the ability is radiant strike or light holder, modify description as well because it doesn't update in the menu when the skills aren't unlocked yet.
             if asset and asset:IsValid() then
-                ModifyAbilityCostAndDescription(asset, true)
+                if (asset.NameID:ToString() == "OldLightHolder" or asset.NameID:ToString() == "RadiantStrike") then
+                    ModifyAbilityCostAndDescription(asset, false)
+                else
+                    ModifyAbilityCostAndDescription(asset, true)
+                end
             end
         end
         Log("Found all skill assets and modified their descriptions and AP cost.")
