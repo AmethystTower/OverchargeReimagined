@@ -72,37 +72,48 @@ else
 end
 
 -- Load our hook paths.
-local hookingOK, hooking = pcall(require, "hooking")
+local hookingOK, hooking = pcall(require, "modules.hooking")
 
 if not hookingOK then
     -- Create an empty list as fallback.
     hooking = {}
-    Log("Failed to load hooking.lua, using default values.")
+    Log("Failed to load modules/hooking.lua, using default values.")
 else
-    Log("hooking.lua loaded successfully!")
+    Log("modules/hooking.lua loaded successfully!")
+end
+
+-- Load our character names, IDs and helper functions.
+local charactersOK, CharacterHelper = pcall(require, "modules.world_characters")
+
+if not charactersOK then
+    -- Create an empty list as fallback.
+    CharacterHelper = {}
+    Log("Failed to load modules/world_characters.lua, using default values.")
+else
+    Log("modules/world_characters.lua loaded successfully!")
 end
 
 -- This loads our elements.lua module, providing us a table that converts elemental values into human readable enums and a few helper functions.
-local elementsOK, ElementsHelper = pcall(require, "elements")
+local elementsOK, ElementsHelper = pcall(require, "modules.elements")
 
 if not elementsOK then
     -- Create an empty list as fallback.
     ElementsHelper = {}
-    Log("Failed to load elements.lua, using empty list.")
+    Log("Failed to load modules/elements.lua, using empty list.")
 else
-    Log("elements.lua loaded successfully!")
+    Log("modules/elements.lua loaded successfully!")
     ElementsHelper.Init(Log, config)
 end
 
--- This gets our list of ability modifications such as new descriptions and different AP costs.
-local functionOK, SkillsHelper = pcall(require, "skills")
+-- This gets our list of ability modifications such as new descriptions, names and different AP costs.
+local functionOK, SkillsHelper = pcall(require, "modules.skills")
 
 if not functionOK then
     -- Create an empty list as fallback.
     SkillsHelper = {}
-    Log("Failed to load skills.lua, using empty list.")
+    Log("Failed to load modules/skills.lua, using empty list.")
 else
-    Log("skills.lua loaded successfully!")
+    Log("modules/skills.lua loaded successfully!")
     SkillsHelper.Init(Log, config, ElementsHelper.ElementEnum)
 end
 
@@ -233,6 +244,8 @@ local selectedFreyInMenu = false
 local voiceLinePlaying = false
 local loadingDependenciesGuard = false
 local updatedDynamicElement = false
+
+-- Ints that we need to monitor stats.
 local ascendingAssaultCounter = 0
 
 -- Booleans that we use to monitor when a specific skill was used or triggers.
@@ -1331,6 +1344,17 @@ local function TryRegisterAbilityHooks()
 
                 Log("Unused Light Holder used this turn.")
                 usedLightHolder = true
+
+                local skillScript = unwrap(param)
+
+                -- The unused version of Light Holder has a HIDDEN OVERCHARGE BONUS EFFECT that was impossible for Gustave to ever trigger until this mod existed.
+                -- It allows him to gain +2 AP per hit on an enemy, which is quite insane to think about.
+                -- I assume that it was the original design idea for Verso's light holder, which would give him +2 AP per hit on rank A rather than just +2 AP once at the end.
+                -- Force the Overcharge state to be disabled when this ability has been activated in order to avoid triggering the hidden bonus effect.
+                -- I think this effect is way too strong otherwise and would require a nerf for the ability by either increasing AP cost or reducing its damage.
+                if skillScript and skillScript.SkillState then
+                    skillScript.SkillState:SetOvercharge(false, false)
+                end
             end)
         end)
 
@@ -3126,7 +3150,110 @@ RegisterHook(hooking.CLIENT_RESTART, function()
     -- This hook modifies the AP cost and description of abilities.
     RegisterHook(hooking.GET_BASE_COST, ModifyAbilityCostAndDescriptionUnwrapper)
 
+    -- Force the game to allow us switching characters while we're in the camp, if enabled.
+    RegisterHook(hooking.CAN_SWITCH_CHARACTER, function(param, characterSwitchFromButtonPress)
+        if config.AllowSwitchingCharactersInCamp then
+            local currentAct = CharacterHelper.GetCurrentAct()
+
+            -- Function returned null so we're not inside the camp, do nothing.
+            if not currentAct then
+                return
+            end
+
+            -- Force the return value to true so we can switch.
+            characterSwitchFromButtonPress:Set(true)
+        end
+    end)
+
+    -- This hook gets called right away when loading into a new area and seemingly handles general character data such as voicelines and the internal values that tell the game who's selected.
+    RegisterHook(hooking.LOAD_CHARACTER, function(param)
+        local currentAct = CharacterHelper.GetCurrentAct()
+
+        -- Function returned null so we're not loading the camp, do nothing.
+        if not currentAct then
+            return
+        end
+
+        -- This is the component that handles the world character logic.
+        local characterWorldManager = unwrap(param)
+
+        if not characterWorldManager then
+            return
+        end
+
+        local character = CharacterHelper.GetCampMainCharacter(currentAct, config, Log)
+        Log("Current chapter " .. tostring(currentAct) .. " main character selected: " .. character .. ".")
+
+        -- Check if the player actually owns the character, otherwise the game will crash if we force the character to be used.
+        local ownsCharacter = CharacterHelper.PlayerOwnsCharacter(character, Log)
+
+        -- We don't own the character, cancel operation.
+        if not ownsCharacter then
+            Log("WARNING: Player does not own character: " .. character .. ". Do not force camp character this instance.")
+            return
+        end
+        
+        -- Force the game to use the data of the character we selected in the config for each chapter.
+        characterWorldManager:LoadAndActivateCharacter(FName(character), true)
+        Log("Forced camp to use " .. character .. " as main character in LOAD_CHARACTER.")
+    end)
+
+    -- This hook gets called after LOAD_CHARACTER and builds the actual character model and animations for the currently active character.
+    RegisterHook(hooking.COMPUTE_ACTIVE_CHARACTER, function(param)
+        local currentAct = CharacterHelper.GetCurrentAct()
+
+        -- Function returned null so we're not loading the camp, do nothing.
+        if not currentAct then
+            return
+        end
+
+        -- This is the component that handles the world character logic.
+        local characterWorldManager = unwrap(param)
+
+        if not characterWorldManager then
+            return
+        end
+
+        local character = CharacterHelper.GetCampMainCharacter(currentAct, config, Log)
+
+        -- Check if the player actually owns the character, otherwise the game will crash if we force the character to be used.
+        local ownsCharacter = CharacterHelper.PlayerOwnsCharacter(character, Log)
+
+        -- We don't own the character, cancel operation.
+        if not ownsCharacter then
+            Log("WARNING: Player does not own character: " .. character .. ". Do not force camp character this instance.")
+            return
+        end
+
+        -- Force the game to use the model and animations of the character we selected in the config for each chapter.
+        characterWorldManager:LoadAndActivateCharacter(FName(character), true)
+        Log("Forced camp to use " .. character .. " as main character in COMPUTE_ACTIVE_CHARACTER.")
+    end)
+
     -- For the first time we load into a save: Attempt to modify all descriptions and AP costs so that they are correct right away.
     -- We also cache the a few abilities related to voicelines that are tied to them for later use.
     ModifyAllDescriptionsAndCost()
+
+
+    -- TEST STUFF.
+    --[[local assets = FindAllOf("BP_GameAction_ReplaceCharacter_C")
+
+    if not assets then
+        return
+    end
+
+    for _, asset in pairs(assets) do
+        if asset and asset:IsValid() then
+            Log("BP_GameAction_ReplaceCharacter_C: " .. tostring(asset:GetFullName()))
+            Log("ReplaceCharacterParameters.OldCharacter_2_76B268A34EDC34B4823397BC5C8FA5E2: " .. tostring(asset.ReplaceCharacterParameters.OldCharacter_2_76B268A34EDC34B4823397BC5C8FA5E2))
+            Log("ReplaceCharacterParameters.NewCharacter_4_7AD35D254B3EE7F97626C3931279DBF8: " .. tostring(asset.ReplaceCharacterParameters.NewCharacter_4_7AD35D254B3EE7F97626C3931279DBF8))
+            Log("ReplaceCharacterParameters.TransferLumina_7_347621E5466692025EF4B2A21AA8E631: " .. tostring(asset.ReplaceCharacterParameters.TransferLumina_7_347621E5466692025EF4B2A21AA8E631))
+            Log("ReplaceCharacterParameters.TransferLevel_11_1EDF1E544B7806EACF12E8968EE240CA: " .. tostring(asset.ReplaceCharacterParameters.TransferLevel_11_1EDF1E544B7806EACF12E8968EE240CA))
+            Log("ReplaceCharacterParameters.TransferPictos_16_F3ADFDAC4F0D8D09C20CB9B1B6415108: " .. tostring(asset.ReplaceCharacterParameters.TransferPictos_16_F3ADFDAC4F0D8D09C20CB9B1B6415108))
+            Log("ReplaceCharacterParameters.TransferWeapon_18_3B0D73CF4D925EE41C43C3A35B759EE7: " .. tostring(asset.ReplaceCharacterParameters.TransferWeapon_18_3B0D73CF4D925EE41C43C3A35B759EE7))
+            Log("ReplaceCharacterParameters.TransferAttributePoints_13_005710C0425DE39B3D97B78BAE5C34E6: " .. tostring(asset.ReplaceCharacterParameters.TransferAttributePoints_13_005710C0425DE39B3D97B78BAE5C34E6))
+            Log("ReplaceCharacterParameters.TransferLuminaPoints_20_CEC573C6457F89F28E882595C5D73A5D: " .. tostring(asset.ReplaceCharacterParameters.TransferLuminaPoints_20_CEC573C6457F89F28E882595C5D73A5D))
+            Log("ReplaceCharacterParameters.AddToParty_15_0D66206E42612DF17AEBBA84C1DF8B2F: " .. tostring(asset.ReplaceCharacterParameters.AddToParty_15_0D66206E42612DF17AEBBA84C1DF8B2F))
+        end
+    end]]--
 end)

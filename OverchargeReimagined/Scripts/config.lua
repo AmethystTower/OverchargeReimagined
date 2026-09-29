@@ -15,7 +15,7 @@
 return
 {
     ------------------------------------------------------------------------
-    -- Charge limit.
+    -- Maximum charge limit setting.
     ------------------------------------------------------------------------
 
     -- Maximum charges that Overcharge can carry. Default: 100 / Default in Vanilla: 10
@@ -25,7 +25,8 @@ return
 
     ------------------------------------------------------------------------
     -- Charge generation settings below.
-    -- All charge generation default settings match the base game.
+    -- This is a config with recommended charge generation settings for the best balance:
+    -- Parries and all types of counter attacks generate 2 charges and free aim shots generate 1 charge per hit.
 
     -- IMPORTANT NOTE: ALL SETTINGS ACCEPT BOTH POSITIVE AND NEGATIVE VALUES.
     -- This means that depending on the settings, they can ADD OR REMOVE charges.
@@ -41,7 +42,7 @@ return
     ChargesOnDodge = 1,
 
     -- Charges on successful parry. Default: 1
-    ChargesOnParry = 1,
+    ChargesOnParry = 2,
 
     -- Charges per base attack hit. Default: 1
     ChargesOnBaseAttacks = 1,
@@ -628,6 +629,26 @@ return
 
     -- Extra charges per hit with this ability. Default: 3
     AngelsEyesAdditionalChargesPerHit = 3,
+
+    ------------------------------------------------------------------------
+    -- Camp settings.
+    ------------------------------------------------------------------------
+    
+    -- Forces the game to use the selected character as the main protagonist for the camp during each respective chapter.
+    -- NOTE: If you have a character selected here that YOU DO NOT CURRENTLY HAVE IN YOUR SAVE, then it will result in Gustave/Verso being used as fallback otherwise the game will crash.
+    -- Valid Settings: 0 (Gustave), 1 (Lune), 2 (Maelle), 3 (Verso), 4 (Monoco), 5 (Sciel)
+    -- Defaults: 0, 3, 3, 3.
+    CampMainCharacter = 
+    {
+        ["Act1"] = 0,
+        ["Act2"] = 3,
+        ["Act3"] = 3,
+        ["Postgame"] = 3,
+    },
+
+    -- This allows you to enable switch between your characters while in the camp. Default: false
+    -- VALUES: true = enabled, false = disabled.
+    AllowSwitchingCharactersInCamp = false,
 
     ------------------------------------------------------------------------
     -- BERSERK: This setting fixes the Berserk buff to not scale the size of our character when receiving it with enough charges via "Powerful".
