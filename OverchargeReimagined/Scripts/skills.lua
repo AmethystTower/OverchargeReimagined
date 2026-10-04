@@ -155,13 +155,13 @@ local function Init(log, config, elementalEnum)
     abilityValues["Powerful_Gustave"].ChargesMultiplier = nil
     abilityValues["Powerful_Gustave"].OverchargeName = config.PowerfulName
     abilityValues["Powerful_Gustave"].OverchargeBonusDescription = "Consumes <keyword id=\"Gustave_Charges\">Charges</> to empower Gustave:\n"
-    abilityValues["Powerful_Gustave"].OverchargeLongDescription = "Applies <keyword id=\"Buff_Powerful\">Powerful</> to self and 0-2 allies for 3 turns.\n" .. abilityValues["Powerful_Gustave"].OverchargeBonusDescription ..
+    abilityValues["Powerful_Gustave"].OverchargeLongDescription = "Applies <keyword id=\"Buff_Powerful_Left\">Powerful</> to self and 0-2 allies for 3 turns.\n" .. abilityValues["Powerful_Gustave"].OverchargeBonusDescription ..
                                                                 string.format("%g", (config.PowerfulChargesConsumed) * 0.2) .. " Charges: Apply <keyword id=\"Buff_Shell_Left\">Shell</> for 3 turns.\n" ..
                                                                 string.format("%g", (config.PowerfulChargesConsumed) * 0.4) .. " Charges: Apply <keyword id=\"Buff_Rush_Left\">Rush</> for 3 turns.\n" ..
                                                                 string.format("%g", (config.PowerfulChargesConsumed) * 0.6) .. " Charges: Apply <keyword id=\"StatusEffect_Berserk_Left\">Berserk</> for 3 turns.\n" ..
                                                                 string.format("%g", (config.PowerfulChargesConsumed) * 0.8) .. " Charges: Increase turn duration to 6.\n" ..
                                                                 (config.PowerfulChargesConsumed) .. " Charges: Apply <keyword id=\"StatusEffect_Enraged_Left\">Rage</> for 1 turn."
-    abilityValues["Powerful_Gustave"].OverchargeShortDescription = "Applies <keyword id=\"Buff_Powerful\">Powerful</> to self and 0-2 allies for 3 turns.\n" .. abilityValues["Powerful_Gustave"].OverchargeBonusDescription ..
+    abilityValues["Powerful_Gustave"].OverchargeShortDescription = "Applies <keyword id=\"Buff_Powerful_Left\">Powerful</> to self and 0-2 allies for 3 turns.\n" .. abilityValues["Powerful_Gustave"].OverchargeBonusDescription ..
                                                                 "<keyword id=\"Element_Lightning\">" .. string.format("%g", (config.PowerfulChargesConsumed) * 0.2) .. "</>: <keyword id=\"Buff_Shell_Left\">Shell</> / " ..
                                                                 "<keyword id=\"Element_Lightning\">" .. string.format("%g", (config.PowerfulChargesConsumed) * 0.4) .. "</>: <keyword id=\"Buff_Rush_Left\">Rush</> /\n" ..
                                                                 "<keyword id=\"Element_Lightning\">" .. string.format("%g", (config.PowerfulChargesConsumed) * 0.6) .. "</>: <keyword id=\"StatusEffect_Berserk_Left\">Berserk</> / " ..
@@ -192,7 +192,7 @@ local function Init(log, config, elementalEnum)
     abilityValues["RadiantStrike"].ChargesConsumed = config.RadiantStrikeChargesConsumed
     abilityValues["RadiantStrike"].ChargesMultiplier = config.RadiantStrikeDamagePerCharge
     abilityValues["RadiantStrike"].OverchargeName = config.RadiantStrikeName
-    abilityValues["RadiantStrike"].OverchargeBonusDescription = "Consumes up to " .. (config.RadiantStrikeChargesConsumed) .. " <keyword id=\"Gustave_Charges\">Charges</> for increased damage."
+    abilityValues["RadiantStrike"].OverchargeBonusDescription = "Consumes up to " .. (config.RadiantStrikeChargesConsumed) .. " <keyword id=\"Gustave_Charges\">Charges</> for increased damage. \nIf all charges are available, inflicts 5 <keyword id=\"StatusEffect_Burn\">Burn</>"
     abilityValues["RadiantStrike"].OverchargeLongDescription = "Deals medium " .. GetElementString(config.RadiantStrikeElement, elementalEnum, false) .. " damage to all enemies. 1 hit.\n" .. abilityValues["RadiantStrike"].OverchargeBonusDescription
     abilityValues["RadiantStrike"].OverchargeShortDescription = "Deals medium " .. GetElementString(config.RadiantStrikeElement, elementalEnum, true) .. " damage to all enemies. 1 hit.\n" .. abilityValues["RadiantStrike"].OverchargeBonusDescription
     abilityValues["RadiantStrike"].PerfectionName = nil
@@ -263,12 +263,12 @@ local function Init(log, config, elementalEnum)
     -- Defiant Strike
     abilityValues["DefiantStrike"] = {}
     abilityValues["DefiantStrike"].APCost = config.DefiantStrikeAPCost
-    abilityValues["DefiantStrike"].ChargesConsumed = config.DefiantStrikeChargesConsumed
-    abilityValues["DefiantStrike"].ChargesMultiplier = config.DefiantStrikeDamagePerCharge
+    abilityValues["DefiantStrike"].ChargesConsumed = nil
+    abilityValues["DefiantStrike"].ChargesMultiplier = nil
     abilityValues["DefiantStrike"].OverchargeName = config.DefiantStrikeName
-    abilityValues["DefiantStrike"].OverchargeBonusDescription = "Consumes up to " .. (config.DefiantStrikeChargesConsumed) .. " <keyword id=\"Gustave_Charges\">Charges</> for increased damage."
+    abilityValues["DefiantStrike"].OverchargeBonusDescription = "Refills " .. string.format("%g", (config.DefiantStrikeChargesPercentage) * 100) .. "% of total <keyword id=\"Gustave_Charges\">Charges</>"
     abilityValues["DefiantStrike"].OverchargeLongDescription = "Deals high single target " .. GetElementString(config.DefiantStrikeElement, elementalEnum, false) .. " damage that applies <keyword id=\"StatusEffect_Mark\">Mark</> 2 hits.\n" .. "Costs 30% of current Health.\n" .. abilityValues["DefiantStrike"].OverchargeBonusDescription
-    abilityValues["DefiantStrike"].OverchargeShortDescription = "High " .. GetElementString(config.DefiantStrikeElement, elementalEnum, false) .. " damage. 2 hits. Applies <keyword id=\"StatusEffect_Mark\">Mark</>\n" .. "Costs 30% Health.\n" .. abilityValues["DefiantStrike"].OverchargeBonusDescription
+    abilityValues["DefiantStrike"].OverchargeShortDescription = "High " .. GetElementString(config.DefiantStrikeElement, elementalEnum, false) .. " damage. 2 hits. Applies <keyword id=\"StatusEffect_Mark\">Mark</>\n" .. "Costs 30% of current Health.\n" .. abilityValues["DefiantStrike"].OverchargeBonusDescription
     abilityValues["DefiantStrike"].PerfectionName = "Defiant Strike"
     abilityValues["DefiantStrike"].PerfectionBonusDescription = "<img id=\"Rank_B\"/>: Increased damage."
     abilityValues["DefiantStrike"].PerfectionLongDescription = "Deals high single target <keyword id=\"Element_Physical\">Physical</> damage that applies <keyword id=\"StatusEffect_Mark\">Mark</> 2 hits.\n" .. "Costs 30% of current Health.\n" .. abilityValues["DefiantStrike"].PerfectionBonusDescription

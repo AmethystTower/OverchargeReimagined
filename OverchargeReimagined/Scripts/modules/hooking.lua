@@ -75,7 +75,12 @@ return
     PLAY_SKILL_BATTLE_LINE_INTERNAL = "/Game/Audio/Blueprints/BP_AudioCharacter_BattleManager.BP_AudioCharacter_BattleManager_C:PlaySkillBattleLineInternal",
     LOAD_DEPENDENCIES_FROM_OBJECT = "/Game/Gameplay/LoadingSystem/BP_LoadingSystemComponent.BP_LoadingSystemComponent_C:LoadDependenciesFromObject",
 
+    -- Camp and overworld related hooks.
     CAN_SWITCH_CHARACTER = "/Game/jRPGTemplate/Blueprints/Basics/BP_jRPG_Character_World.BP_jRPG_Character_World_C:CanSwitchCharacter",
     LOAD_CHARACTER = "/Game/jRPGTemplate/Blueprints/Basics/BP_jRPG_Character_World.BP_jRPG_Character_World_C:LoadCharacter",
     COMPUTE_ACTIVE_CHARACTER = "/Game/jRPGTemplate/Blueprints/Basics/BP_jRPG_Character_World.BP_jRPG_Character_World_C:ComputeActiveCharacter",
+
+    LOAD_WEAPON = "/Game/UI/Widgets/InGame_Menu/WeaponPanel/WBP_WeaponTooltip.WBP_WeaponTooltip_C:LoadWeapon",
+    LOAD_WEAPON_LUMINAS = "/Game/UI/Widgets/InGame_Menu/WeaponPanel/WBP_WeaponTooltip.WBP_WeaponTooltip_C:LoadWeaponLuminas",
+    LOAD_PASSIVE_EFFECT_DATA = "/Game/UI/Widgets/InGame_Menu/WeaponPanel/WBP_WeaponTooltipLumina.WBP_WeaponTooltipLumina_C:LoadPassiveEffectData",
 }

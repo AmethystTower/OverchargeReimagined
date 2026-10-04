@@ -58,6 +58,40 @@ local function Log(msg)
     print("[Overcharge Reimagined] " .. msg .. "\n")
 end
 
+-- This function lets us unwrap UE4 objects as proper values.
+local function unwrap(param)
+	if not param then
+		return nil
+	end
+
+	local ok, val = pcall(function()
+		return param:get()
+	end)
+
+	if ok and val ~= nil then
+		return val
+	end
+
+	return nil
+end
+
+-- This function lets us unwrap UE4 objects as proper integers.
+local function read_int(param)
+	if not param then
+		return nil
+	end
+
+	local ok, val = pcall(function()
+		return param:get()
+	end)
+
+	if ok and val ~= nil then
+		return tonumber(val)
+	end
+
+	return nil
+end
+
 Log("Loading...\n")
 
 -- Load our config.
@@ -66,7 +100,7 @@ local configOK, config = pcall(require, "config")
 if not configOK then
     -- Create an empty list as fallback.
     config = {}
-    Log("Failed to load config.lua, using default values.")
+    Log("Failed to load config.lua, using empty list: " .. tostring(config))
 else
     Log("config.lua loaded successfully!")
 end
@@ -77,7 +111,7 @@ local hookingOK, hooking = pcall(require, "modules.hooking")
 if not hookingOK then
     -- Create an empty list as fallback.
     hooking = {}
-    Log("Failed to load modules/hooking.lua, using default values.")
+    Log("Failed to load modules/hooking.lua, using empty list: " .. tostring(hooking))
 else
     Log("modules/hooking.lua loaded successfully!")
 end
@@ -88,7 +122,7 @@ local charactersOK, CharacterHelper = pcall(require, "modules.world_characters")
 if not charactersOK then
     -- Create an empty list as fallback.
     CharacterHelper = {}
-    Log("Failed to load modules/world_characters.lua, using default values.")
+    Log("Failed to load modules/world_characters.lua, using empty list: " .. tostring(CharacterHelper))
 else
     Log("modules/world_characters.lua loaded successfully!")
 end
@@ -99,21 +133,45 @@ local elementsOK, ElementsHelper = pcall(require, "modules.elements")
 if not elementsOK then
     -- Create an empty list as fallback.
     ElementsHelper = {}
-    Log("Failed to load modules/elements.lua, using empty list.")
+    Log("Failed to load modules/elements.lua, using empty list: " .. tostring(ElementsHelper))
 else
     Log("modules/elements.lua loaded successfully!")
     ElementsHelper.Init(Log, config)
 end
 
+-- This loads all the patches that we need for Gustave to work properly.
+local patchesOK, PatchHelper = pcall(require, "modules.patches")
+
+if not patchesOK then
+    -- Create an empty list as fallback.
+    PatchHelper = {}
+    Log("Failed to load modules/patches.lua, using empty list: " .. tostring(PatchHelper))
+else
+    Log("modules/patches.lua loaded successfully!")
+    PatchHelper.Init(Log, config, unwrap, read_int)
+end
+
+-- This loads all weapon modifications.
+local weaponsOK, WeaponHelper = pcall(require, "modules.weapons")
+
+if not weaponsOK then
+    -- Create an empty list as fallback.
+    WeaponHelper = {}
+    Log("Failed to load modules/weapons.lua, using empty list: " .. tostring(WeaponHelper))
+else
+    Log("modules/weapons.lua loaded successfully!")
+    WeaponHelper.Init(Log, config, unwrap, read_int)
+end
+
 -- This gets our list of ability modifications such as new descriptions, names and different AP costs.
-local functionOK, SkillsHelper = pcall(require, "modules.skills")
+local functionOK, SkillsHelper = pcall(require, "skills")
 
 if not functionOK then
     -- Create an empty list as fallback.
     SkillsHelper = {}
-    Log("Failed to load modules/skills.lua, using empty list.")
+    Log("Failed to load skills.lua, using empty list: " .. tostring(SkillsHelper))
 else
-    Log("modules/skills.lua loaded successfully!")
+    Log("skills.lua loaded successfully!")
     SkillsHelper.Init(Log, config, ElementsHelper.ElementEnum)
 end
 
@@ -155,8 +213,6 @@ local ascendingAssaultAdditionalChargesConsumed = config.AscendingAssaultAdditio
 
 local phantomStarsAPReducedCost = config.PhantomStarsAPReducedCost
 local phantomStarsChargesConsumed = config.PhantomStarsChargesConsumed
-
-local purificationChargesConsumed = config.PurificationChargesConsumed
 
 local berserkScaleSize = config.BerserkScaleSize
 local berserkScaleTime = config.BerserkScaleTime
@@ -247,6 +303,7 @@ local updatedDynamicElement = false
 
 -- Ints that we need to monitor stats.
 local ascendingAssaultCounter = 0
+local skillHitCounter = 0
 
 -- Booleans that we use to monitor when a specific skill was used or triggers.
 -- Even more stuff we must monitor!
@@ -300,45 +357,14 @@ local temp_SkillScript = nil
 -- Initialize it with value physical (1).
 local dynamicWeaponElement = ElementsHelper.ElementEnum.Physical
 
+-- This will store the current weapon info used by the character, so that we can grab its weapon passives.
+local currentWeaponDefinitionInBattle = nil
+
 local overloadAddedCharges = 0
 
 -- This will cache the game's loading system component used to load and manage assets.
 -- It will effectively be used as a bool to see if it's valid between battles.
 local loadingSystemComponent = nil
-
--- This function lets us unwrap UE4 objects as proper values.
-local function unwrap(param)
-	if not param then
-		return nil
-	end
-
-	local ok, val = pcall(function()
-		return param:get()
-	end)
-
-	if ok and val ~= nil then
-		return val
-	end
-
-	return nil
-end
-
--- This function lets us unwrap UE4 objects as proper integers.
-local function read_int(param)
-	if not param then
-		return nil
-	end
-
-	local ok, val = pcall(function()
-		return param:get()
-	end)
-
-	if ok and val ~= nil then
-		return tonumber(val)
-	end
-
-	return nil
-end
 
 -- This function helps us find out if our current charge component is still valid.
 local function IsValidChargeComponent()
@@ -830,8 +856,9 @@ local function ResetAbilityStates()
         usedSteeledStrike = false
     end
 
-    -- Set this back to 0.
+    -- Set these back to 0.
     consumedChargesFromAbility = 0
+    skillHitCounter = 0
 end
 
 -- This function caches a reference to all the sound objects for the voicelines.
@@ -1382,6 +1409,9 @@ local function TryRegisterAbilityHooks()
                 Log("Unused Radiant Strike used this turn.")
                 usedRadiantStrike = true
 
+                -- Cache the skill script for this instance so that we can apply Burn to the enemy.
+                temp_SkillScript = unwrap(param)
+
                 CalculateAmountOfConsumedCharges("RadiantStrike", "Radiant Strike")
 
                 -- 50% chance to play the voiceline.
@@ -1541,7 +1571,13 @@ local function TryRegisterAbilityHooks()
                 Log("Defiant Strike used this turn.")
                 usedDefiantStrike = true
 
-                CalculateAmountOfConsumedCharges("DefiantStrike", "Defiant Strike")
+                -- Temporarily cache this skill script object so we can apply Blight to an enemy.
+                temp_SkillScript = unwrap(param)
+
+                local addedCharges = math.floor(virtualMaxCharges * config.DefiantStrikeChargesPercentage)
+
+                chargeComponent.ChangeCharge(addedCharges)
+                Log("Defiant Strike: Adding " .. addedCharges .. " charges to the counter.")
             end)
         end)
 
@@ -2509,17 +2545,32 @@ local function TryRegisterChargeComponentHooks()
                             --    FirePellets(0, 8, temp_SkillScript, true)
                             --end
 
-                        -- Blitz inflicts Stormcaller for 1 turn if enough charges are consumed.
-                        elseif usedPurification and consumedChargesFromAbility == purificationChargesConsumed then
-                            if temp_SkillScript and temp_SkillScript:IsValid() then
+                        -- Purification inflicts Powerless for 3 turns if enough charges are consumed.
+                        elseif usedPurification and consumedChargesFromAbility == config.PurificationChargesConsumed then
+                            skillHitCounter = skillHitCounter + 1
+
+                            -- The last hit applies the debuff.
+                            if temp_SkillScript and temp_SkillScript:IsValid() and skillHitCounter == 2 then
                                 local appliedDebuff = {}
                                 
                                 -- Inflict Powerless on this enemy.
                                 local powerlessClass = StaticFindObject("/Game/Gameplay/Buffs/StatsBuffs/BP_BattleBuff_Powerless.BP_BattleBuff_Powerless_C")
                                 temp_SkillScript:ApplyBuff(powerlessClass, statsComponentTarget, 3, statsComponentSource, 4, appliedDebuff)
                                 Log("Purification inflicted Powerless.")
+                            end
 
-                                temp_SkillScript = nil
+                        -- Radiant Strike inflicts Burn for 3 turns if enough charges are consumed.
+                        elseif usedRadiantStrike and consumedChargesFromAbility == config.RadiantStrikeChargesConsumed then
+                            if temp_SkillScript and temp_SkillScript:IsValid() then
+                                local appliedDebuff = {}
+                                
+                                -- Inflict Burn on this enemy.
+                                local burnClass = StaticFindObject("/Game/Gameplay/Buffs/GenericBuff/BP_BattleBuff_Burn.BP_BattleBuff_Burn_C")
+                                -- Apply 5 burn stacks.
+                                for _ = 1, 5 do
+                                    temp_SkillScript:ApplyBuff(burnClass, statsComponentTarget, 3, statsComponentSource, 4, appliedDebuff)
+                                end
+                                Log("Radiant Strike inflicted Burn.")
                             end
                         end
 
@@ -2857,7 +2908,6 @@ RegisterHook(hooking.CLIENT_RESTART, function()
 
         -- We used Defiant Strike
         elseif usedDefiantStrike then
-            modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "DefiantStrike", consumedChargesFromAbility)
             modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "DefiantStrike")
 
         -- We used Blitz
@@ -2884,6 +2934,7 @@ RegisterHook(hooking.CLIENT_RESTART, function()
             modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "PhantomStars", consumedChargesFromAbility)
             modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "PhantomStars")
 
+        -- We used Paradigm Shift.
         elseif usedParadigmShift then
             modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "ParadigmShift")
 
@@ -2923,6 +2974,16 @@ RegisterHook(hooking.CLIENT_RESTART, function()
             updatedDynamicElement = true
             Log("Updated weapon elemental type: " .. tostring(dynamicWeaponElement))
         end
+
+        local characterDefinition = {}
+        self:GetCharacterData(characterDefinition)
+
+        local isValid = {}
+        local weaponInstance = characterDefinition.CharacterData:GetEquippedWeaponItemInstance(isValid)
+
+        currentWeaponDefinitionInBattle = weaponInstance
+
+        Log("Updated weapon instance: " .. currentWeaponDefinitionInBattle.WeaponDefinition.DefinitionID_22_2E1ECEC74A7814AEAC1E35ACAD9FC16D:ToString())
     end)
 
     -- This hook runs when we're in battle and open the ability menu.
@@ -3234,26 +3295,20 @@ RegisterHook(hooking.CLIENT_RESTART, function()
     -- We also cache the a few abilities related to voicelines that are tied to them for later use.
     ModifyAllDescriptionsAndCost()
 
+    -- Patch Gustave and Verso to only use their own respective weapons.
+    -- Also allow Gustave to use weapon passives.
+    PatchHelper.PatchGustaveVerso()
 
-    -- TEST STUFF.
-    --[[local assets = FindAllOf("BP_GameAction_ReplaceCharacter_C")
+    -- This hook patches the weapon tooltips so that they can show for Gustave in the menu.
+    RegisterHook(hooking.LOAD_WEAPON, WeaponHelper.WeaponTooltipsHook)
 
-    if not assets then
-        return
-    end
+    -- WIP STUFF BELOW
 
-    for _, asset in pairs(assets) do
-        if asset and asset:IsValid() then
-            Log("BP_GameAction_ReplaceCharacter_C: " .. tostring(asset:GetFullName()))
-            Log("ReplaceCharacterParameters.OldCharacter_2_76B268A34EDC34B4823397BC5C8FA5E2: " .. tostring(asset.ReplaceCharacterParameters.OldCharacter_2_76B268A34EDC34B4823397BC5C8FA5E2))
-            Log("ReplaceCharacterParameters.NewCharacter_4_7AD35D254B3EE7F97626C3931279DBF8: " .. tostring(asset.ReplaceCharacterParameters.NewCharacter_4_7AD35D254B3EE7F97626C3931279DBF8))
-            Log("ReplaceCharacterParameters.TransferLumina_7_347621E5466692025EF4B2A21AA8E631: " .. tostring(asset.ReplaceCharacterParameters.TransferLumina_7_347621E5466692025EF4B2A21AA8E631))
-            Log("ReplaceCharacterParameters.TransferLevel_11_1EDF1E544B7806EACF12E8968EE240CA: " .. tostring(asset.ReplaceCharacterParameters.TransferLevel_11_1EDF1E544B7806EACF12E8968EE240CA))
-            Log("ReplaceCharacterParameters.TransferPictos_16_F3ADFDAC4F0D8D09C20CB9B1B6415108: " .. tostring(asset.ReplaceCharacterParameters.TransferPictos_16_F3ADFDAC4F0D8D09C20CB9B1B6415108))
-            Log("ReplaceCharacterParameters.TransferWeapon_18_3B0D73CF4D925EE41C43C3A35B759EE7: " .. tostring(asset.ReplaceCharacterParameters.TransferWeapon_18_3B0D73CF4D925EE41C43C3A35B759EE7))
-            Log("ReplaceCharacterParameters.TransferAttributePoints_13_005710C0425DE39B3D97B78BAE5C34E6: " .. tostring(asset.ReplaceCharacterParameters.TransferAttributePoints_13_005710C0425DE39B3D97B78BAE5C34E6))
-            Log("ReplaceCharacterParameters.TransferLuminaPoints_20_CEC573C6457F89F28E882595C5D73A5D: " .. tostring(asset.ReplaceCharacterParameters.TransferLuminaPoints_20_CEC573C6457F89F28E882595C5D73A5D))
-            Log("ReplaceCharacterParameters.AddToParty_15_0D66206E42612DF17AEBBA84C1DF8B2F: " .. tostring(asset.ReplaceCharacterParameters.AddToParty_15_0D66206E42612DF17AEBBA84C1DF8B2F))
-        end
-    end]]--
+    RegisterHook(hooking.LOAD_WEAPON_LUMINAS, WeaponHelper.WeaponLoadLuminasHook)
+
+    RegisterHook(hooking.LOAD_PASSIVE_EFFECT_DATA, function(param, passiveEffectDefinition, qualityLevel, isLocked, unlockLevel)
+        WeaponHelper.WeaponLuminaTooltipsHook(param, passiveEffectDefinition, qualityLevel, isLocked, unlockLevel, selectedFreyInMenu)
+    end)
+
+    WeaponHelper.ModifyAllWeapons(ElementsHelper.ElementEnum)
 end)

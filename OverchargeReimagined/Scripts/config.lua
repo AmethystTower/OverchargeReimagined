@@ -42,7 +42,7 @@ return
     ChargesOnDodge = 1,
 
     -- Charges on successful parry. Default: 1
-    ChargesOnParry = 2,
+    ChargesOnParry = 1,
 
     -- Charges per base attack hit. Default: 1
     ChargesOnBaseAttacks = 1,
@@ -338,7 +338,7 @@ return
 
     -- The custom name for this ability displayed in-game.
     -- NOTE: Don't remove the quotes otherwise the config will fail to load. They don't get shown in-game.
-    RadiantStrikeName = "Infernal Storm",
+    RadiantStrikeName = "Fire of Verdun",
 
     ------------------------------------------------------------------------
     -- PERFECTION ABILITIES: Shared with the other character.
@@ -427,12 +427,8 @@ return
 
     -- Defiant Strike: These are the settings for Defiant Strike.
 
-    -- Maximum amount of charges this ability can consume for bonus damage. Default: 15
-    DefiantStrikeChargesConsumed = 15,
-
-    -- Additional damage multiplier per consumed charge. Default: 0.20 (20%)
-    -- NOTE: This is added for each hit and not just the total damage.
-    DefiantStrikeDamagePerCharge = 0.20,
+    -- Percentage amount of charges that Defiant Strike generates when using the ability. Default: 0.15 (15%)
+    DefiantStrikeChargesPercentage = 0.15,
 
     -- The elemental damage type of this ability. Default: 6 (Dark) / Default in Vanilla: 1 (Physical)
     -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
@@ -444,7 +440,7 @@ return
 
     -- The custom name for this ability displayed in-game.
     -- NOTE: Don't remove the quotes otherwise the config will fail to load. They don't get shown in-game.
-    DefiantStrikeName = "Vengeful Strike",
+    DefiantStrikeName = "Shared Pain",
 
     ------------------------------------------------------------------------
 
