@@ -61,11 +61,12 @@ return
     PARADIGM_SHIFT_ON_EFFECT = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_Verso_ParadigmShift.BP_Battle_SkillScript_Verso_ParadigmShift_C:OnActionEffect",
     PARADIGM_SHIFT_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_Verso_ParadigmShift.BP_Battle_SkillScript_Verso_ParadigmShift_C:OnExecuteSkill",
     PURIFICATION_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_NEW_15.BP_Battle_SkillScript_NEW_15_C:OnExecuteSkill",
+    EGIDE_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Maelle/BP_Battle_SkillScript_New7_Egide.BP_Battle_SkillScript_New7_Egide_C:OnExecuteSkill",
     SABOTAGE_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_Verso_Sabotage.BP_Battle_SkillScript_Verso_Sabotage_C:OnExecuteSkill",
-    STRIKER_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_Verso_Striker.BP_Battle_SkillScript_Verso_Striker_C:OnExecuteSkill",
+    STRIKER_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Maelle/BP_Battle_SkillScript_PhoenixFlame.BP_Battle_SkillScript_PhoenixFlame_C:OnExecuteSkill",
     ANGELS_EYES_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_Verso_AngelsEyes.BP_Battle_SkillScript_Verso_AngelsEyes_C:OnExecuteSkill",
 
-    -- Our modifier hooks that allow us to manipulate the cost and damage multiplier of abilities on the fly.
+    -- Hooks that manipulate the cost and damage multiplier of abilities on the fly.
     GET_BASE_COST = "/Game/Gameplay/SkillTree/BP_DataAsset_Skill.BP_DataAsset_Skill_C:GetSkillBaseCost",
     GET_COST = "/Game/Gameplay/SkillTree/BP_DataAsset_Skill.BP_DataAsset_Skill_C:GetSkillCost",
     GET_ATTACK_MULTIPLIER = "/Game/Gameplay/Battle/BP_BattleDamageBuilder.BP_BattleDamageBuilder_C:GetAttackPowerMultiplier",
@@ -80,7 +81,11 @@ return
     LOAD_CHARACTER = "/Game/jRPGTemplate/Blueprints/Basics/BP_jRPG_Character_World.BP_jRPG_Character_World_C:LoadCharacter",
     COMPUTE_ACTIVE_CHARACTER = "/Game/jRPGTemplate/Blueprints/Basics/BP_jRPG_Character_World.BP_jRPG_Character_World_C:ComputeActiveCharacter",
 
+    -- Weapon related hooks.
     LOAD_WEAPON = "/Game/UI/Widgets/InGame_Menu/WeaponPanel/WBP_WeaponTooltip.WBP_WeaponTooltip_C:LoadWeapon",
     LOAD_WEAPON_LUMINAS = "/Game/UI/Widgets/InGame_Menu/WeaponPanel/WBP_WeaponTooltip.WBP_WeaponTooltip_C:LoadWeaponLuminas",
     LOAD_PASSIVE_EFFECT_DATA = "/Game/UI/Widgets/InGame_Menu/WeaponPanel/WBP_WeaponTooltipLumina.WBP_WeaponTooltipLumina_C:LoadPassiveEffectData",
+
+    -- Skill tree related hooks.
+    GET_TOTAL_SKILL_POINTS = "/Game/Gameplay/SkillTree/BP_CharacterSkillGraphSystem.BP_CharacterSkillGraphSystem_C:GetAvailableSkillPoints",
 }
