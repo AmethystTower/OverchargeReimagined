@@ -42,7 +42,7 @@ return
     ChargesOnDodge = 1,
 
     -- Charges on successful parry. Default: 1
-    ChargesOnParry = 1,
+    ChargesOnParry = 2,
 
     -- Charges per base attack hit. Default: 1
     ChargesOnBaseAttacks = 1,
@@ -51,13 +51,13 @@ return
     ChargesFromSkillDamage = 1,
 
     -- Charges on a normal counter attack. Default: 1
-    ChargesOnCounterAttacks = 1,
+    ChargesOnCounterAttacks = 2,
 
     -- Charges on a gradient counter attack. Default: 1
-    ChargesOnGradientCounter = 1,
+    ChargesOnGradientCounter = 2,
 
     -- Charges per jump counter. Default: 1
-    ChargesOnJumpCounter = 1,
+    ChargesOnJumpCounter = 2,
 
     ------------------------------------------------------------------------
     -- CUSTOM EVENTS: These are events that do NOT generate charges in the base game.
@@ -76,7 +76,7 @@ return
     ChargesOnLuminaDamage = 0,
 
     -- Charges per free aim shot. Default: 0
-    ChargesOnFreeAim = 0,
+    ChargesOnFreeAim = 1,
 
     -- Charges per damage event from buffs (e.g. burn). Default: 0
     ChargesOnBuffDamage = 0,
@@ -618,6 +618,26 @@ return
 
     ------------------------------------------------------------------------
 
+    -- Egide: These are the settings for Egide.
+
+    -- Maximum amount of charges this ability can consume for healing. Default: 5
+    EgideChargesConsumed = 5,
+
+    -- Additional health per consumed charge. Default: 0.10
+    -- NOTE: A value of 0.10 for example means 10% of max health healed per charge.
+    -- Consuming 5 charges would heal us by 50% of max health total.
+    EgideHealPerCharge = 0.10,
+
+    -- AP cost of this ability. Default: 3
+    -- NOTE: This setting affects the Perfection character as well!
+    EgideAPCost = 3,
+
+    -- The custom name for this ability displayed in-game.
+    -- NOTE: Don't remove the quotes otherwise the config will fail to load. They don't get shown in-game.
+    EgideName = "Guardian",
+
+    ------------------------------------------------------------------------
+
     -- Angel's Eyes: These are the settings for Angel's Eyes.
     -- This is a gradient ability and it's the only one that interacts with Perfection, so it will interact with Overcharge as well.
     -- No cost or elemental damage settings though, there is no reason to modify it since gradients are special.
@@ -638,13 +658,22 @@ return
     {
         ["Act1"] = 0,
         ["Act2"] = 3,
-        ["Act3"] = 3,
+        ["Act3"] = 2,
         ["Postgame"] = 3,
     },
 
     -- This allows you to enable switch between your characters while in the camp. Default: false
     -- VALUES: true = enabled, false = disabled.
-    AllowSwitchingCharactersInCamp = false,
+    AllowSwitchingCharactersInCamp = true,
+
+    ------------------------------------------------------------------------
+    -- Passive settings: These are the passive settings for all weapons.
+    -- Featuring a setting for the elemental type of the weapon and settings for certain values of their passives, as well weapon names.
+    ------------------------------------------------------------------------
+
+    -- Amount of additional charges per base attack hit.
+    -- NOTE: Used by Lanceram.
+    LuminaAdditionalChargesPerBaseAttackHit = 4,
 
     ------------------------------------------------------------------------
     -- BERSERK: This setting fixes the Berserk buff to not scale the size of our character when receiving it with enough charges via "Powerful".

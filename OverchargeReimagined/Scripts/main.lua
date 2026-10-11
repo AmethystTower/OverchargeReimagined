@@ -55,44 +55,24 @@
 ]]--
 
 local function Log(msg)
+    if not msg then
+        return
+    end
+
     print("[Overcharge Reimagined] " .. msg .. "\n")
 end
 
--- This function lets us unwrap UE4 objects as proper values.
-local function unwrap(param)
-	if not param then
-		return nil
-	end
+-- Load all custom functions.
+local customfunctionsOK, CustomFunctions = pcall(require, "modules.customfunctions")
 
-	local ok, val = pcall(function()
-		return param:get()
-	end)
-
-	if ok and val ~= nil then
-		return val
-	end
-
-	return nil
+if not customfunctionsOK then
+    -- Create an empty list as fallback.
+    CustomFunctions = {}
+    Log("Failed to load modules/customfunctions.lua, using empty list: " .. tostring(CustomFunctions))
+else
+    Log("modules/customfunctions.lua loaded successfully!")
+    CustomFunctions.Init(Log)
 end
-
--- This function lets us unwrap UE4 objects as proper integers.
-local function read_int(param)
-	if not param then
-		return nil
-	end
-
-	local ok, val = pcall(function()
-		return param:get()
-	end)
-
-	if ok and val ~= nil then
-		return tonumber(val)
-	end
-
-	return nil
-end
-
-Log("Loading...\n")
 
 -- Load our config.
 local configOK, config = pcall(require, "config")
@@ -148,7 +128,7 @@ if not patchesOK then
     Log("Failed to load modules/patches.lua, using empty list: " .. tostring(PatchHelper))
 else
     Log("modules/patches.lua loaded successfully!")
-    PatchHelper.Init(Log, config, unwrap, read_int)
+    PatchHelper.Init(Log, config, CustomFunctions.unwrap, CustomFunctions.read_int)
 end
 
 -- This loads all weapon modifications.
@@ -160,7 +140,7 @@ if not weaponsOK then
     Log("Failed to load modules/weapons.lua, using empty list: " .. tostring(WeaponHelper))
 else
     Log("modules/weapons.lua loaded successfully!")
-    WeaponHelper.Init(Log, config, unwrap, read_int)
+    WeaponHelper.Init(Log, config, CustomFunctions, ElementsHelper.ElementEnum)
 end
 
 -- This gets our list of ability modifications such as new descriptions, names and different AP costs.
@@ -274,6 +254,7 @@ local speedBurstHookRegistered = false
 local phantomStarsHookRegistered = false
 local paradigmShiftHookRegistered = false
 local purificationHookRegistered = false
+local egideHookRegistered = false
 local angelsEyesHookRegistered = false
 local strikerHookRegistered = false
 local sabotageHookRegistered = false
@@ -289,6 +270,11 @@ local changeChargeHookRegistered = false
 local updateCurrentValueHookRegistered = false
 local constructPortraitHookRegistered = false
 
+-- These let us know if we need to refresh the patch functions incase someone loaded a new save.
+local patchedCharacterSample = nil
+local patchedSkillSample = nil
+local patchedWeaponSample = nil
+
 -- Booleans that we need to monitor states.
 local updatingNativeCharge = false
 local restoreMaxCharges = false
@@ -300,6 +286,7 @@ local selectedFreyInMenu = false
 local voiceLinePlaying = false
 local loadingDependenciesGuard = false
 local updatedDynamicElement = false
+local updatedWeaponPassives = false
 
 -- Ints that we need to monitor stats.
 local ascendingAssaultCounter = 0
@@ -326,6 +313,7 @@ local usedAscendingAssault = false
 local usedSpeedBurst = false
 local usedPhantomStars = false
 local usedPurification = false
+local usedEgide = false
 local usedAngelsEyes = false
 local usedStriker = false
 local usedSabotage = false
@@ -345,6 +333,9 @@ local chargePortrait = nil
 -- This will store the audio manager component during battle, which will allow us to play battle lines for abilities that usually never play any (like Shatter or From Fire).
 local battleAudioManager = nil
 
+-- This will cache the current character portrait of our character during battle, so that we display the lumina pop-ups for our custom passives.
+local characterPortrait = nil
+
 -- This allows us to temporarily cache a skillscript after using an ability so we can use it from one of our other hooks.
 local temp_SkillScript = nil
 
@@ -359,6 +350,9 @@ local dynamicWeaponElement = ElementsHelper.ElementEnum.Physical
 
 -- This will store the current weapon info used by the character, so that we can grab its weapon passives.
 local currentWeaponDefinitionInBattle = nil
+
+-- This will store the list of currently equipped custom weapon passives.
+local equippedCustomPassives = {}
 
 local overloadAddedCharges = 0
 
@@ -465,78 +459,11 @@ local function GetAbilityOverrideValues(abilityNameID)
     return abilityOverrides
 end
 
--- Since we must build an FText ourselves, the runtime strings require the special symbols to be escaped, otherwise they won't print properly.
--- Example: In Lua we write \"Element\" for the colours but in the runtime it becomes "Element".
--- In order for the colours to not break, we must turn "Element" back into \"Element\" and also handle newlines.
-local function EscapeStringCharacters(value)
-    value = value:gsub("\\", "\\\\")
-    value = value:gsub('"', '\\"')
-    value = value:gsub("\n", "\\n")
-
-    return value
-end
-
--- UE4SS' implementation of FText has a major bug with this game where it expects the size of FTest properties to be 24 bytes, but the game only uses 16 bytes!
--- This caused UE4SS' function to write into adjacent memory and cause a memory corruption.
--- This would cause weird behaviour like giving the ability's targeting type an impossible value or it would cause a hard game crash.
--- With our own implementation we build the FText ourselves in order to circumvent this issue.
--- Let's hope that UE4SS fixes this issue at some point, since it has been a known problem for a few months now.
--- Our function gets the memory location of the ability's description property and we import our custom built FText into it.
--- Special thanks to SamTheMan for researching about this issue.
-local function FTextCustom(skillObject, propertyName, newDescription, abilityNameID)
-    local success, errorMessage = pcall(function()
-        local reflection = skillObject:Reflection()
-
-        if not reflection then
-            Log("Failed to get reflection for skill object.")
-            return
-        end
-
-        -- Find the skill's description reflection property.
-        local property = reflection:GetProperty(propertyName)
-
-        if not property then
-            Log("Failed to find property for skill object.")
-            return
-        end
-
-        -- Get the property's memory address.
-        local pointer = property:ContainerPtrToValuePtr(skillObject)
-
-        if not pointer then
-            Log("Failed to find pointer address for property of skill object.")
-            return
-        end
-
-        -- Build our own FText formatted string and import it directly into the corresponding description property.
-        local customFText = 'INVTEXT("' .. EscapeStringCharacters(newDescription) .. '")'
-        property:ImportText(customFText, pointer, 0, skillObject)
-        Log("Imported text into FText property.")
-
-        -- Add the new description to the version in the tracked abilities array.
-        -- This will allow us to compare the descriptions and see if they are different, so we prevent unnecessary writing.
-        -- Also check if abilityNameID is null because we use this function to modify the charge UI, which doesn't need a name ID.
-        if abilityNameID then
-            if propertyName == "Description" then
-                trackedAbilities[abilityNameID].Description = newDescription
-            elseif propertyName == "ShortDescription" then
-                trackedAbilities[abilityNameID].ShortDescription = newDescription
-            elseif propertyName == "name" then
-                trackedAbilities[abilityNameID].Name = newDescription
-            end
-        end
-    end)
-
-    if not success then
-        Log("Failed to set " .. propertyName .. ": " .. tostring(errorMessage))
-    end
-end
-
 -- This function modifies the AP cost and description of abilities.
 local function ModifyAbilityCostAndDescription(param, modifyAPCostOnly)
     -- Since we call this function from a hook that gives us a remote object and from upon loading a save with direct skill objects, we need to handle both possibilities.
-    -- If it is a remote object then unwrap it, otherwise just use the param directly.
-    local self = unwrap(param) or param
+    -- If it is a remote object then CustomFunctions.unwrap it, otherwise just use the param directly.
+    local self = CustomFunctions.unwrap(param) or param
 
     -- Make sure it exists and is valid.
     if not self or not self:IsValid() then
@@ -643,8 +570,8 @@ local function ModifyAbilityCostAndDescription(param, modifyAPCostOnly)
     end
 
     -- Set the skill's custom name.
-    if assembledName ~= "" and trackedAbilities[abilityNameID].Name ~= assembledName or not trackedAbilities[abilityNameID].skillObject:IsValid() then
-        FTextCustom(self, "name", assembledName, abilityNameID)
+    if assembledName ~= "" and trackedAbilities[abilityNameID].name ~= assembledName or not trackedAbilities[abilityNameID].skillObject:IsValid() then
+        trackedAbilities[abilityNameID].name = CustomFunctions.FTextCustom(self, "name", assembledName, abilityNameID)
         Log("Modified name of ability: " .. tostring(abilityNameID))
     end
 
@@ -652,7 +579,7 @@ local function ModifyAbilityCostAndDescription(param, modifyAPCostOnly)
     -- Only do this if the description from our tracked abilities array is different.
     -- Due to the UE4SS memory corruption issue from handling FText properties, we can't read the description directly otherwise it could return garbage and crash the game.
     if assembledLongDescription ~= "" and trackedAbilities[abilityNameID].Description ~= assembledLongDescription or not trackedAbilities[abilityNameID].skillObject:IsValid() then
-        FTextCustom(self, "Description", assembledLongDescription, abilityNameID)
+        trackedAbilities[abilityNameID].Description = CustomFunctions.FTextCustom(self, "Description", assembledLongDescription, abilityNameID)
         Log("Modified long description of ability: " .. tostring(abilityNameID))
     end
 
@@ -677,17 +604,14 @@ local function ModifyAbilityCostAndDescription(param, modifyAPCostOnly)
     -- Only do this if the short description from our tracked abilities array is different.
     -- Due to the UE4SS memory corruption issue from handling FText properties, we can't read the description directly otherwise it could return garbage and crash the game.
     if assembledShortDescription ~= "" and trackedAbilities[abilityNameID].ShortDescription ~= assembledShortDescription or not trackedAbilities[abilityNameID].skillObject:IsValid() then
-        FTextCustom(self, "ShortDescription", assembledShortDescription, abilityNameID)
+        trackedAbilities[abilityNameID].ShortDescription = CustomFunctions.FTextCustom(self, "ShortDescription", assembledShortDescription, abilityNameID)
         Log("Modified short description of ability: " .. tostring(abilityNameID))
     end
 
     -- Update the skill object of this array entry so we know if we loaded a new save.
     if not trackedAbilities[abilityNameID].skillObject:IsValid() then
         trackedAbilities[abilityNameID].skillObject = self
-    end 
-
-    -- This might no longer be needed since we circumvent UE4SS' FText bug that would corrupt this value.
-    --self.TargetingType = targetingType
+    end
 end
 
 -- Retrieve all skill data objects.
@@ -703,6 +627,10 @@ end
 
 -- Modify all abilities so that they show their correct descriptions and AP cost immediately.
 local function ModifyAllDescriptionsAndCost()
+    if patchedSkillSample and patchedSkillSample:IsValid() then
+        return
+    end
+
     local skill_assets = GetAllSkillAssets()
     
     if skill_assets then
@@ -717,8 +645,15 @@ local function ModifyAllDescriptionsAndCost()
                 else
                     ModifyAbilityCostAndDescription(asset, true)
                 end
+
+                -- Sample a skill so that if we load a new save, we know it's invalid and need to patch them again.
+                if not patchedSkills or not patchedSkills:IsValid() then
+                    patchedSkillSample = asset
+                end
             end
         end
+
+        selectedFreyInMenu = false
         Log("Found all skill assets and modified their descriptions and AP cost.")
     else
         Log("Couldn't find skill assets and didn't modify anything.")
@@ -755,7 +690,7 @@ end
 local function ModifyAbilityCostAndDescriptionUnwrapper(param)
     -- Modify individual ability's description.
     if param then
-        local skill = unwrap(param)
+        local skill = CustomFunctions.unwrap(param)
 
         if skill then
             ModifyAbilityCostAndDescription(skill, false)
@@ -842,6 +777,7 @@ local function ResetAbilityStates()
     usedSpeedBurst = false
     usedPhantomStars = false
     usedPurification = false
+    usedEgide = false
     usedAngelsEyes = false
     usedStriker = false
     usedSabotage = false
@@ -1017,7 +953,7 @@ local function TryRegisterAbilityHooks()
                 end
 
                 -- TODO: This is part of the custom multi-hits. Since it is broken, don't use this for now.
-                --temp_SkillScript = unwrap(param)
+                --temp_SkillScript = CustomFunctions.unwrap(param)
 
                 CalculateAmountOfConsumedCharges("MarkingShot_Gustave", "Marking Shot")
             end)
@@ -1148,7 +1084,7 @@ local function TryRegisterAbilityHooks()
                     return
                 end
 
-                local result = unwrap(param)
+                local result = CustomFunctions.unwrap(param)
 
                 if not result then
                     return
@@ -1223,7 +1159,7 @@ local function TryRegisterAbilityHooks()
                     return
                 end
 
-                local skillScript = unwrap(param)
+                local skillScript = CustomFunctions.unwrap(param)
 
                 if not skillScript then
                     return
@@ -1247,16 +1183,9 @@ local function TryRegisterAbilityHooks()
                     return
                 end
 
-                -- Get the ability's properties so we can check how many charges it can consume.
-                local abilityValues = GetAbilityOverrideValues("Powerful_Gustave")
-
-                if not abilityValues then
-                    return
-                end
-
                 -- Apply bonus buffs to our character depending on the charges he consumed for this.
                 -- If this ability can't consume charges because it was configured to be 0 then don't give any bonus effects or duration.
-                if abilityValues.ChargesConsumed > 0 then
+                if config.PowerfulChargesConsumed > 0 then
                     local applyShell = false
                     local applyRush = false
                     local applyBerserk = false
@@ -1268,7 +1197,7 @@ local function TryRegisterAbilityHooks()
 
                     -- For every 20% of the total charge consumption we grant a bonus.
                     -- Example: If the ability can consume up to 15 charges, we grant a bonus every 3 charges.
-                    local consumedChargesChunk = math.floor(abilityValues.ChargesConsumed * 0.2)
+                    local consumedChargesChunk = math.floor(config.PowerfulChargesConsumed * 0.2)
 
                     -- We consumed 1/5 of the required charges, grant Shell as a bonus.
                     if consumedChargesFromAbility >= consumedChargesChunk then
@@ -1372,7 +1301,7 @@ local function TryRegisterAbilityHooks()
                 Log("Unused Light Holder used this turn.")
                 usedLightHolder = true
 
-                local skillScript = unwrap(param)
+                local skillScript = CustomFunctions.unwrap(param)
 
                 -- The unused version of Light Holder has a HIDDEN OVERCHARGE BONUS EFFECT that was impossible for Gustave to ever trigger until this mod existed.
                 -- It allows him to gain +2 AP per hit on an enemy, which is quite insane to think about.
@@ -1410,7 +1339,7 @@ local function TryRegisterAbilityHooks()
                 usedRadiantStrike = true
 
                 -- Cache the skill script for this instance so that we can apply Burn to the enemy.
-                temp_SkillScript = unwrap(param)
+                temp_SkillScript = CustomFunctions.unwrap(param)
 
                 CalculateAmountOfConsumedCharges("RadiantStrike", "Radiant Strike")
 
@@ -1572,7 +1501,7 @@ local function TryRegisterAbilityHooks()
                 usedDefiantStrike = true
 
                 -- Temporarily cache this skill script object so we can apply Blight to an enemy.
-                temp_SkillScript = unwrap(param)
+                temp_SkillScript = CustomFunctions.unwrap(param)
 
                 local addedCharges = math.floor(virtualMaxCharges * config.DefiantStrikeChargesPercentage)
 
@@ -1607,7 +1536,7 @@ local function TryRegisterAbilityHooks()
 
                 -- Temporarily cache this skill script object so we can apply Stormcaller to an enemy.
                 -- TODO: Stormcaller doesn't work yet, don't use it for now.
-                --temp_SkillScript = unwrap(param)
+                --temp_SkillScript = CustomFunctions.unwrap(param)
 
                 CalculateAmountOfConsumedCharges("Blitz", "Blitz")
             end)
@@ -1662,7 +1591,7 @@ local function TryRegisterAbilityHooks()
                 -- Check if we have the required charge consumption amount for Follow Up.
                 -- If yes, override its usual AP cost to the new value.
                 if virtualCurrentCharges >= followUpChargesConsumed then
-                    local skillScript = unwrap(param)
+                    local skillScript = CustomFunctions.unwrap(param)
 
                     if skillScript and skillScript.SkillState then
                         skillScript.SkillState:SetOvercharge(true, true)
@@ -1735,7 +1664,7 @@ local function TryRegisterAbilityHooks()
 
                 if virtualCurrentCharges >= consumedCharges then
                     Log("Ascending Assault is discounted: " .. virtualCurrentCharges .. " / " .. consumedCharges)
-                    local skillScript = unwrap(param)
+                    local skillScript = CustomFunctions.unwrap(param)
 
                     if skillScript and skillScript.SkillState then
                         skillScript.SkillState:SetOvercharge(true, true)
@@ -1824,7 +1753,7 @@ local function TryRegisterAbilityHooks()
                 -- Check if we have the required charge consumption amount for Phantom Stars.
                 -- If yes, override its usual AP cost to the new value.
                 if virtualCurrentCharges >= phantomStarsChargesConsumed then
-                    local skillScript = unwrap(param)
+                    local skillScript = CustomFunctions.unwrap(param)
 
                     if skillScript and skillScript.SkillState then
                         skillScript.SkillState:SetOvercharge(true, true)
@@ -1877,7 +1806,7 @@ local function TryRegisterAbilityHooks()
                     return
                 end
 
-                local skillScript = unwrap(param)
+                local skillScript = CustomFunctions.unwrap(param)
 
                 if not skillScript then
                     return
@@ -1934,7 +1863,7 @@ local function TryRegisterAbilityHooks()
                 usedPurification = true
 
                 -- Cache the skill script for this instance so that we can apply Powerless to the enemy.
-                temp_SkillScript = unwrap(param)
+                temp_SkillScript = CustomFunctions.unwrap(param)
 
                 CalculateAmountOfConsumedCharges("Purification", "Purification")
             end)
@@ -1944,6 +1873,95 @@ local function TryRegisterAbilityHooks()
         if ok then
             purificationHookRegistered = true
             Log("Successfully registered Purification ability execution hooks.")
+        end
+    end
+
+    -- Try to register Egide's hooks.
+    if not egideHookRegistered then
+        local ok = pcall(function()
+            -- This hook runs whenever someone uses Purification.
+            RegisterHook(hooking.EGIDE_ON_EXECUTE, function(param)
+                if not IsValidChargeComponent() then
+                    return
+                end
+
+                -- A different character used this ability, do nothing.
+                if not overchargeCharacterTurn then
+                    return
+                end
+
+                Log("Egide used this turn.")
+                usedEgide = true
+
+                local skillScript = CustomFunctions.unwrap(param)
+
+                if not skillScript then
+                    return
+                end
+
+                -- The character class we need for ApplyBuff().
+                local statsClass = StaticFindObject("/Game/jRPGTemplate/Blueprints/Components/AC_jRPG_CharacterBattleStats.AC_jRPG_CharacterBattleStats_C")
+
+                -- Get the character who's casting Powerful.
+                local castingChar = {}
+                skillScript:GetCurrentCharacter(castingChar)
+
+                if not castingChar or not castingChar.CurrentCharacter then
+                    return
+                end
+
+                -- Retrieve the character's class component.
+                local castingCharacterClass = castingChar.CurrentCharacter:GetComponentByClass(statsClass)
+
+                if not castingCharacterClass then
+                    return
+                end
+
+                -- 50% chance to play the voiceline.
+                if math.random(1, 100) <= 50 then
+                    PlayVoiceLine(battleAudioManager, "buffteam")
+                end
+
+                -- Calculate amount of consumed charges.
+                CalculateAmountOfConsumedCharges("Egide", "Egide")
+
+                -- No charges consumed, apply no bonuses.
+                if consumedChargesFromAbility == 0 then
+                    return
+                end
+
+                -- We consumed all required charges, grant Regen as a bonus for 3 turns.
+                if consumedChargesFromAbility >= config.EgideChargesConsumed then
+                    local appliedBuff = {}
+                    local turnDuration = 2
+                    local regenBuffClass = StaticFindObject("/Game/Gameplay/Buffs/UniqueBuffs/BP_BattleBuff_Regen.BP_BattleBuff_Regen_C")
+
+                    -- ApplyBuff: Buff class, target character, duration, casting character, 4 = forced application (guaranteed), returned buff object.
+                    skillScript:ApplyBuff(regenBuffClass, castingCharacterClass, turnDuration, castingCharacterClass, 4, appliedBuff)
+                end
+
+                -- Heal our character based on the amount of charges we consumed.
+                local result = {}
+
+                -- Get the max health.
+                castingCharacterClass:GetMaxHP(result)
+
+                -- Formula: Max health x heal per charge x amount of charges.
+                local healAmount = (result.MaxHP * config.EgideHealPerCharge) * consumedChargesFromAbility
+
+                -- Heal based on amount of charges and max health.
+                -- Params: Heal amount, character that healed us (ourselves in this case), play heal effect, heal reason (skill cast in this chase), debug string.
+                -- This will damage us if we're inverted but since healing abilities do this in the vanilla game we'll leave it like this.
+                if healAmount > 0 then
+                    castingCharacterClass.RecoverHP(healAmount, castingCharacterClass, true, 1, "none")
+                end
+            end)
+        end)
+
+        -- If it was successful, mark the hooks registrations as true.
+        if ok then
+            egideHookRegistered = true
+            Log("Successfully registered Egide ability execution hooks.")
         end
     end
 
@@ -1973,7 +1991,7 @@ local function TryRegisterAbilityHooks()
         end
     end
 
-    -- Try to register Striker's hooks.
+    -- Try to register Phoenix Flame's hooks.
     if not strikerHookRegistered then
         local ok = pcall(function()
             -- This hook runs whenever someone uses Angel's Eyes.
@@ -1987,8 +2005,13 @@ local function TryRegisterAbilityHooks()
                     return
                 end
 
-                Log("Striker used this turn.")
+                Log("Phoenix Flame used this turn.")
                 usedStriker = true
+
+                -- 50% chance to play the voiceline.
+                if math.random(1, 100) <= 50 then
+                    PlayVoiceLine(battleAudioManager, "buffteam")
+                end
             end)
         end)
 
@@ -2037,8 +2060,8 @@ local function TryRegisterAbilityHooks()
                     return
                 end
 
-                local berserk = unwrap(param)
-                local stats = unwrap(characterStats)
+                local berserk = CustomFunctions.unwrap(param)
+                local stats = CustomFunctions.unwrap(characterStats)
 
                 if not berserk or not stats then
                     return
@@ -2130,7 +2153,7 @@ local function TryRegisterChargeComponentHooks()
         local ok = pcall(function()
             RegisterHook(hooking.OVERCHARGE_WIDGET_CONSTRUCT, function(param)
                 -- This is the full widget object responsible for the UI.
-                local self = unwrap(param)
+                local self = CustomFunctions.unwrap(param)
 
                 if self:IsValid() then
                     -- Cache the portrait text property for the charge counter for this fight so that we can call it from any of our hooks.
@@ -2182,7 +2205,7 @@ local function TryRegisterChargeComponentHooks()
     if not receiveBeginPlayHookRegistered then
         local ok = pcall(function()
             RegisterHook(hooking.RECEIVE_BEGIN_PLAY, function(param)
-                local self = unwrap(param)
+                local self = CustomFunctions.unwrap(param)
 
                 -- Check if the charge component exists, if yes then cache it.
                 if self:IsValid() then
@@ -2239,7 +2262,7 @@ local function TryRegisterChargeComponentHooks()
                 -- This is a safety incase we somehow ever lose the current charge component, get it when a new turn starts.
                 -- Although this should NEVER happen.
                 if not IsValidChargeComponent() then
-                    local self = unwrap(param)
+                    local self = CustomFunctions.unwrap(param)
 
                     if self:IsValid() then
                         chargeComponent = self
@@ -2283,7 +2306,7 @@ local function TryRegisterChargeComponentHooks()
                 -- This is a safety incase we somehow ever lose the current charge component, get it when a new turn starts.
                 -- Although this should NEVER happen.
                 if not IsValidChargeComponent() then
-                    local self = unwrap(param)
+                    local self = CustomFunctions.unwrap(param)
 
                     if self:IsValid() then
                         chargeComponent = self
@@ -2322,7 +2345,7 @@ local function TryRegisterChargeComponentHooks()
                     return
                 end
 
-                local dodgingCharacter = unwrap(character)
+                local dodgingCharacter = CustomFunctions.unwrap(character)
 
                 -- The character that is dodging is not the one with Overcharge, skip.
                 if not chargeComponent:IsCharacterOwner(dodgingCharacter) then
@@ -2357,7 +2380,7 @@ local function TryRegisterChargeComponentHooks()
                     return
                 end
 
-                local parryingCharacter = unwrap(character)
+                local parryingCharacter = CustomFunctions.unwrap(character)
 
                 -- The character that is parrying is not the one with Overcharge, skip.
                 if not chargeComponent:IsCharacterOwner(parryingCharacter) then
@@ -2387,8 +2410,8 @@ local function TryRegisterChargeComponentHooks()
                     return
                 end
 
-                --local selfObject = unwrap(selfParam)
-                local sourceCharacter = unwrap(sourceParam)
+                --local selfObject = CustomFunctions.unwrap(selfParam)
+                local sourceCharacter = CustomFunctions.unwrap(sourceParam)
 
                 -- Make sure the source character exists.
                 if not sourceCharacter then
@@ -2396,7 +2419,7 @@ local function TryRegisterChargeComponentHooks()
                 end
 
                 -- This is the reason for the break.
-                local reason = unwrap(reasonParam)
+                local reason = CustomFunctions.unwrap(reasonParam)
 
                 -- Get our actual breaking character from the parameter.
                 local owner = sourceCharacter:GetOwner()
@@ -2447,7 +2470,7 @@ local function TryRegisterChargeComponentHooks()
                     return
                 end
 
-                local damageObject = unwrap(damageParam)
+                local damageObject = CustomFunctions.unwrap(damageParam)
 
                 local statsComponentSource = damageObject.SourceCharacter
                 local statsComponentTarget = damageObject.TargetCharacter
@@ -2547,8 +2570,6 @@ local function TryRegisterChargeComponentHooks()
 
                         -- Purification inflicts Powerless for 3 turns if enough charges are consumed.
                         elseif usedPurification and consumedChargesFromAbility == config.PurificationChargesConsumed then
-                            skillHitCounter = skillHitCounter + 1
-
                             -- The last hit applies the debuff.
                             if temp_SkillScript and temp_SkillScript:IsValid() and skillHitCounter == 2 then
                                 local appliedDebuff = {}
@@ -2577,54 +2598,61 @@ local function TryRegisterChargeComponentHooks()
                     -- Damage Reason 2: Buffs such as burn.
                     -- Add or remove charges for damaging enemies through buffs, if enabled.
                     elseif damageReason == 2 and config.ChargesOnBuffDamage ~= 0 then
-                        chargeComponent.ChangeCharge(config.ChargesOnBuffDamage)
                         Log("Buff Damage: +" .. config.ChargesOnBuffDamage .. " charges added.")
+                        chargeComponent.ChangeCharge(config.ChargesOnBuffDamage)
 
                     -- Damage reason 3: Free aim shots.
                     -- Add/remove charges for shooting enemies, if enabled.
                     elseif damageReason == 3 and config.ChargesOnFreeAim ~= 0 then
-                        chargeComponent.ChangeCharge(config.ChargesOnFreeAim)
                         Log("Free Aim Damage: +" .. config.ChargesOnFreeAim .. " charges added.")
+                        chargeComponent.ChangeCharge(config.ChargesOnFreeAim)
 
                     -- Damage Reason 4: Basic attacks.
                     -- Add/remove charges for basic attacking enemies, if enabled.
                     elseif damageReason == 4 then
-                        chargeComponent.ChangeCharge(config.ChargesOnBaseAttacks - 1)
                         Log("Base Attack Damage: +" .. config.ChargesOnBaseAttacks .. " charges added.")
+                        chargeComponent.ChangeCharge(config.ChargesOnBaseAttacks - 1)
+
+                        -- Weapon lumina passive "Stance_CritChanceDefensive" adds additional charges on a base attack.
+                        if equippedCustomPassives["Stance_CritChanceDefensive"] then
+                            Log("Lumina 'Stance_CritChanceDefensive' base attack damage: +" .. config.LuminaAdditionalChargesPerBaseAttackHit .. " additional charges added.")
+                            chargeComponent.ChangeCharge(config.LuminaAdditionalChargesPerBaseAttackHit)
+                            WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Stance_CritChanceDefensive"])
+                        end
 
                     -- Damage Reason 5 and 9: Normal counter attacks.
                     -- Add or remove charges for doing a normal or ranged counter attack, if enabled.
                     elseif damageReason == 5 or damageReason == 9 then
-                        chargeComponent.ChangeCharge(config.ChargesOnCounterAttacks - 1)
                         Log("Counter Attack Damage: +" .. config.ChargesOnCounterAttacks .. " charges added.")
+                        chargeComponent.ChangeCharge(config.ChargesOnCounterAttacks - 1)
 
                     -- Damage reason 6: Lumina which is used by the Simoso "ethereal" sword ability for double light damage.
                     -- Add/remove charges for this effect, if enabled.
                     elseif damageReason == 6 and config.ChargesOnLuminaDamage ~= 0 then
-                        chargeComponent.ChangeCharge(config.ChargesOnLuminaDamage)
                         Log("Lumina Damage: +" .. config.ChargesOnLuminaDamage .. " charges added.")
+                        chargeComponent.ChangeCharge(config.ChargesOnLuminaDamage)
 
                     -- Damage Reason 8: Gradient counter attack.
                     -- Add or remove charges for doing a gradient counter attack, if enabled.
                     elseif damageReason == 8 then
-                        chargeComponent.ChangeCharge(config.ChargesOnGradientCounter - 1)
                         Log("Gradient Counter Damage: +" .. config.ChargesOnGradientCounter .. " charges added.")
+                        chargeComponent.ChangeCharge(config.ChargesOnGradientCounter - 1)
 
                     -- Damage Reason 11: Jump counter attack.
                     -- Add or remove charges for doing a jump counter attack, if enabled.
                     elseif damageReason == 11 then
-                        chargeComponent.ChangeCharge(config.ChargesOnJumpCounter - 1)
                         Log("Jump Counter Damage: +" .. config.ChargesOnJumpCounter .. " charges added.")
+                        chargeComponent.ChangeCharge(config.ChargesOnJumpCounter - 1)
                     end
                 end
 
-                -- We took damage from an enemy!
+                -- We took a hit from an enemy!
                 if isTargetOwner then
                     -- Adds or removes charges when receiving a hit, if enabled.
                     -- Damage reason anything other than 2: Add or remove charges for anything that isn't buff damage (e.g. burn).
                     if damageReason ~= 2 and config.ChargesOnReceivedHit ~=0 then
-                        chargeComponent.ChangeCharge(config.ChargesOnReceivedHit)
                         Log("Damage Taken: +" .. config.ChargesOnReceivedHit .. " charges added.")
+                        chargeComponent.ChangeCharge(config.ChargesOnReceivedHit)
                     end
 
                     -- Incase Steeled Strike is enabled, disable it now since we got hit and it was cancelled.
@@ -2657,7 +2685,7 @@ local function TryRegisterChargeComponentHooks()
 
                 -- We already have the maximum amount of charges, so do nothing otherwise the player keeps hearing the "max charges" noise.
                 -- Unless the added charge amount is negative, then in this case do NOT skip this instance.
-                if(virtualCurrentCharges == virtualMaxCharges) and (read_int(amount) >= 0) then
+                if(virtualCurrentCharges == virtualMaxCharges) and (CustomFunctions.read_int(amount) >= 0) then
                     return
                 end
 
@@ -2676,10 +2704,10 @@ local function TryRegisterChargeComponentHooks()
 
                 -- The amount of charges that get added to our counter.
                 -- Also includes the bonus charges from Lumiere Assault, Strike Storm and Shatter.
-                Log("Added charges: "..tostring(read_int(amount)))
+                Log("Added charges: "..tostring(CustomFunctions.read_int(amount)))
 
                 -- Add the charges.
-                virtualCurrentCharges = virtualCurrentCharges + read_int(amount)
+                virtualCurrentCharges = virtualCurrentCharges + CustomFunctions.read_int(amount)
 
                 -- Make sure we don't go over our max limit.
                 -- Also make sure our virtual charges never go below 0 as well.
@@ -2731,6 +2759,19 @@ end
 
 -- This hook runs when loading a save.
 RegisterHook(hooking.CLIENT_RESTART, function()
+
+    -- For the first time we load into a save: Attempt to modify all descriptions and AP costs so that they are correct right away.
+    -- We also cache a few abilities related to voicelines that are tied to them for later use.
+    ModifyAllDescriptionsAndCost()
+
+    -- This function modifies all the weapons in the game by changing their elemental damage type and the passives they use.
+    patchedWeaponSample = WeaponHelper.ModifyAllWeapons(patchedWeaponSample)
+
+    -- Patch Gustave and Verso to only use their own respective weapons.
+    -- Also allows Gustave to use weapon passives and patches his skilltree.
+    patchedCharacterSample = PatchHelper.PatchGustaveVerso(patchedCharacterSample)
+
+    -- Make sure everything below only executes once even if loading multiple saves since hooks stick until the game is closed.
     if clientHookRegistered then
         return 
     end
@@ -2755,6 +2796,9 @@ RegisterHook(hooking.CLIENT_RESTART, function()
         selectedFreyInMenu = false
         loadingSystemComponent = nil
         updatedDynamicElement = false
+        updatedWeaponPassives = false
+        currentWeaponDefinitionInBattle = nil
+        equippedCustomPassives = {}
 
         -- Cache the Overcharge skills we need for the sounds when a new battle begins.
         CacheOverchargeSkills()
@@ -2762,7 +2806,7 @@ RegisterHook(hooking.CLIENT_RESTART, function()
 
     -- This hook runs when opening the character menu and selecting a specific character.
     RegisterHook(hooking.MENU_LOAD_CHARACTER_DATA, function(param, characterData)        
-        local character = unwrap(characterData)
+        local character = CustomFunctions.unwrap(characterData)
 
         if character:IsValid() then
             Log("CHARACTER NAME: " .. tostring(character.HardcodedNameID:ToString()))
@@ -2777,7 +2821,7 @@ RegisterHook(hooking.CLIENT_RESTART, function()
 
     -- This hook runs when opening the skills menu in the character selection menu and update all of the skill values after changing names/description.
     RegisterHook(hooking.SKILLPANEL_LOAD_CHARACTER, function(param, characterData)
-        local skillPanel = unwrap(param)
+        local skillPanel = CustomFunctions.unwrap(param)
 
         if skillPanel:IsValid() then
             skillPanel:InitializeSlotsData()
@@ -2791,7 +2835,7 @@ RegisterHook(hooking.CLIENT_RESTART, function()
             return
         end
 
-        local modifier = unwrap(param)
+        local modifier = CustomFunctions.unwrap(param)
 
         -- Return if the modifier somehow doesn't exist or the damage isn't caused by a skill.
         if not modifier or modifier.DamageReason ~= 1 then
@@ -2948,11 +2992,11 @@ RegisterHook(hooking.CLIENT_RESTART, function()
     -- This hook runs on any character's turn start.
     -- We will use it in order to grab the elemental damage type of our character's weapon for abilities that use it.
     RegisterHook(hooking.GENERIC_CHARACTER_TURN_START, function(param)
-        if not IsValidChargeComponent() or updatedDynamicElement then
+        if not IsValidChargeComponent() or updatedDynamicElement or updatedWeaponPassives then
             return
         end
 
-        local self = unwrap(param)
+        local self = CustomFunctions.unwrap(param)
 
         if not self then
             return
@@ -2961,10 +3005,14 @@ RegisterHook(hooking.CLIENT_RESTART, function()
         -- Get the actual character from the parameter so we can check if this is the one who owns the overcharge component.
         local owner = self:GetOwner()
 
-        -- Somehow owner doesn't exist or this character is not the one we need, do nothing.
+        -- Owner doesn't exist or this isn't the overcharge character that we need, do nothing.
         if not owner or not owner:IsValid() or not chargeComponent:IsCharacterOwner(owner) then
             return
         end
+
+        -- Cache the current character portrait so we can display lumina pop-up events whenever our custom luminas trigger.
+        characterPortrait = self.CharacterBattleSlotWidget.WBP_PassivePopupContainer_C_0
+        Log("Cached characterPortrait for lumina displays: " .. tostring(characterPortrait))
 
         -- Update the elemental damage type of the character's weapon.
         local newElement = self:GetBaseDamageType()
@@ -2978,12 +3026,37 @@ RegisterHook(hooking.CLIENT_RESTART, function()
         local characterDefinition = {}
         self:GetCharacterData(characterDefinition)
 
+        -- Get the character's weapon item instance.
         local isValid = {}
         local weaponInstance = characterDefinition.CharacterData:GetEquippedWeaponItemInstance(isValid)
 
+        -- Cache the current weapon instance so we can use it for the passive effect trigger notification display in the UI.
         currentWeaponDefinitionInBattle = weaponInstance
 
         Log("Updated weapon instance: " .. currentWeaponDefinitionInBattle.WeaponDefinition.DefinitionID_22_2E1ECEC74A7814AEAC1E35ACAD9FC16D:ToString())
+
+        -- Get the weapon's quality level which goes from 1-5.
+        local weaponRank = {}
+        currentWeaponDefinitionInBattle:GetCurrentQuality(weaponRank)
+
+        -- Put the lumina names into an array so it can be looped through and we don't have to deal with those massive variable names.
+        local luminaNames =
+        {
+            currentWeaponDefinitionInBattle.WeaponDefinition.Level1Lumina_37_784B3E9C481C775586D1A89DCF6D6FD4:ToString(),
+            currentWeaponDefinitionInBattle.WeaponDefinition.Level2Lumina_38_82A460E444079A36F26DDCA706CF3CFA:ToString(),
+            currentWeaponDefinitionInBattle.WeaponDefinition.Level3Lumina_39_307DE22A4854A7781B622B91C882BC69:ToString(),
+            currentWeaponDefinitionInBattle.WeaponDefinition.Level4Lumina_40_0EB7E00747F0CED5D7259C995D5AB4A7:ToString()
+        }
+
+        -- Get a list of available passives that we have equipped and unlocked on the character's weapon for this battle.
+        equippedCustomPassives = WeaponHelper.GetEquippedWeaponLuminas(luminaNames, weaponRank.Quality)
+
+        -- Print the passives that we have available for this battle in our array.
+        for _, passive in pairs(equippedCustomPassives) do
+            Log("Equipped custom passive: " .. passive)
+        end
+
+        updatedWeaponPassives = true
     end)
 
     -- This hook runs when we're in battle and open the ability menu.
@@ -2998,13 +3071,13 @@ RegisterHook(hooking.CLIENT_RESTART, function()
             return
         end
 
-        local self = unwrap(param)
+        local self = CustomFunctions.unwrap(param)
 
         if not self then
             return
         end
 
-        local skillState = unwrap(RemoteSkillState)
+        local skillState = CustomFunctions.unwrap(RemoteSkillState)
 
         if not skillState then
             return
@@ -3067,7 +3140,7 @@ RegisterHook(hooking.CLIENT_RESTART, function()
             return
         end
 
-        local self = unwrap(param)
+        local self = CustomFunctions.unwrap(param)
 
         if not self then
             return
@@ -3097,7 +3170,7 @@ RegisterHook(hooking.CLIENT_RESTART, function()
         end
 
         -- This is the current audio manager instance.
-        local self = unwrap(param)
+        local self = CustomFunctions.unwrap(param)
 
         -- Do nothing if it doesn't exist for whatever reason.
         if not self then
@@ -3139,8 +3212,6 @@ RegisterHook(hooking.CLIENT_RESTART, function()
             voiceLine = voiceLinesList["takethemdown"]
         elseif usedSabotage then
             voiceLine = voiceLinesList["battlewon"]
-        elseif usedStriker then
-            voiceLine = voiceLinesList["breakcycle"]
         elseif usedAngelsEyes then
             voiceLine = voiceLinesList["overcharge4"]
         else
@@ -3161,7 +3232,7 @@ RegisterHook(hooking.CLIENT_RESTART, function()
             return
         end
 
-        local self = unwrap(param)
+        local self = CustomFunctions.unwrap(param)
 
         if not self then
             return
@@ -3236,7 +3307,7 @@ RegisterHook(hooking.CLIENT_RESTART, function()
         end
 
         -- This is the component that handles the world character logic.
-        local characterWorldManager = unwrap(param)
+        local characterWorldManager = CustomFunctions.unwrap(param)
 
         if not characterWorldManager then
             return
@@ -3269,7 +3340,7 @@ RegisterHook(hooking.CLIENT_RESTART, function()
         end
 
         -- This is the component that handles the world character logic.
-        local characterWorldManager = unwrap(param)
+        local characterWorldManager = CustomFunctions.unwrap(param)
 
         if not characterWorldManager then
             return
@@ -3291,24 +3362,37 @@ RegisterHook(hooking.CLIENT_RESTART, function()
         Log("Forced camp to use " .. character .. " as main character in COMPUTE_ACTIVE_CHARACTER.")
     end)
 
-    -- For the first time we load into a save: Attempt to modify all descriptions and AP costs so that they are correct right away.
-    -- We also cache the a few abilities related to voicelines that are tied to them for later use.
-    ModifyAllDescriptionsAndCost()
-
-    -- Patch Gustave and Verso to only use their own respective weapons.
-    -- Also allow Gustave to use weapon passives.
-    PatchHelper.PatchGustaveVerso()
-
-    -- This hook patches the weapon tooltips so that they can show for Gustave in the menu.
+    -- This hook patches the weapon passive tooltips menu so that they can show for Gustave in the menu.
     RegisterHook(hooking.LOAD_WEAPON, WeaponHelper.WeaponTooltipsHook)
 
-    -- WIP STUFF BELOW
-
+    -- This hook helps us get the luminas of the currently selected weapon in the character menu to show custom descriptions in cominbation with our LOAD_PASSIVE_EFFECT_DATA hook.
     RegisterHook(hooking.LOAD_WEAPON_LUMINAS, WeaponHelper.WeaponLoadLuminasHook)
 
+    -- This hook injects our custom descriptions into the weapon passives tooltip menu.
     RegisterHook(hooking.LOAD_PASSIVE_EFFECT_DATA, function(param, passiveEffectDefinition, qualityLevel, isLocked, unlockLevel)
         WeaponHelper.WeaponLuminaTooltipsHook(param, passiveEffectDefinition, qualityLevel, isLocked, unlockLevel, selectedFreyInMenu)
     end)
 
-    WeaponHelper.ModifyAllWeapons(ElementsHelper.ElementEnum)
+    -- This hook patches the amount of available skill points because the game doesn't use our new costs right away.
+    RegisterHook(hooking.GET_TOTAL_SKILL_POINTS, function(param)
+        PatchHelper.GetTotalSkillPoints(param, selectedFreyInMenu)
+    end)
+
+    RegisterHook(hooking.LOAD_MENU_CHARACTERS, PatchHelper.PatchCharacterMenu)
+
+    NotifyOnNewObject("/Game/Gameplay/GameMenu/BP_GameMenuScene.BP_GameMenuScene_C", PatchHelper.PatchCharacterMenu)
+
+    NotifyOnNewObject("/Script/Engine.Actor", function(object)
+        local className = object:GetClass():GetFullName()
+
+        if className:find("Character")
+            or className:find("GameMenuScene")
+            or className:find("Niagara") then
+            -- ForEachProperty is available on UStruct / UClass objects
+            object:GetClass():ForEachProperty(function(Property)
+                Log(("Found Property: " .. Property:GetFName():ToString()))
+            end)
+            Log(tostring("--------------------Created [" .. className .. "]: " .. object:GetFullName()))
+        end
+    end)
 end)
