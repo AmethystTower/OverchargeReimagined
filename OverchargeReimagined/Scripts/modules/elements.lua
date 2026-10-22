@@ -1,6 +1,6 @@
 
 --[[
-------- Overcharge Reimagined v3.0 - By Killera -------
+------- Overcharge Reimagined v4.0 - By Killera -------
 
         This module handles all the elemental damage type tables and caches the config's custom element settings used by all abilities in a static list.
 

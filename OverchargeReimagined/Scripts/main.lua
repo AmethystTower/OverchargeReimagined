@@ -1,6 +1,6 @@
 
 --[[
-------- Overcharge Reimagined v3.0 - By Killera -------
+------- Overcharge Reimagined v4.0 - By Killera -------
 
     DO NOT MODIFY THIS MODULE IF YOU SIMPLY WANT TO CUSTOMIZE THIS MOD.
     If you just want to customize this mod and simply change gameplay values then use the config.lua instead!
@@ -155,9 +155,6 @@ else
     SkillsHelper.Init(Log, config, ElementsHelper.ElementEnum)
 end
 
--- This is our custom charge limit, can be set to any number but it should NOT be negative.
-local virtualMaxCharges = config.VirtualMaxCharges
-
 -- Ability settings that we need in this module of the mod.
 local shatterChargesPercentage = config.ShatterChargesPercentage
 local overchargeChargesPercentage = config.OverchargeChargesPercentage
@@ -179,7 +176,6 @@ local strikeStormChargesPerCritical = config.StrikeStormChargesPerCritical
 local fromFireChargesPerCritical = config.FromFireChargesPerCritical
 local endbringerChargesPerStunnedHit = config.EndbringerChargesPerStunnedHit
 local speedBurstChargesPerHit = config.SpeedBurstChargesPerHit
-local angelsEyesAdditionalChargesPerHit = config.AngelsEyesAdditionalChargesPerHit
 
 local fromFireHealPerCharge = config.FromFireHealPerCharge
 local paradigmShiftAPPerCharge = config.ParadigmShiftAPPerCharge
@@ -197,13 +193,18 @@ local phantomStarsChargesConsumed = config.PhantomStarsChargesConsumed
 local berserkScaleSize = config.BerserkScaleSize
 local berserkScaleTime = config.BerserkScaleTime
 
--- These values SHOULD NOT BE MODIFIED.
-local virtualCurrentCharges = 0 -- Our own charge counter.
+-- The values below SHOULD NOT BE MODIFIED.
+
+-- Custom max charge limit, can be set to any number but it should NOT be negative or a decimal.
+local virtualMaxCharges = config.VirtualMaxCharges
+
+-- Custom charge counter monitoring how many we have available right now.
+local virtualCurrentCharges = 0
 
 -- This should never be changed, the game has to think that there is still only 10 charges under the hood so that animation selection and other effects still work properly.
 local MAX_INGAME_CHARGES = 10
 
--- This makes sure the in-game charges are always within the number of MAX_INGAME_CHARGES independent to how many actual charges we can have.
+-- Makes sure the in-game charges are always within the number of the game's MAX_INGAME_CHARGES independent to how many actual charges we can have through the custom counters.
 local CHARGE_MULTIPLIER
 
 -- Check if virtual max charges has been set to 0 or even negative numbers, then create our multiplier accordingly.
@@ -269,6 +270,7 @@ local onReceivedDamageHookRegistered = false
 local changeChargeHookRegistered = false
 local updateCurrentValueHookRegistered = false
 local constructPortraitHookRegistered = false
+local skillGraphSystemHookRegistered = false
 
 -- These let us know if we need to refresh the patch functions incase someone loaded a new save.
 local patchedCharacterSample = nil
@@ -285,8 +287,10 @@ local steeledStrikeExecuted = false
 local selectedFreyInMenu = false
 local voiceLinePlaying = false
 local loadingDependenciesGuard = false
+local patchSkillTreeGuard = false
 local updatedDynamicElement = false
 local updatedWeaponPassives = false
+local disableChargeGeneration = false
 
 -- Ints that we need to monitor stats.
 local ascendingAssaultCounter = 0
@@ -321,22 +325,25 @@ local usedParadigmShift = false
 local usedRecovery = false
 local usedOverload = false
 
--- This tells if we have consumed some charges this turn with any ability that isn't the "Overcharge" skill.
+-- Tells if we have consumed some charges this turn with any ability that isn't the "Overcharge" skill.
 local consumedChargesFromAbility = 0
 
--- This will store the active charge component from our character during the battle so we can modify it from any of our hooks.
+-- Tracks how many charges are being consumed during a battle in total.
+local totalConsumedChargesDuringBattle = 0
+
+-- Store the active charge component from our character during the battle so we can modify it from any of our hooks.
 local chargeComponent = nil
 
--- This will store the active portrait component during the battle that displays the number of charges along with the images of the arm.
+-- Store the active portrait component during the battle that displays the number of charges along with the images of the arm.
 local chargePortrait = nil
 
--- This will store the audio manager component during battle, which will allow us to play battle lines for abilities that usually never play any (like Shatter or From Fire).
+-- Store the audio manager component during battle, which will allow us to play battle lines for abilities that usually never play any (like Shatter or From Fire).
 local battleAudioManager = nil
 
--- This will cache the current character portrait of our character during battle, so that we display the lumina pop-ups for our custom passives.
+-- Cache the current character portrait of our character during battle, so that we display the lumina pop-ups for our custom passives.
 local characterPortrait = nil
 
--- This allows us to temporarily cache a skillscript after using an ability so we can use it from one of our other hooks.
+-- Allows us to temporarily cache a skillscript after using an ability so we can use it from one of our other hooks.
 local temp_SkillScript = nil
 
 -- This boolean allows us to know if the current damage instance is caused by our custom bonus hits for an ability.
@@ -344,40 +351,56 @@ local temp_SkillScript = nil
 -- TODO: Unused for now as this feature is not fully finished and stable yet.
 --local addingAdditionalPellets = false
 
--- This will restore the dynamic elemental damage type of the character's currently equipped weapon.
+-- Restores the dynamic elemental damage type of the character's currently equipped weapon.
 -- Initialize it with value physical (1).
 local dynamicWeaponElement = ElementsHelper.ElementEnum.Physical
 
--- This will store the current weapon info used by the character, so that we can grab its weapon passives.
+-- Stores the current weapon info used by the character, so that we can grab its weapon passives.
 local currentWeaponDefinitionInBattle = nil
 
--- This will store the list of currently equipped custom weapon passives.
+-- Stores the list of currently equipped custom weapon passives.
 local equippedCustomPassives = {}
 
+-- Used by the Overload skill to split its charges to the 2 times its effect triggers so it's cooler :D
 local overloadAddedCharges = 0
 
--- This will cache the game's loading system component used to load and manage assets.
+-- Caches the game's loading system component used to load and manage assets.
 -- It will effectively be used as a bool to see if it's valid between battles.
 local loadingSystemComponent = nil
 
--- This function helps us find out if our current charge component is still valid.
+-- Helps us find out if our current charge component is still valid.
 local function IsValidChargeComponent()
     return chargeComponent and chargeComponent:IsValid()
 end
 
--- This function helps us find out if the overcharge portrait component is still valid.
+-- Helps us find out if the overcharge portrait component is still valid.
 local function IsValidChargePortraitProperties()
     return chargePortrait and chargePortrait:IsValid()
 end
 
--- This function helps us find out if the audio manager component is still valid.
+-- Helps us find out if the audio manager component is still valid.
 local function IsValidAudioComponent()
     return battleAudioManager and battleAudioManager:IsValid()
 end
 
--- This function helps us find out if the system loading component is still valid.
+-- Helps us find out if the system loading component is still valid.
 local function IsValidLoadingComponent()
     return loadingSystemComponent and loadingSystemComponent:IsValid()
+end
+
+-- Update the CHARGE_MULTIPLIER which keeps the game's in-game charge counter within 10.
+-- If a lumina passive from a weapon modifies the max charge cap then this gets called to update the multiplier.
+local function UpdateChargeMultiplier()
+    if virtualMaxCharges > 0 then
+        -- This multiplier is used to make sure no whatter how many max charges we have set, the game will always use 10 charges.
+        CHARGE_MULTIPLIER = 100 / (virtualMaxCharges * MAX_INGAME_CHARGES)
+    else
+        CHARGE_MULTIPLIER = 0
+
+        -- Incase someone set the number to negatives, set it to 0.
+        -- Now we can't generate any charges anymore... hope you're happy! :D
+        virtualMaxCharges = 0
+    end
 end
 
 local function PlayOverchargeLines(audioManager, strengthStage)
@@ -472,8 +495,8 @@ local function ModifyAbilityCostAndDescription(param, modifyAPCostOnly)
 
     -- Check if the skill type is 1 and if it isn't, do nothing.
     -- 2 are gradient abilities and 3 are items, we ignore those.
-    -- UNLESS it is Angel's eyes, we want to modify the ability's description and add charges on criticals but not make its cost customizable.
-    if self.SkillType ~= 1 and self.NameID:ToString() ~= "AngelsEyes" then
+    -- UNLESS it is Gommage, we want to modify the ability's description and add charges on criticals but not make its cost customizable.
+    if self.SkillType ~= 1 and self.NameID:ToString() ~= "Gommage" then
         return
     end
 
@@ -586,8 +609,9 @@ local function ModifyAbilityCostAndDescription(param, modifyAPCostOnly)
     -- This check handles dynamic short descriptions during battle.
     if overchargeCharacterTurn and IsValidChargeComponent() then
         -- Dynamically update Marking Shot's short description with the current stun chance we have based off the available amount of charges.
+        -- Use the VirtualMaxCharges from the config incase we have luminas modifying the max charge cap.
         if abilityNameID == "MarkingShot_Gustave" then
-            assembledShortDescription = assembledShortDescription .. ("\nHas a " .. string.format("%g", (virtualCurrentCharges / virtualMaxCharges * markingShotMaxStunChance) * 100) .. " " .. abilityValues.OverchargeDynamicDescriptionPiece)
+            assembledShortDescription = assembledShortDescription .. ("\nHas a " .. string.format("%g", (virtualCurrentCharges / config.VirtualMaxCharges * markingShotMaxStunChance) * 100) .. " " .. abilityValues.OverchargeDynamicDescriptionPiece)
         -- Dynamically update the current amount of consumed charges for Ascending Assault.
         elseif abilityNameID == "AscendingAssault" then
             local consumedCharges = ascendingAssaultChargesConsumed + (ascendingAssaultCounter * ascendingAssaultAdditionalChargesConsumed)
@@ -627,10 +651,6 @@ end
 
 -- Modify all abilities so that they show their correct descriptions and AP cost immediately.
 local function ModifyAllDescriptionsAndCost()
-    if patchedSkillSample and patchedSkillSample:IsValid() then
-        return
-    end
-
     local skill_assets = GetAllSkillAssets()
     
     if skill_assets then
@@ -707,14 +727,66 @@ local function IncreaseDamageMultiplierBasedOnCharges(multiplier, abilityName, c
 
     local bonusMultiplier = abilityValues.ChargesMultiplier
 
+    -- Luminas that increase damage per consumed charge.
+    -- BUT add an exception for Overcharge because the way it consumes charges behaves differently so it needs to be multiplied differently.
+    if not usedOvercharge then
+        -- Lumina Passive: "Stance_DamageSwitch" greatly increases damage per consumed charge.
+        if equippedCustomPassives["Stance_DamageSwitch"] then
+            local increasedMultiplier = bonusMultiplier * config.LuminaIncreasedDamagePerConsumedChargePercentage
+
+            Log("Lumina 'Stance_DamageSwitch' bonusMultiplier before: " .. bonusMultiplier .. ".")
+            bonusMultiplier = bonusMultiplier + increasedMultiplier
+            Log("Lumina 'Stance_DamageSwitch' bonusMultiplier after: " .. bonusMultiplier .. ".")
+            
+            WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Stance_DamageSwitch"])
+        end
+
+        -- Lumina Passive: "Stains_ICEDMGUp" increases damage per consumed charge.
+        if equippedCustomPassives["Stains_ICEDMGUp"] then
+            local increasedMultiplier = bonusMultiplier * config.LuminaIncreasedDamagePerConsumedChargePercentageWeaker
+
+            Log("Lumina 'Stains_ICEDMGUp' bonusMultiplier before: " .. bonusMultiplier .. ".")
+            bonusMultiplier = bonusMultiplier + increasedMultiplier
+            Log("Lumina 'Stains_ICEDMGUp' bonusMultiplier after: " .. bonusMultiplier .. ".")
+            
+            WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Stains_ICEDMGUp"])
+        end
+    end
+
     Log("FinalDamageMultiplier before: " .. tostring(multiplier))
 
     -- Formula: Every charge adds +ChargesMultiplier to the multiplier.
     local addedModifier = consumedCharges * bonusMultiplier
-
+    
     multiplier = multiplier + addedModifier
-
     Log("Added +" .. addedModifier .. " to the damage multiplier based on " .. consumedCharges .. " charges and " .. bonusMultiplier .. " per charge.")
+
+
+    -- Multiply Overcharge's final multiplier with the lumina bonus directly otherwise the bonus damage it receives is pretty much nothing compared to all other abilities.
+    if usedOvercharge then
+        -- Lumina Passive: "Stance_DamageSwitch" greatly increases damage per consumed charge.
+        if equippedCustomPassives["Stance_DamageSwitch"] then
+            local increasedMultiplier = multiplier * config.LuminaIncreasedDamagePerConsumedChargePercentage
+
+            Log("Lumina 'Stance_DamageSwitch' Overcharge multiplier before: " .. multiplier .. ".")
+            multiplier = multiplier + increasedMultiplier
+            Log("Lumina 'Stance_DamageSwitch' Overcharge multiplier after: " .. multiplier .. ".")
+
+            WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Stance_DamageSwitch"])
+        end
+
+        -- Lumina Passive: "Stains_ICEDMGUp" increases damage per consumed charge.
+        if equippedCustomPassives["Stains_ICEDMGUp"] then
+            local increasedMultiplier = multiplier * config.LuminaIncreasedDamagePerConsumedChargePercentageWeaker
+
+            Log("Lumina 'Stains_ICEDMGUp' bonusMultiplier before: " .. multiplier .. ".")
+            multiplier = multiplier + increasedMultiplier
+            Log("Lumina 'Stains_ICEDMGUp' bonusMultiplier after: " .. multiplier .. ".")
+            
+            WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Stains_ICEDMGUp"])
+        end
+    end
+
     Log("FinalDamageMultiplier after: " .. tostring(multiplier))
 
     return multiplier
@@ -733,6 +805,12 @@ local function CalculateAmountOfConsumedCharges(abilityName, abilityNameLog)
 
     local consumedCharges = abilityValues.ChargesConsumed
 
+    -- Set the consumed charges for those abilities to the max amount, since they always consume all.
+    -- This is mostly a fix for the log so it displays the correct number if the cap was changed by a passive.
+    if usedOvercharge or usedShatter or usedMarkingShot then
+        consumedCharges = virtualMaxCharges
+    end
+
     -- Check the amount of charges that Ascending Assault can consume right now and add them.
     if abilityName == "AscendingAssault" then
         consumedCharges = consumedCharges + (ascendingAssaultCounter * ascendingAssaultAdditionalChargesConsumed)
@@ -747,6 +825,41 @@ local function CalculateAmountOfConsumedCharges(abilityName, abilityNameLog)
     local availableCharges = math.min(virtualCurrentCharges, consumedCharges)
     consumedChargesFromAbility = availableCharges
 
+    -- Lumina Passive: "Stance_ShieldDStance" adds shields for every x charges consumed throughout the battle.
+    if equippedCustomPassives["Stance_ShieldDStance"] then
+        -- Get the character owner of the charge component.
+        local owner = chargeComponent:GetOwner()
+
+        -- Make sure the config setting LuminaAdditionalShieldPerCharges is higher than 0, otherwise division by 0 is possible.
+        if owner and owner:IsValid() and config.LuminaAdditionalShieldPerCharges > 0 then
+            -- Get stats instance of the character.
+            local statsClass = StaticFindObject("/Game/jRPGTemplate/Blueprints/Components/AC_jRPG_CharacterBattleStats.AC_jRPG_CharacterBattleStats_C")
+            local ownerStatsClass = owner:GetComponentByClass(statsClass)
+
+            -- Calculate gained shields.
+            local shieldAmount = 0
+
+            -- Divide total charges with required amount for shields and use the rest value to check how close we are to the next 25.
+            local leftoverCharges = totalConsumedChargesDuringBattle % config.LuminaAdditionalShieldPerCharges
+
+            -- Add the currently consumed charges to the rest value.
+            local chargesForNextShield = leftoverCharges + consumedChargesFromAbility
+
+            -- Check if we have consumed enough starts for 1 or more shields.
+            shieldAmount = math.floor(chargesForNextShield / config.LuminaAdditionalShieldPerCharges)
+
+            if shieldAmount > 0 then
+                Log("Added +" .. shieldAmount .. " shield(s) after consuming " .. config.LuminaAdditionalShieldPerCharges .. " total charges.")
+                -- AddShieldPoints: Shield amount, debug reason.
+                ownerStatsClass:AddShieldPoints(shieldAmount, "None")
+                WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Stance_ShieldDStance"])
+            end
+        end
+    end
+
+    -- Track total amount of charges consumed during this battle.
+    totalConsumedChargesDuringBattle = totalConsumedChargesDuringBattle + consumedChargesFromAbility
+
     -- Do not consume the charges here when we are using Overcharge, since we need it for the game's native damage calculation as we only want to add to it.
     -- The game natively consumes the charges using our custom values once Overcharge is finished.
     if not usedOvercharge then
@@ -754,6 +867,29 @@ local function CalculateAmountOfConsumedCharges(abilityName, abilityNameLog)
     end
 
     Log(abilityNameLog .. ": Consuming " .. consumedChargesFromAbility .. " charges for increased damage.")
+end
+
+-- Modifies the max charge cap for certain lumina effects.
+local function ModifyMaxChargeCap(luminaPassive, luminaPercentageModifier, isIncrement)
+    if not IsValidChargeComponent() or not IsValidChargePortraitProperties() then
+        return
+    end
+    
+    -- Use the original max charge cap to calculate the additional charges.
+    -- This way any other effects modifiying the max charges don't stack multiplicative.
+    local additionalMaxCharges = math.floor(config.VirtualMaxCharges * luminaPercentageModifier)
+
+    if not isIncrement then
+        additionalMaxCharges = (-1) * additionalMaxCharges
+    end
+
+    virtualMaxCharges = virtualMaxCharges + additionalMaxCharges
+
+    -- Update the CHARGE_MULTIPLIER and the arm portrait to use the new max charge cap.
+    UpdateChargeMultiplier()
+    chargePortrait.TextBlock_MaxValue:SetText(FText("/" .. tostring(virtualMaxCharges)))
+    chargeComponent.ChangeCharge(0)
+    WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, luminaPassive)
 end
 
 local function ResetAbilityStates()
@@ -1097,7 +1233,8 @@ local function TryRegisterAbilityHooks()
                 end
 
                 -- Calculate the charges that Recovery generates.
-                local addedCharges = math.floor((virtualMaxCharges * recoveryChargesPercentage))
+                -- Only use the original max charge cap to keep it balanced with luminas that increase it.
+                local addedCharges = math.floor((config.VirtualMaxCharges * recoveryChargesPercentage))
 
                 -- Multiply our added charges with the charge gain from the game's result object.
                 -- This way we can utilize the skillcheck and add more percentages.
@@ -1500,10 +1637,8 @@ local function TryRegisterAbilityHooks()
                 Log("Defiant Strike used this turn.")
                 usedDefiantStrike = true
 
-                -- Temporarily cache this skill script object so we can apply Blight to an enemy.
-                temp_SkillScript = CustomFunctions.unwrap(param)
-
-                local addedCharges = math.floor(virtualMaxCharges * config.DefiantStrikeChargesPercentage)
+                -- This ability is not affected by luminas that increase the max charge cap to keep it balanced.
+                local addedCharges = math.floor(config.VirtualMaxCharges * config.DefiantStrikeChargesPercentage)
 
                 chargeComponent.ChangeCharge(addedCharges)
                 Log("Defiant Strike: Adding " .. addedCharges .. " charges to the counter.")
@@ -1995,7 +2130,7 @@ local function TryRegisterAbilityHooks()
     if not strikerHookRegistered then
         local ok = pcall(function()
             -- This hook runs whenever someone uses Angel's Eyes.
-            RegisterHook(hooking.STRIKER_ON_EXECUTE, function(param)
+            RegisterHook(hooking.PHOENIX_FLAME_ON_EXECUTE, function(param)
                 if not IsValidChargeComponent() then
                     return
                 end
@@ -2022,11 +2157,11 @@ local function TryRegisterAbilityHooks()
         end
     end
 
-    -- Try to register Angel's Eyes' hooks.
+    -- Try to register Gommage's hooks.
     if not angelsEyesHookRegistered then
         local ok = pcall(function()
             -- This hook runs whenever someone uses Angel's Eyes.
-            RegisterHook(hooking.ANGELS_EYES_ON_EXECUTE, function(param)
+            RegisterHook(hooking.GOMMAGE_ON_EXECUTE, function(param)
                 if not IsValidChargeComponent() then
                     return
                 end
@@ -2036,15 +2171,25 @@ local function TryRegisterAbilityHooks()
                     return
                 end
 
-                Log("Angel's Eyes used this turn.")
+                Log("Gommage used this turn.")
                 usedAngelsEyes = true
+
+                local addedCharges = math.floor(virtualMaxCharges * config.GommageChargesPercentage)
+
+                chargeComponent.ChangeCharge(addedCharges)
+                Log("Gommage: Adding " .. addedCharges .. " charges to the counter.")
+
+                -- 50% chance to play the voiceline.
+                if math.random(1, 100) <= 50 then
+                    PlayVoiceLine(battleAudioManager, "overcharge4")
+                end
             end)
         end)
 
         -- If it was successful, mark the hooks registrations as true.
         if ok then
             angelsEyesHookRegistered = true
-            Log("Successfully registered Angel's Eyes ability execution hooks.")
+            Log("Successfully registered Gommage's ability execution hooks.")
         end
     end
 
@@ -2207,16 +2352,8 @@ local function TryRegisterChargeComponentHooks()
             RegisterHook(hooking.RECEIVE_BEGIN_PLAY, function(param)
                 local self = CustomFunctions.unwrap(param)
 
-                -- Check if the charge component exists, if yes then cache it.
+                -- Check if the charge component is valid.
                 if self:IsValid() then
-                    virtualCurrentCharges = 0
-                    consumedChargesFromAbility = 0
-                    ascendingAssaultCounter = 0
-                    firstTurn = true
-                    overchargeCharacterTurn = false
-
-                    Log("Internal Charge Counter: " .. tostring(virtualCurrentCharges))
-
                     -- Cache the charge component during the fight for easy access in our other hooks.
                     chargeComponent = self
 
@@ -2237,11 +2374,44 @@ local function TryRegisterChargeComponentHooks()
 
                     -- Add a 2 second delay before applying the starting charges.
                     -- Otherwise we'd get an error and no charges due to calling this too early when the character is not fully initialized yet.
-                    ExecuteWithDelay(2000, function()
+                    ExecuteWithDelay(4000, function()
                         -- This is another safety check to see if self still exists, since we are exceuting delayed code here.
                         if self:IsValid() then
                             Log("Adding " .. tostring(config.StartingCharges) .. " starting charges.")
                             self.ChangeCharge(config.StartingCharges)
+                        end
+
+                        -- Lumina Passive: "Perfection_Dodgex2" increases max charge cap for this battle!
+                        if equippedCustomPassives["Perfection_Dodgex2"] then
+                            ModifyMaxChargeCap(equippedCustomPassives["Perfection_Dodgex2"], config.LuminaIncreaseMaxChargesPercentage, true)
+                            Log("Lumina 'Perfection_Dodgex2' increases virtual max charges to: " .. (virtualMaxCharges) .. ".")
+                        end
+
+                        -- Lumina Passive: "Perfection_StartRankA" doubles max charge cap for this battle!
+                        if equippedCustomPassives["Perfection_StartRankA"] then
+                            ModifyMaxChargeCap(equippedCustomPassives["Perfection_StartRankA"], config.LuminaDoubleMaxChargesPercentage, true)
+                            Log("Lumina 'Perfection_StartRankA' increases virtual max charges to: " .. (virtualMaxCharges) .. ".")
+                        end
+
+                        -- Lumina Passive: "Perfection_StartRankS" reduced max charge cap for this battle!
+                        if equippedCustomPassives["Perfection_StartRankS"] then
+                            ModifyMaxChargeCap(equippedCustomPassives["Perfection_StartRankS"], config.LuminaReducedMaxChargesPercentage, false)
+                            Log("Lumina 'Perfection_StartRankS' reduces virtual max charges to: " .. (virtualMaxCharges) .. ".")
+                        end
+
+                        -- Lumina Passive: "Stance_ShieldOnOSstance" adds some charges on battle start.
+                        if equippedCustomPassives["Stance_ShieldOnOSstance"] then
+                            Log("Lumina 'Stance_ShieldOnOSstance' adding starting charges: +" .. math.floor(config.VirtualMaxCharges * config.LuminaStartingChargesQuarterPercentage) .. " added.")
+                            chargeComponent.ChangeCharge(math.floor(config.VirtualMaxCharges * config.LuminaStartingChargesQuarterPercentage))
+                            WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Stance_ShieldOnOSstance"])
+                        end
+
+                        -- Lumina Passive: "Perfection_StartRankC" adds full charges on battle start but disables charge generation afterwards.
+                        if equippedCustomPassives["Perfection_StartRankC"] then
+                            Log("Lumina 'Perfection_StartRankC' adding starting charges: +" .. math.floor(virtualMaxCharges * config.LuminaStartingChargesFullPercentage) .. " added.")
+                            chargeComponent.ChangeCharge(math.floor(virtualMaxCharges * config.LuminaStartingChargesFullPercentage))
+                            disableChargeGeneration = true
+                            WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Perfection_StartRankC"])
                         end
                     end)
                 end
@@ -2286,6 +2456,19 @@ local function TryRegisterChargeComponentHooks()
                 if IsValidChargeComponent() and not firstTurn then
                     Log("Adding " .. tostring(config.ChargesPerTurn) .. " charges per turn.")
                     chargeComponent.ChangeCharge(config.ChargesPerTurn)
+
+                    -- Lumina Passive: "Stance_DefensiveGradientCharges" adds some charges on turn start.
+                    if equippedCustomPassives["Stance_DefensiveGradientCharges"] then
+                        Log("Lumina 'Stance_DefensiveGradientCharges' adding charges per turn: +" .. math.floor(config.VirtualMaxCharges * config.LuminaAdditionalChargesPerTurn) .. " added.")
+                        chargeComponent.ChangeCharge(math.floor(config.VirtualMaxCharges * config.LuminaAdditionalChargesPerTurn))
+                        WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Stance_DefensiveGradientCharges"])
+                    end
+
+                    -- Lumina Passive: "Stance_DamageSelfSwitch" increases max charge cap with each turn!
+                    if equippedCustomPassives["Stance_DamageSelfSwitch"] then
+                        ModifyMaxChargeCap(equippedCustomPassives["Stance_DamageSelfSwitch"], config.LuminaAdditionalMaxChargesPercentage, true)
+                        Log("Lumina 'Stance_DamageSelfSwitch' increases virtual max charges to: " .. (virtualMaxCharges) .. ".")
+                    end
                 else
                     firstTurn = false
                 end
@@ -2357,6 +2540,20 @@ local function TryRegisterChargeComponentHooks()
                 local calculatedCharges = config.ChargesOnDodge - 1
 
                 chargeComponent.ChangeCharge(calculatedCharges)
+
+                -- Lumina Passive: "Stance_VirtuoseOnShieldBreak" adds additional charges per successful dodge.
+                if equippedCustomPassives["Stance_VirtuoseOnShieldBreak"] then
+                    Log("Lumina 'Stance_VirtuoseOnShieldBreak' successful parry: +" .. config.LuminaAdditionalChargesPerDodgeParry .. " additional charges added.")
+                    chargeComponent.ChangeCharge(config.LuminaAdditionalChargesPerDodgeParry)
+                    WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Stance_VirtuoseOnShieldBreak"])
+                end
+
+                -- Lumina Passive: "Foretell_OnlyDeathEmpress" adds a lot of additional charges per successful parry. But takes away a lot of charges per dodge and all when hit.
+                if equippedCustomPassives["Foretell_OnlyDeathEmpress"] then
+                    Log("Lumina 'Foretell_OnlyDeathEmpress' successful dodge: -" .. config.LuminaLostChargesPerDodge .. " charges lost.")
+                    chargeComponent.ChangeCharge((-1) * config.LuminaLostChargesPerDodge)
+                    WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Foretell_OnlyDeathEmpress"])
+                end
             end)
         end)
 
@@ -2392,6 +2589,20 @@ local function TryRegisterChargeComponentHooks()
                 local calculatedCharges = config.ChargesOnParry - 1
 
                 chargeComponent.ChangeCharge(calculatedCharges)
+
+                -- Lumina Passive: "Stance_VirtuoseOnShieldBreak" adds additional charges per successful parry.
+                if equippedCustomPassives["Stance_VirtuoseOnShieldBreak"] then
+                    Log("Lumina 'Stance_VirtuoseOnShieldBreak' successful parry: +" .. config.LuminaAdditionalChargesPerDodgeParry .. " additional charges added.")
+                    chargeComponent.ChangeCharge(config.LuminaAdditionalChargesPerDodgeParry)
+                    WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Stance_VirtuoseOnShieldBreak"])
+                end
+
+                -- Lumina Passive: "Foretell_OnlyDeathEmpress" adds a lot of additional charges per successful parry. But takes away a lot of charges per dodge and all when hit.
+                if equippedCustomPassives["Foretell_OnlyDeathEmpress"] then
+                    Log("Lumina 'Foretell_OnlyDeathEmpress' successful parry: +" .. config.LuminaAdditionalChargesPerParry .. " additional charges added.")
+                    chargeComponent.ChangeCharge(config.LuminaAdditionalChargesPerParry)
+                    WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Foretell_OnlyDeathEmpress"])
+                end
             end)
         end)
 
@@ -2435,8 +2646,12 @@ local function TryRegisterChargeComponentHooks()
                     return
                 end
 
+                if not isOwner then
+                    return
+                end
+
                 -- Reason 1: Broken by an ability.
-                if isOwner and reason == 1 then
+                if reason == 1 then
                     -- Broken by Shatter.
                     if usedShatter then
                         -- We remove -10 from the calculated amount because Shatter is hardcoded to give 10 charges on a break.
@@ -2450,6 +2665,20 @@ local function TryRegisterChargeComponentHooks()
                     elseif usedPhantomStars then
                         Log("Player caused break using the ability Phantom Stars, instantly refilling charges by " .. (phantomStarsChargesPercentage * 100) .. "% of " .. virtualMaxCharges .. " total charges.")
                         chargeComponent.ChangeCharge(math.floor(virtualMaxCharges * phantomStarsChargesPercentage))
+                    end
+                else
+                    -- Lumina Passive: Broken in any way while having the "Perfection_HealRankDownMedium" passive equipped, refill additional charges.
+                    if equippedCustomPassives["Perfection_HealRankDownMedium"] then
+                        Log("Lumina 'Perfection_HealRankDownMedium': +" .. math.floor(virtualMaxCharges * config.LuminaAdditionalChargesOnBreakPercentage) .. " additional charges added.")
+                        chargeComponent.ChangeCharge(math.floor(virtualMaxCharges * config.LuminaAdditionalChargesOnBreakPercentage))
+                        WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Perfection_HealRankDownMedium"])
+                    end
+
+                    -- Lumina Passive: Broken in any way while having the "Perfection_Dodgex2" passive equipped, refill even more additional charges.
+                    if equippedCustomPassives["Perfection_SwitchRankSOnBreak"] then
+                        Log("Lumina 'Perfection_SwitchRankSOnBreak': +" .. math.floor(virtualMaxCharges * config.LuminaMoreChargesOnBreakPercentage) .. " additional charges added.")
+                        chargeComponent.ChangeCharge(math.floor(virtualMaxCharges * config.LuminaMoreChargesOnBreakPercentage))
+                        WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Perfection_SwitchRankSOnBreak"])
                     end
                 end
             end)
@@ -2486,26 +2715,57 @@ local function TryRegisterChargeComponentHooks()
                     return
                 end
 
-                -- Get the damage reason.
+                -- Get the damage reason and damage element.
                 damageReason = damageObject.DamageReason
+                attackElement = damageObject.FinalAttackElement
 
-                -- We dealt damage to an enemy!
+                -- We hit an enemy!
                 if isSourceOwner then
                     -- Critical hits: Add or remove charges based on critical hits, if enabled.
                     -- This is independent from Lumiere Assault and Strike Storm.
-                    if damageObject.IsCriticalHit and config.ChargesOnCritical ~= 0 then
+                    -- Also ignore any instances of Lumina or Buff damage, we don't want critical hits from those to generate charges.
+                    if damageObject.IsCriticalHit and damageReason ~= 6 and damageReason ~= 2 then
                         -- Check if the player enabled bonus charges from critical hits to affect free aim shots as well.
-                        if damageReason ~= 3 or config.FreeAimAffectedByCriticals then
+                        if config.ChargesOnCritical ~= 0 and (damageReason ~= 3 or config.FreeAimAffectedByCriticals) then
                             chargeComponent.ChangeCharge(config.ChargesOnCritical)
                             Log("Critical Damage: +" .. config.ChargesOnCritical .. " charges added.")
+                        end
+
+                        -- Lumina Passive: "Stance_DMG+Stanceless" adds additional charges per critical hit if it's not through free aim shots.
+                        if equippedCustomPassives["Stance_DMG+Stanceless"] and damageReason ~= 3 then
+                            Log("Lumina 'Stance_DMG+Stanceless' critical hit: +" .. config.LuminaAdditionalChargesOnCriticals .. " additional charges added.")
+                            chargeComponent.ChangeCharge(config.LuminaAdditionalChargesOnCriticals)
+                            WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Stance_DMG+Stanceless"])
                         end
                     end
 
                     -- Damage Reason 1: Skill damage.
-                    -- Add or remove charges for damaging enemies with abilities if it is NOT from Overcharge or Shatter, if enabled.
+                    -- Add or remove charges for damaging enemies with abilities if it is NOT from Overcharge, Shatter or Marking Shot, if enabled.
                     if damageReason == 1 then
                         chargeComponent.ChangeCharge(config.ChargesFromSkillDamage - 1)
                         Log("Skill Damage: +" .. config.ChargesFromSkillDamage .. " charges added.")
+
+                        -- Lumina Passive: "Foretell_HealOnApply" adds additional charges per skill hit using ice abilities.
+                        if equippedCustomPassives["Foretell_HealOnApply"] and attackElement == ElementsHelper.ElementEnum.Ice then
+                            Log("Lumina 'Foretell_HealOnApply' ice skill damage: +" .. config.LuminaAdditionalChargesPerIceSkillHit .. " additional charges added.")
+                            chargeComponent.ChangeCharge(config.LuminaAdditionalChargesPerIceSkillHit)
+                            WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Foretell_HealOnApply"])
+                        end
+
+                        -- Lumina Passive: "Stains_AdditionalFire" inflicts burn per skill hit using dark, fire and lightning abilities..
+                        if equippedCustomPassives["Stains_AdditionalFire"] and (attackElement == ElementsHelper.ElementEnum.Dark or attackElement == ElementsHelper.ElementEnum.Fire or attackElement == ElementsHelper.ElementEnum.Lightning) then
+                            Log("Lumina 'Stains_AdditionalFire' dark, fire or lightning skill damage: +" .. config.LuminaBurnPerDarkFireLightningSkillHit .. " burn on target.")
+
+                            -- Load the skillscript asset class so that we can apply the debuff.
+                            temp_SkillScript = LoadAsset("/Game/Gameplay/Battle/Skills/BP_Battle_SkillScript.BP_Battle_SkillScript_C")
+                            local appliedDebuff = {}
+                            
+                            -- Apply the debuff.
+                            local burnClass = StaticFindObject("/Game/Gameplay/Buffs/GenericBuff/BP_BattleBuff_Burn.BP_BattleBuff_Burn_C")
+                            temp_SkillScript:ApplyBuff(burnClass, statsComponentTarget, 3, statsComponentSource, 4, appliedDebuff)
+
+                            WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Stains_AdditionalFire"])
+                        end
 
                         -- Monitor abilities that generate bonus charges on critical hits as their exclusive feature.
                         if damageObject.IsCriticalHit then
@@ -2533,19 +2793,20 @@ local function TryRegisterChargeComponentHooks()
                             end
                         end
 
+                        -- The base game still adds charges from Overcharge's, Shatter's and Marking Shot's hit, so remove these hits.
+                        if usedShatter or usedOvercharge or usedMarkingShot then
+                            -- Adjust for doubled charge generation if we have the corresponding lumina equipped.
+                            if equippedCustomPassives["Perfection_StartRankS"] then
+                                chargeComponent.ChangeCharge((-2) * config.ChargesFromSkillDamage)
+                            else
+                                chargeComponent.ChangeCharge((-1) * config.ChargesFromSkillDamage)
+                            end
+                        end
+
                         -- Monitor Endbringer's hits when the target is stunned for bonus charges.
                         if usedEndbringer and statsComponentTarget.IsStun then
                             chargeComponent.ChangeCharge(endbringerChargesPerStunnedHit)
                             Log("Endbringer Stun Damage: +" .. endbringerChargesPerStunnedHit .. " charges added.")
-
-                        -- The base game still adds charges from Overcharge's and Shatter's hit, so remove these hits.
-                        elseif usedShatter or usedOvercharge then
-                            chargeComponent.ChangeCharge((-1))
-
-                        -- Add additional charges per hit from Angel's Eyes.
-                        elseif usedAngelsEyes then
-                            chargeComponent.ChangeCharge(angelsEyesAdditionalChargesPerHit)
-                            Log("Angel's Eyes Damage: +" .. angelsEyesAdditionalChargesPerHit .. " charges added.")
 
                         -- Add additional charges per hit from Speed Burst.
                         elseif usedSpeedBurst then
@@ -2556,10 +2817,16 @@ local function TryRegisterChargeComponentHooks()
                         elseif usedMarkingShot then
                             -- Roll a number from 0.0 - 1.0 and compare it to the result when dividing current charges with max charges.
                             -- This means the chance depends on current charges, so 33 / 100 = 0.33, which is a 33% chance to stun in this example.
-                            if math.random(1, 100) <= ( (consumedChargesFromAbility / virtualMaxCharges * markingShotMaxStunChance) * 100 ) then
+                            -- Make sure we use the VirtualMaxCharges from the config so luminas that modify the max cap don't affect this.
+                            local random = math.random(1, 100)
+                            local chance = ( (consumedChargesFromAbility / config.VirtualMaxCharges * markingShotMaxStunChance) * 100 )
+
+                            if random <= chance then
                                 -- Parameters: Character that gets broken and reason 1: Skill. This also resets break bar.
                                 statsComponentTarget:PerformBreakStun(statsComponentSource, 1)
                                 Log("Marking Shot has stunned the target.")
+                            else
+                                Log("Marking Shot stun failed. random: " .. random .. " / chance: " .. chance .. ".")
                             end
 
                             -- Fire extra hits at the target enemy, this is a SHOTGUN now!
@@ -2578,6 +2845,17 @@ local function TryRegisterChargeComponentHooks()
                                 local powerlessClass = StaticFindObject("/Game/Gameplay/Buffs/StatsBuffs/BP_BattleBuff_Powerless.BP_BattleBuff_Powerless_C")
                                 temp_SkillScript:ApplyBuff(powerlessClass, statsComponentTarget, 3, statsComponentSource, 4, appliedDebuff)
                                 Log("Purification inflicted Powerless.")
+
+                                -- Lumina Passive: Weapon lumina passive "Foretell_OnlyJusticeChariot" applies Curse for 5 turns on non-boss enemies for skills that apply Powerless or Burn.
+                                if equippedCustomPassives["Foretell_OnlyJusticeChariot"] and not statsComponentTarget.IsBoss then
+                                    Log("Lumina 'Foretell_OnlyJusticeChariot' applying Curse for 5 turns.")
+
+                                    -- Apply Curse for 5 turns.
+                                    local cursedClass = StaticFindObject("/Game/Gameplay/Buffs/GenericBuff/BP_BattleBuff_Cursed.BP_BattleBuff_Cursed_C")
+                                    temp_SkillScript:ApplyBuff(cursedClass, statsComponentTarget, 5, statsComponentSource, 4, appliedDebuff)
+                                    
+                                    WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Foretell_OnlyJusticeChariot"])
+                                end
                             end
 
                         -- Radiant Strike inflicts Burn for 3 turns if enough charges are consumed.
@@ -2592,6 +2870,56 @@ local function TryRegisterChargeComponentHooks()
                                     temp_SkillScript:ApplyBuff(burnClass, statsComponentTarget, 3, statsComponentSource, 4, appliedDebuff)
                                 end
                                 Log("Radiant Strike inflicted Burn.")
+
+                                -- Lumina Passive: Weapon lumina passive "Foretell_OnlyJusticeChariot" applies Curse for 5 turns on non-boss enemies for skills that apply Powerless or Burn.
+                                if equippedCustomPassives["Foretell_OnlyJusticeChariot"] and not statsComponentTarget.IsBoss and config.LuminaCurseDuration > 0 then
+                                    Log("Lumina 'Foretell_OnlyJusticeChariot' applying Curse for " .. config.LuminaCurseDuration .. " turns.")
+
+                                    -- Apply Curse for 5 turns.
+                                    local cursedClass = StaticFindObject("/Game/Gameplay/Buffs/GenericBuff/BP_BattleBuff_Cursed.BP_BattleBuff_Cursed_C")
+                                    temp_SkillScript:ApplyBuff(cursedClass, statsComponentTarget, config.LuminaCurseDuration, statsComponentSource, 4, appliedDebuff)
+
+                                    WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Foretell_OnlyJusticeChariot"])
+                                end
+                            end
+                        end
+
+                        -- Defiant Strike, Marking Shot and Sabotage apply Blight if there's a specific weapon passive being used.
+                        if usedDefiantStrike or usedMarkingShot or usedSabotage then
+                            -- If Defiant Strike was used only apply the debuff on the second hit, otherwise on the first for the other skills.
+                            if not usedDefiantStrike or skillHitCounter == 2 then
+                                -- Lumina Passive: "Foretell_OnlyFoolTower" applies 1 Blight for 1 turn for skills that apply Mark.
+                                if equippedCustomPassives["Foretell_OnlyFoolTower"] and config.LuminaBlightDuration > 0 then
+                                    Log("Lumina 'Foretell_OnlyFoolTower' applying 1 Blight for " .. config.LuminaBlightDuration .. " turn.")
+
+                                    -- Load the skillscript asset class so that we can apply the debuff.
+                                    temp_SkillScript = LoadAsset("/Game/Gameplay/Battle/Skills/BP_Battle_SkillScript.BP_Battle_SkillScript_C")
+                                    local appliedDebuff = {}
+
+                                    --Apply 1 Blight stack for 1 turn.
+                                    local blightClass = StaticFindObject("/Game/Gameplay/Buffs/GenericBuff/BP_BattleBuff_Blight.BP_BattleBuff_Blight_C")
+                                    temp_SkillScript:ApplyBuff(blightClass, statsComponentTarget, config.LuminaBlightDuration, statsComponentSource, 4, appliedDebuff)
+
+                                    -- Blight is hardcoded to be permanent, set this to false.
+                                    appliedDebuff.CreatedBuffInstance.IsPermanent = false
+
+                                    WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Foretell_OnlyFoolTower"])
+                                end
+
+                                -- Lumina Passive: "Stains_FireDMGUp" applies Charm for 1 turn for skills that apply Mark. Charmed enemies deal no damage to Gustave and provide buffs to him when attacking.
+                                if equippedCustomPassives["Stains_FireDMGUp"] and config.LuminaCharmDuration > 0 then
+                                    Log("Lumina 'Stains_FireDMGUp' applying Charm for " .. config.LuminaCharmDuration .. " turn.")
+
+                                    -- Load the skillscript asset class so that we can apply the debuff.
+                                    temp_SkillScript = LoadAsset("/Game/Gameplay/Battle/Skills/BP_Battle_SkillScript.BP_Battle_SkillScript_C")
+                                    local appliedDebuff = {}
+
+                                    --Apply Charm for 1 turn. Add +1 to the duration because for some weird reason charm immediately goes away if it only has 1 turn left.
+                                    local blightClass = StaticFindObject("/Game/Gameplay/Buffs/GenericBuff/BP_BattleBuff_Charmed.BP_BattleBuff_Charmed_C")
+                                    temp_SkillScript:ApplyBuff(blightClass, statsComponentTarget, config.LuminaCharmDuration + 1, statsComponentSource, 4, appliedDebuff)
+
+                                    WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Stains_FireDMGUp"])
+                                end
                             end
                         end
 
@@ -2602,10 +2930,48 @@ local function TryRegisterChargeComponentHooks()
                         chargeComponent.ChangeCharge(config.ChargesOnBuffDamage)
 
                     -- Damage reason 3: Free aim shots.
-                    -- Add/remove charges for shooting enemies, if enabled.
-                    elseif damageReason == 3 and config.ChargesOnFreeAim ~= 0 then
-                        Log("Free Aim Damage: +" .. config.ChargesOnFreeAim .. " charges added.")
-                        chargeComponent.ChangeCharge(config.ChargesOnFreeAim)
+                    -- Add/remove charges for shooting enemies.
+                    elseif damageReason == 3 then
+                        -- Lumina Passive: "Stance_AOEOnSwitch" allows free aim shots to consume charges to return spent AP. But Free Aim shots no longer generate charges.
+                        if equippedCustomPassives["Stance_AOEOnSwitch"] then
+                            -- Check if there's enough charges.
+                            if virtualCurrentCharges >= 2 then
+                                Log("Lumina 'Stance_AOEOnSwitch' free aim damage: Consume " .. config.LuminaFreeAimChargesConsumed .. " charges to recover 1 AP.")
+
+                                chargeComponent.ChangeCharge((-1) * config.LuminaFreeAimChargesConsumed)
+                                -- +1 AP, change reason 9: lumina passive.
+                                statsComponentSource:GainAP(1, 9)
+
+                                WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Stance_AOEOnSwitch"])
+                            end
+                        -- Passive "Stance_AOEOnSwitch" is not equipped, allow charge generation effects.
+                        else
+                            if config.ChargesOnFreeAim ~= 0 then
+                                Log("Free Aim Damage: +" .. config.ChargesOnFreeAim .. " charges added.")
+                                chargeComponent.ChangeCharge(config.ChargesOnFreeAim)
+                            end
+
+                            -- Lumina Passive: "Stains_RandomGeneration" adds additional charges on a free aim shot.
+                            if equippedCustomPassives["Stains_RandomGeneration"] then
+                                Log("Lumina 'Stains_RandomGeneration' free aim damage: +" .. config.LuminaAdditionalChargesPerFreeAim .. " additional charges added.")
+                                chargeComponent.ChangeCharge(config.LuminaAdditionalChargesPerFreeAim)
+                                WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Stains_RandomGeneration"])
+                            end
+
+                            -- Lumina Passive: Stance_VirtuoseDoubleBurn" has a chance to inflict freeze for 1 turn.
+                            if equippedCustomPassives["Stance_VirtuoseDoubleBurn"] and math.random(1, 100) <= (config.LuminaFreezeChance * 100 ) then
+                                Log("Lumina 'Stance_VirtuoseDoubleBurn' froze an enemy.")
+
+                                -- Load the skillscript asset class so that we can apply the debuff.
+                                temp_SkillScript = LoadAsset("/Game/Gameplay/Battle/Skills/BP_Battle_SkillScript.BP_Battle_SkillScript_C")
+                                local appliedDebuff = {}
+
+                                -- Apply the debuff.
+                                local freezeClass = StaticFindObject("/Game/Gameplay/Buffs/GenericBuff/BP_BattleBuff_Frozen.BP_BattleBuff_Frozen_C")
+                                temp_SkillScript:ApplyBuff(freezeClass, statsComponentTarget, 1, statsComponentSource, 4, appliedDebuff)
+                                WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Stance_VirtuoseDoubleBurn"])
+                            end
+                        end
 
                     -- Damage Reason 4: Basic attacks.
                     -- Add/remove charges for basic attacking enemies, if enabled.
@@ -2613,12 +2979,18 @@ local function TryRegisterChargeComponentHooks()
                         Log("Base Attack Damage: +" .. config.ChargesOnBaseAttacks .. " charges added.")
                         chargeComponent.ChangeCharge(config.ChargesOnBaseAttacks - 1)
 
-                        -- Weapon lumina passive "Stance_CritChanceDefensive" adds additional charges on a base attack.
+                        -- Lumina Passive: "Stance_CritChanceDefensive" adds additional charges on a base attack.
                         if equippedCustomPassives["Stance_CritChanceDefensive"] then
                             Log("Lumina 'Stance_CritChanceDefensive' base attack damage: +" .. config.LuminaAdditionalChargesPerBaseAttackHit .. " additional charges added.")
                             chargeComponent.ChangeCharge(config.LuminaAdditionalChargesPerBaseAttackHit)
                             WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Stance_CritChanceDefensive"])
                         end
+
+                    -- Damage reason 6: Lumina damage. Used by passives like "ethereal sword", "lightning strikes" and "free aim double shots".
+                    -- Add/remove charges for this effect, if enabled.
+                    elseif damageReason == 6 and config.ChargesOnLuminaDamage ~= 0 then
+                        Log("Lumina Damage: +" .. config.ChargesOnLuminaDamage .. " charges added.")
+                        chargeComponent.ChangeCharge(config.ChargesOnLuminaDamage)
 
                     -- Damage Reason 5 and 9: Normal counter attacks.
                     -- Add or remove charges for doing a normal or ranged counter attack, if enabled.
@@ -2626,11 +2998,12 @@ local function TryRegisterChargeComponentHooks()
                         Log("Counter Attack Damage: +" .. config.ChargesOnCounterAttacks .. " charges added.")
                         chargeComponent.ChangeCharge(config.ChargesOnCounterAttacks - 1)
 
-                    -- Damage reason 6: Lumina which is used by the Simoso "ethereal" sword ability for double light damage.
-                    -- Add/remove charges for this effect, if enabled.
-                    elseif damageReason == 6 and config.ChargesOnLuminaDamage ~= 0 then
-                        Log("Lumina Damage: +" .. config.ChargesOnLuminaDamage .. " charges added.")
-                        chargeComponent.ChangeCharge(config.ChargesOnLuminaDamage)
+                        -- Lumina Passive: "Stains_IncreaseDMGPerLightStain" adds additional charges for any counter-attack type.
+                        if equippedCustomPassives["Stains_IncreaseDMGPerLightStain"] then
+                            Log("Lumina 'Stains_IncreaseDMGPerLightStain' counter-attack damage: +" .. config.LuminaAdditionalChargesPerAnyCounterAttack .. " additional charges added.")
+                            chargeComponent.ChangeCharge(config.LuminaAdditionalChargesPerAnyCounterAttack)
+                            WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Stains_IncreaseDMGPerLightStain"])
+                        end
 
                     -- Damage Reason 8: Gradient counter attack.
                     -- Add or remove charges for doing a gradient counter attack, if enabled.
@@ -2638,26 +3011,88 @@ local function TryRegisterChargeComponentHooks()
                         Log("Gradient Counter Damage: +" .. config.ChargesOnGradientCounter .. " charges added.")
                         chargeComponent.ChangeCharge(config.ChargesOnGradientCounter - 1)
 
+                        -- Lumina Passive: "Stains_IncreaseDMGPerLightStain" adds additional charges for any counter-attack type.
+                        if equippedCustomPassives["Stains_IncreaseDMGPerLightStain"] then
+                            Log("Lumina 'Stains_IncreaseDMGPerLightStain' counter-attack damage: +" .. config.LuminaAdditionalChargesPerAnyCounterAttack .. " additional charges added.")
+                            chargeComponent.ChangeCharge(config.LuminaAdditionalChargesPerAnyCounterAttack)
+                            WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Stains_IncreaseDMGPerLightStain"])
+                        end
+
                     -- Damage Reason 11: Jump counter attack.
                     -- Add or remove charges for doing a jump counter attack, if enabled.
                     elseif damageReason == 11 then
                         Log("Jump Counter Damage: +" .. config.ChargesOnJumpCounter .. " charges added.")
                         chargeComponent.ChangeCharge(config.ChargesOnJumpCounter - 1)
+
+                        -- Lumina Passive: "Stains_IncreaseDMGPerLightStain" adds additional charges for any counter-attack type.
+                        if equippedCustomPassives["Stains_IncreaseDMGPerLightStain"] then
+                            Log("Lumina 'Stains_IncreaseDMGPerLightStain' counter-attack damage: +" .. config.LuminaAdditionalChargesPerAnyCounterAttack .. " additional charges added.")
+                            chargeComponent.ChangeCharge(config.LuminaAdditionalChargesPerAnyCounterAttack)
+                            WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Stains_IncreaseDMGPerLightStain"])
+                        end
                     end
                 end
 
                 -- We took a hit from an enemy!
                 if isTargetOwner then
-                    -- Adds or removes charges when receiving a hit, if enabled.
-                    -- Damage reason anything other than 2: Add or remove charges for anything that isn't buff damage (e.g. burn).
-                    if damageReason ~= 2 and config.ChargesOnReceivedHit ~=0 then
-                        Log("Damage Taken: +" .. config.ChargesOnReceivedHit .. " charges added.")
-                        chargeComponent.ChangeCharge(config.ChargesOnReceivedHit)
+                    -- Lumina Passive: "Stains_FireDMGUp" applies Charm for 1 turn for skills that apply Mark. Charmed enemies deal no damage to Gustave and provide buffs to him when hitting him.
+                    -- Penalties still apply.
+                    if equippedCustomPassives["Stains_FireDMGUp"] and statsComponentSource:HasForcedAutoAttack() then
+                        Log("Ignoring damage of charmed character, setting damage to 0 and refunding shield if applicable.")
+                        damageObject:SetFinalDamageLimit(0, "None")
+
+                        -- Refund lost shields.
+                        if damageObject.IsAbsorbedByShield then
+                            statsComponentTarget:AddShieldPoints(1, "None")
+                        end
+
+                        -- Apply Rage for 1 turn.
+                        temp_SkillScript = LoadAsset("/Game/Gameplay/Battle/Skills/BP_Battle_SkillScript.BP_Battle_SkillScript_C")
+                        local appliedBuff = {}
+
+                        local enragedBuffClass = StaticFindObject("/Game/Gameplay/Buffs/GenericBuff/BP_BattleBuff_Enraged.BP_BattleBuff_Enraged_C")
+                        temp_SkillScript:ApplyBuff(enragedBuffClass, statsComponentTarget, 2, statsComponentTarget, 4, appliedBuff)
+                        appliedBuff.CreatedBuffInstance.Type = 1
+
+                        local burnClass = StaticFindObject("/Game/Gameplay/Buffs/GenericBuff/BP_BattleBuff_Burn.BP_BattleBuff_Burn_C")
+                        -- Apply 10 burn stacks.
+                        for _ = 1, 10 do
+                            temp_SkillScript:ApplyBuff(burnClass, statsComponentSource, 3, statsComponentTarget, 4, appliedBuff)
+                        end
                     end
 
                     -- Incase Steeled Strike is enabled, disable it now since we got hit and it was cancelled.
                     if usedSteeledStrike then
                         usedSteeledStrike = false
+                    end
+
+                    -- Lumina Passive: "Perfection_SurvivorRankA" makes the character ignore any kind of damage while above a certain amount of charges.
+                    -- But takes away charges on each hit received.
+                    if equippedCustomPassives["Perfection_SurvivorRankA"] then
+                        -- Check if there's enough charges for the damage to be ignored.
+                        if virtualCurrentCharges >= math.floor(config.VirtualMaxCharges * config.LuminaInvulnerabilityMinimumRequiredCharges) then
+                            Log("Lumina 'Perfection_SurvivorRankA': Ignoring damage.")
+                            damageObject:SetFinalDamageLimit(0, "None")
+                        end
+
+                        -- Take away 10% of charges upon receiving a hit.
+                        Log("Lumina 'Perfection_SurvivorRankA' hit received: Taking away " .. tostring(math.floor(config.VirtualMaxCharges * config.LuminaInvulnerabilityChargesLostOnHitPercentage)) .. " charges.")
+                        chargeComponent.ChangeCharge((-1) * math.floor(config.VirtualMaxCharges * config.LuminaInvulnerabilityChargesLostOnHitPercentage))
+                        WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Perfection_SurvivorRankA"])
+                    end
+
+                    -- Lumina Passive: "Foretell_OnlyDeathEmpress" adds a lot of additional charges per successful parry. But takes away a lot of charges per dodge and all when hit.
+                    if equippedCustomPassives["Foretell_OnlyDeathEmpress"] then
+                        Log("Lumina 'Foretell_OnlyDeathEmpress' hit received: Taking away " .. tostring(virtualMaxCharges) .. " charges.")
+                        chargeComponent.ChangeCharge((-1) * virtualMaxCharges)
+                        WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Foretell_OnlyDeathEmpress"])
+                    end
+
+                    -- Adds or removes charges when receiving a hit, if enabled.
+                    -- Damage reason anything other than 2: Add or remove charges for anything that isn't buff damage (e.g. burn).
+                    if damageReason ~= 2 and config.ChargesOnReceivedHit ~=0 then
+                        Log("Damage Taken: +" .. config.ChargesOnReceivedHit .. " charges added.")
+                        chargeComponent.ChangeCharge(config.ChargesOnReceivedHit)
                     end
                 end
             end)
@@ -2683,9 +3118,27 @@ local function TryRegisterChargeComponentHooks()
                     return
                 end
 
+                local addedCharges = CustomFunctions.read_int(amount)
+
+                -- Only call those luminas if added charges are a positive number.
+                if addedCharges > 0 then
+                    -- Lumina Passive: "Perfection_StartRankC" adds full charges on battle start but disables charge generation afterwards.
+                    if disableChargeGeneration then
+                        addedCharges = 0
+                        WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Perfection_StartRankC"])
+                    end
+
+                    -- Lumina Passive: "Perfection_StartRankS" doubles ALL charge generation.
+                    if equippedCustomPassives["Perfection_StartRankS"] then
+                        Log("Lumina 'Perfection_StartRankS' doubled charges from " .. addedCharges .. " to " .. math.floor(addedCharges * 2) .. " added.")
+                        addedCharges = addedCharges * 2
+                        WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Perfection_StartRankS"])
+                    end
+                end
+
                 -- We already have the maximum amount of charges, so do nothing otherwise the player keeps hearing the "max charges" noise.
                 -- Unless the added charge amount is negative, then in this case do NOT skip this instance.
-                if(virtualCurrentCharges == virtualMaxCharges) and (CustomFunctions.read_int(amount) >= 0) then
+                if(virtualCurrentCharges == virtualMaxCharges) and (addedCharges >= 0) then
                     return
                 end
 
@@ -2704,10 +3157,10 @@ local function TryRegisterChargeComponentHooks()
 
                 -- The amount of charges that get added to our counter.
                 -- Also includes the bonus charges from Lumiere Assault, Strike Storm and Shatter.
-                Log("Added charges: "..tostring(CustomFunctions.read_int(amount)))
+                Log("Added charges: "..tostring(addedCharges))
 
                 -- Add the charges.
-                virtualCurrentCharges = virtualCurrentCharges + CustomFunctions.read_int(amount)
+                virtualCurrentCharges = virtualCurrentCharges + addedCharges
 
                 -- Make sure we don't go over our max limit.
                 -- Also make sure our virtual charges never go below 0 as well.
@@ -2762,14 +3215,20 @@ RegisterHook(hooking.CLIENT_RESTART, function()
 
     -- For the first time we load into a save: Attempt to modify all descriptions and AP costs so that they are correct right away.
     -- We also cache a few abilities related to voicelines that are tied to them for later use.
-    ModifyAllDescriptionsAndCost()
+    if not patchedSkillSample or not patchedSkillSample:IsValid() then
+        ModifyAllDescriptionsAndCost()
+    end
 
     -- This function modifies all the weapons in the game by changing their elemental damage type and the passives they use.
-    patchedWeaponSample = WeaponHelper.ModifyAllWeapons(patchedWeaponSample)
+    if not patchedWeaponSample or not patchedWeaponSample:IsValid() then
+        patchedWeaponSample = WeaponHelper.ModifyAllWeapons()
+    end
 
     -- Patch Gustave and Verso to only use their own respective weapons.
     -- Also allows Gustave to use weapon passives and patches his skilltree.
-    patchedCharacterSample = PatchHelper.PatchGustaveVerso(patchedCharacterSample)
+    if not patchedCharacterSample or not patchedCharacterSample:IsValid() then
+        patchedCharacterSample = PatchHelper.PatchGustaveVerso()
+    end
 
     -- Make sure everything below only executes once even if loading multiple saves since hooks stick until the game is closed.
     if clientHookRegistered then
@@ -2799,6 +3258,18 @@ RegisterHook(hooking.CLIENT_RESTART, function()
         updatedWeaponPassives = false
         currentWeaponDefinitionInBattle = nil
         equippedCustomPassives = {}
+
+        -- Reset the charge counters and the CHARGES_MULTIPLIER to their original values..
+        virtualMaxCharges = config.VirtualMaxCharges
+        virtualCurrentCharges = 0
+        UpdateChargeMultiplier()
+
+        -- Reset these back to their initial values.
+        totalConsumedChargesDuringBattle = 0
+        ascendingAssaultCounter = 0
+        firstTurn = true
+        overchargeCharacterTurn = false
+        disableChargeGeneration = false
 
         -- Cache the Overcharge skills we need for the sounds when a new battle begins.
         CacheOverchargeSkills()
@@ -2953,6 +3424,7 @@ RegisterHook(hooking.CLIENT_RESTART, function()
         -- We used Defiant Strike
         elseif usedDefiantStrike then
             modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "DefiantStrike")
+            skillHitCounter = skillHitCounter + 1
 
         -- We used Blitz
         elseif usedBlitz then
@@ -2986,11 +3458,58 @@ RegisterHook(hooking.CLIENT_RESTART, function()
         elseif usedPurification then
             modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "Purification", consumedChargesFromAbility)
             modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "Purification")
+            skillHitCounter = skillHitCounter + 1
+        end
+
+        -- Check if any charge generating abilities were used because they have a couple luminas affecting them.
+        if CustomFunctions.UsedChargeGeneratingAbility(usedLumiereAssault, usedFromFire, usedDefiantStrike, usedSpeedBurst, usedStrikeStorm, usedLightHolder, usedEndbringer, usedAngelsEyes) then
+            -- Lumina Passive: "Foretell_ApplyBurnPerSunChargeOnConsume" increases damage per currently available charge for any skill that generates extra charges.
+            if equippedCustomPassives["Foretell_ApplyBurnPerSunChargeOnConsume"] and virtualCurrentCharges > 0 then
+                -- Multiply the damage multiplier with the bonus damage from the weapon passive.
+                local increasedDamageMultiplier = (virtualCurrentCharges * config.LuminaIncreasedDamagePerChargePercentage)
+                Log("Lumina 'Foretell_ApplyBurnPerSunChargeOnConsume' increases damage of charge-generating skill by " .. string.format("%g", (increasedDamageMultiplier) * 100) .. "%.")
+
+                Log("FinalDamageMultiplier before passive bonus: " .. tostring(modifier.FinalDamageMultiplier))
+                modifier.FinalDamageMultiplier =  modifier.FinalDamageMultiplier + (modifier.FinalDamageMultiplier * increasedDamageMultiplier)
+                Log("FinalDamageMultiplier after passive bonus: " .. tostring(modifier.FinalDamageMultiplier))
+                
+                WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Foretell_ApplyBurnPerSunChargeOnConsume"])
+            end
+
+            -- Lumina Passive: "Stains_EarthDMGUp" increases damage for any skill that generates extra charges by a flat amount.
+            if equippedCustomPassives["Stains_EarthDMGUp"] then
+                -- Multiply the damage multiplier with the bonus damage from the weapon passive.
+                local increasedDamageMultiplier = config.LuminaIncreasedDamageChargeGeneratingSkills
+                Log("Lumina 'Stains_EarthDMGUp' increases damage of charge-generating skill by " .. string.format("%g", (increasedDamageMultiplier) * 100) .. "%.")
+
+                Log("FinalDamageMultiplier before passive bonus: " .. tostring(modifier.FinalDamageMultiplier))
+                modifier.FinalDamageMultiplier =  modifier.FinalDamageMultiplier + (modifier.FinalDamageMultiplier * increasedDamageMultiplier)
+                Log("FinalDamageMultiplier after passive bonus: " .. tostring(modifier.FinalDamageMultiplier))
+                
+                WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Stains_EarthDMGUp"])
+            end
+        end
+
+        -- Lumina Passive: "Perfection_StartRankB" doubles damage for ALL skills when at 0 charges.
+        if equippedCustomPassives["Perfection_StartRankB"] then
+            -- Check if we have no charges and no charges were consumed this turn. If charges were consumed, it means we had some when casting the skill.
+            if virtualCurrentCharges == 0 and consumedChargesFromAbility == 0 then
+                -- Multiply the damage multiplier with our bonus damage from the weapon passive.
+                local increasedDamageMultiplier = config.LuminaIncreasedDamageWhenNoCharges
+                Log("Lumina 'Perfection_StartRankB' increases damage of skill by " .. string.format("%g", (increasedDamageMultiplier) * 100) .. "%.")
+
+                Log("FinalDamageMultiplier before passive bonus: " .. tostring(modifier.FinalDamageMultiplier))
+                modifier.FinalDamageMultiplier =  modifier.FinalDamageMultiplier + (modifier.FinalDamageMultiplier * increasedDamageMultiplier)
+                Log("FinalDamageMultiplier after passive bonus: " .. tostring(modifier.FinalDamageMultiplier))
+                
+                WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Perfection_StartRankB"])
+            end
         end
     end)
 
     -- This hook runs on any character's turn start.
     -- We will use it in order to grab the elemental damage type of our character's weapon for abilities that use it.
+    -- Unfortunately we can't do this on RECEIVE_BEGIN_PLAY because the character data isn't fully initialized in there yet.
     RegisterHook(hooking.GENERIC_CHARACTER_TURN_START, function(param)
         if not IsValidChargeComponent() or updatedDynamicElement or updatedWeaponPassives then
             return
@@ -2998,7 +3517,7 @@ RegisterHook(hooking.CLIENT_RESTART, function()
 
         local self = CustomFunctions.unwrap(param)
 
-        if not self then
+        if not self or not self:IsValid() then
             return
         end
         
@@ -3098,7 +3617,7 @@ RegisterHook(hooking.CLIENT_RESTART, function()
         end
 
         -- Check if we are at max charges and the abilities are Overcharge or Shatter and highlight them.
-        if virtualCurrentCharges == virtualMaxCharges and (abilityNameID == "UnleashCharge" or abilityNameID == "PerfectBreak_Gustave") then
+        if virtualCurrentCharges == virtualMaxCharges and (abilityNameID == "UnleashCharge" or abilityNameID == "PerfectBreak_Gustave" or abilityNameID == "MarkingShot_Gustave") then
             skillState:SetOvercharge(true, true)
             return
         end
@@ -3212,8 +3731,6 @@ RegisterHook(hooking.CLIENT_RESTART, function()
             voiceLine = voiceLinesList["takethemdown"]
         elseif usedSabotage then
             voiceLine = voiceLinesList["battlewon"]
-        elseif usedAngelsEyes then
-            voiceLine = voiceLinesList["overcharge4"]
         else
             return
         end
@@ -3279,7 +3796,7 @@ RegisterHook(hooking.CLIENT_RESTART, function()
         loadingDependenciesGuard = false
     end)
 
-    -- This hook modifies the AP cost and description of abilities.
+    -- Modifies the AP cost and description of abilities.
     RegisterHook(hooking.GET_BASE_COST, ModifyAbilityCostAndDescriptionUnwrapper)
 
     -- Force the game to allow us switching characters while we're in the camp, if enabled.
@@ -3297,7 +3814,7 @@ RegisterHook(hooking.CLIENT_RESTART, function()
         end
     end)
 
-    -- This hook gets called right away when loading into a new area and seemingly handles general character data such as voicelines and the internal values that tell the game who's selected.
+    -- Gets called right away when loading into a new area and seemingly handles general character data such as voicelines and the internal values that tell the game who's selected.
     RegisterHook(hooking.LOAD_CHARACTER, function(param)
         local currentAct = CharacterHelper.GetCurrentAct()
 
@@ -3330,7 +3847,7 @@ RegisterHook(hooking.CLIENT_RESTART, function()
         Log("Forced camp to use " .. character .. " as main character in LOAD_CHARACTER.")
     end)
 
-    -- This hook gets called after LOAD_CHARACTER and builds the actual character model and animations for the currently active character.
+    -- Gets called after LOAD_CHARACTER and builds the actual character model and animations for the currently active character.
     RegisterHook(hooking.COMPUTE_ACTIVE_CHARACTER, function(param)
         local currentAct = CharacterHelper.GetCurrentAct()
 
@@ -3362,19 +3879,42 @@ RegisterHook(hooking.CLIENT_RESTART, function()
         Log("Forced camp to use " .. character .. " as main character in COMPUTE_ACTIVE_CHARACTER.")
     end)
 
-    -- This hook patches the weapon passive tooltips menu so that they can show for Gustave in the menu.
+    -- Patches the weapon passive tooltips menu so that they can show for Gustave in the menu.
     RegisterHook(hooking.LOAD_WEAPON, WeaponHelper.WeaponTooltipsHook)
 
-    -- This hook helps us get the luminas of the currently selected weapon in the character menu to show custom descriptions in cominbation with our LOAD_PASSIVE_EFFECT_DATA hook.
+    -- Helps us get the luminas of the currently selected weapon in the character menu to show custom descriptions in cominbation with our LOAD_PASSIVE_EFFECT_DATA hook.
     RegisterHook(hooking.LOAD_WEAPON_LUMINAS, WeaponHelper.WeaponLoadLuminasHook)
 
-    -- This hook injects our custom descriptions into the weapon passives tooltip menu.
-    RegisterHook(hooking.LOAD_PASSIVE_EFFECT_DATA, function(param, passiveEffectDefinition, qualityLevel, isLocked, unlockLevel)
-        WeaponHelper.WeaponLuminaTooltipsHook(param, passiveEffectDefinition, qualityLevel, isLocked, unlockLevel, selectedFreyInMenu)
-    end)
+    -- Injects our custom descriptions into the weapon passives tooltip menu.
+    RegisterHook(hooking.LOAD_PASSIVE_EFFECT_DATA, WeaponHelper.WeaponLuminaTooltipsHook)
 
-    -- This hook patches the amount of available skill points because the game doesn't use our new costs right away.
-    RegisterHook(hooking.GET_TOTAL_SKILL_POINTS, function(param)
-        PatchHelper.GetTotalSkillPoints(param, selectedFreyInMenu)
+    -- Gets called when a calculating the price of a weapon in a merchant shop.
+    RegisterHook(hooking.COMPUTE_WEAPON_PRICE, WeaponHelper.ModifyWeaponPrice)
+end)
+
+ExecuteInGameThread(function()
+    local skillGraphSystem = LoadAsset("/Game/Gameplay/SkillTree/BP_CharacterSkillGraphSystem.BP_CharacterSkillGraphSystem_C")
+
+    RegisterHook(hooking.INIT_SKILL_GRAPH_SYSTEM, function(param)
+        if patchSkillTreeGuard then
+            return
+        end
+
+        local skillGraphSystem = CustomFunctions.unwrap(param)
+
+        if not skillGraphSystem or not skillGraphSystem:IsValid() then
+            return
+        end
+
+        if skillGraphSystem.TempCharacterData.HardcodedNameID:ToString() == "Frey" then
+            PatchHelper.PatchGustaveSkilltree(skillGraphSystem.TempCharacterData)
+
+            -- This function is used by Recoats to reset the skilltree by re-initializing a new instance.
+            -- Since the skilltree is being patched before any save data gets loaded, this will make sure the skilltree is fully initialized with the patched values.
+            -- This also fixes the issue of Gustave ALWAYS starting with his "Overcharge" skill since the game is hardcoded to ALWAYS give it to him, even if removed from the skilltree :D
+            patchSkillTreeGuard = true
+            skillGraphSystem:ResetProgression()
+            patchSkillTreeGuard = false
+        end
     end)
 end)

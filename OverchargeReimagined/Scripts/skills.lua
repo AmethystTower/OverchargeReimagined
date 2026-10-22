@@ -1,6 +1,6 @@
 
 --[[
-------- Overcharge Reimagined v3.0 - By Killera -------
+------- Overcharge Reimagined v4.0 - By Killera -------
 
         This module handles all the ability descriptions and settings like AP cost, consumed charges and damage per charge.
         The descriptions are quite difficult to read because of all the variables and the formatting needed.
@@ -140,7 +140,7 @@ local function Init(log, config, elementalEnum)
     abilityValues["PerfectRecovery_Gustave"].ChargesConsumed = nil
     abilityValues["PerfectRecovery_Gustave"].ChargesMultiplier = nil
     abilityValues["PerfectRecovery_Gustave"].OverchargeName = config.RecoveryName
-    abilityValues["PerfectRecovery_Gustave"].OverchargeBonusDescription = "Refills 0% - " .. string.format("%g", (config.RecoveryChargesPercentage) * 100) .. "% of total <keyword id=\"Gustave_Charges\">Charges</>"
+    abilityValues["PerfectRecovery_Gustave"].OverchargeBonusDescription = "Generates 0 - " .. string.format("%g", (config.VirtualMaxCharges * config.RecoveryChargesPercentage)) .. " <keyword id=\"Gustave_Charges\">Charges</> upon being used."
     abilityValues["PerfectRecovery_Gustave"].OverchargeLongDescription = "<keyword id=\"Heal\">Recovers</> 50% Health and dispels Status Effects.\n" .. abilityValues["PerfectRecovery_Gustave"].OverchargeBonusDescription
     abilityValues["PerfectRecovery_Gustave"].OverchargeShortDescription = "<keyword id=\"Heal\">Recovers</> 50% Health and dispels Status Effects.\n" .. abilityValues["PerfectRecovery_Gustave"].OverchargeBonusDescription
     abilityValues["PerfectRecovery_Gustave"].PerfectionName = nil
@@ -266,7 +266,7 @@ local function Init(log, config, elementalEnum)
     abilityValues["DefiantStrike"].ChargesConsumed = nil
     abilityValues["DefiantStrike"].ChargesMultiplier = nil
     abilityValues["DefiantStrike"].OverchargeName = config.DefiantStrikeName
-    abilityValues["DefiantStrike"].OverchargeBonusDescription = "Refills " .. string.format("%g", (config.DefiantStrikeChargesPercentage) * 100) .. "% of total <keyword id=\"Gustave_Charges\">Charges</>"
+    abilityValues["DefiantStrike"].OverchargeBonusDescription = "Generates " .. string.format("%g", (config.VirtualMaxCharges * config.DefiantStrikeChargesPercentage)) .. " <keyword id=\"Gustave_Charges\">Charges</> upon being used."
     abilityValues["DefiantStrike"].OverchargeLongDescription = "Deals high single target " .. GetElementString(config.DefiantStrikeElement, elementalEnum, false) .. " damage that applies <keyword id=\"StatusEffect_Mark\">Mark</> 2 hits.\n" .. "Costs 30% of current Health.\n" .. abilityValues["DefiantStrike"].OverchargeBonusDescription
     abilityValues["DefiantStrike"].OverchargeShortDescription = "High " .. GetElementString(config.DefiantStrikeElement, elementalEnum, false) .. " damage. 2 hits. Applies <keyword id=\"StatusEffect_Mark\">Mark</>\n" .. "Costs 30% of current Health.\n" .. abilityValues["DefiantStrike"].OverchargeBonusDescription
     abilityValues["DefiantStrike"].PerfectionName = "Defiant Strike"
@@ -376,7 +376,7 @@ local function Init(log, config, elementalEnum)
 
     -- Egide
     abilityValues["Egide"] = {}
-    abilityValues["Egide"].APCost = config.PurificationAPCost
+    abilityValues["Egide"].APCost = config.EgideAPCost
     abilityValues["Egide"].ChargesConsumed = config.EgideChargesConsumed
     abilityValues["Egide"].ChargesMultiplier = nil
     abilityValues["Egide"].OverchargeName = config.EgideName
@@ -389,18 +389,18 @@ local function Init(log, config, elementalEnum)
     abilityValues["Egide"].PerfectionShortDescription = "Protects allies by taking damage in their place for 2 turns.\n" .. abilityValues["Egide"].PerfectionBonusDescription
 
     -- Angel's Eyes
-    abilityValues["AngelsEyes"] = {}
-    abilityValues["AngelsEyes"].APCost = 3 -- This is the gradient cost, modifiying this is not recommended.
-    abilityValues["AngelsEyes"].ChargesConsumed = nil
-    abilityValues["AngelsEyes"].ChargesMultiplier = nil
-    abilityValues["AngelsEyes"].OverchargeName = "Sophie's Homage"
-    abilityValues["AngelsEyes"].OverchargeBonusDescription = "Generates " .. (config.AngelsEyesAdditionalChargesPerHit or 3) .. " additional <keyword id=\"Gustave_Charges\">Charge(s)</> per hit."
-    abilityValues["AngelsEyes"].OverchargeLongDescription = "Deals extreme single target <keyword id=\"Element_Physical\">Physical</> Damage. 8 hits.\n" .. "Applies Aureole to revive this character on death.\n" .. abilityValues["AngelsEyes"].OverchargeBonusDescription
-    abilityValues["AngelsEyes"].OverchargeShortDescription = "Extreme <keyword id=\"Element_Physical\">Physical</> Damage. 8 hits.\n" .. "Applies Aureole to revive this character on death.\n" .. abilityValues["AngelsEyes"].OverchargeBonusDescription
-    abilityValues["AngelsEyes"].PerfectionName = "Angel's Eyes"
-    abilityValues["AngelsEyes"].PerfectionBonusDescription = "Generates 1 additional <keyword id=\"Perfection\">Perfection</> per hit."
-    abilityValues["AngelsEyes"].PerfectionLongDescription = "Deals extreme single target <keyword id=\"Element_Physical\">Physical</> Damage. 8 hits.\n" .. "Applies Aureole to revive this character on death.\n" .. abilityValues["AngelsEyes"].PerfectionBonusDescription
-    abilityValues["AngelsEyes"].PerfectionShortDescription = "Extreme <keyword id=\"Element_Physical\">Physical</> Damage. 8 hits.\n" .. "Applies Aureole to revive this character on death.\n" .. abilityValues["AngelsEyes"].PerfectionBonusDescription
+    abilityValues["Gommage"] = {}
+    abilityValues["Gommage"].APCost = 3 -- This is the gradient cost, modifiying this is not recommended.
+    abilityValues["Gommage"].ChargesConsumed = nil
+    abilityValues["Gommage"].ChargesMultiplier = nil
+    abilityValues["Gommage"].OverchargeName = "Sophie's Homage"
+    abilityValues["Gommage"].OverchargeBonusDescription = "Refills " .. string.format("%g", (config.GommageChargesPercentage) * 100) .. "% of total <keyword id=\"Gustave_Charges\">Charge(s)</>"
+    abilityValues["Gommage"].OverchargeLongDescription = "Kills weak targets.\nOtherwise deals extreme <keyword id=\"Element_Void\">Void</> damage. 1 hit.\n" .. abilityValues["Gommage"].OverchargeBonusDescription
+    abilityValues["Gommage"].OverchargeShortDescription = "Kills weak targets.\nOtherwise deals extreme <keyword id=\"Element_Void\">Void</> damage. 1 hit.\n" .. abilityValues["Gommage"].OverchargeBonusDescription
+    abilityValues["Gommage"].PerfectionName = "Gommage"
+    abilityValues["Gommage"].PerfectionBonusDescription = ""
+    abilityValues["Gommage"].PerfectionLongDescription = "Kills weak targets.\nOtherwise deals extreme <keyword id=\"Element_Void\">Void</> damage. 1 hit." .. abilityValues["Gommage"].PerfectionBonusDescription
+    abilityValues["Gommage"].PerfectionShortDescription = "Kills weak targets.\nOtherwise deals extreme <keyword id=\"Element_Void\">Void</> damage. 1 hit." .. abilityValues["Gommage"].PerfectionBonusDescription
 
     log("Initialized abilityValues array in skills.lua successfully!")
 end

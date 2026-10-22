@@ -1,6 +1,6 @@
 
 --[[
-------- Overcharge Reimagined v3.0 - By Killera -------
+------- Overcharge Reimagined v4.0 - By Killera -------
 
         Overcharge Reimagined configuration file.
 
@@ -76,7 +76,7 @@ return
     ChargesOnLuminaDamage = 0,
 
     -- Charges per free aim shot. Default: 0
-    ChargesOnFreeAim = 0,
+    ChargesOnFreeAim = 1,
 
     -- Charges per damage event from buffs (e.g. burn). Default: 0
     ChargesOnBuffDamage = 0,
@@ -388,9 +388,9 @@ return
     -- Charges per hit on a stunned enemy with this ability. Default: 5
     EndbringerChargesPerStunnedHit = 5,
 
-    -- The elemental damage type of this ability. Default: 7 (Light) / Default in Vanilla: 1 (Physical)
+    -- The elemental damage type of this ability. Default: 6 (Dark) / Default in Vanilla: 1 (Physical)
     -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
-    EndbringerElement = 7,
+    EndbringerElement = 6,
 
     -- AP cost of this ability. Default: 9
     -- NOTE: This setting affects the Perfection character as well!
@@ -427,8 +427,8 @@ return
 
     -- Defiant Strike: These are the settings for Defiant Strike.
 
-    -- Percentage amount of charges that Defiant Strike generates when using the ability. Default: 0.15 (15%)
-    DefiantStrikeChargesPercentage = 0.15,
+    -- Percentage amount of charges that Defiant Strike generates when using the ability. Default: 0.10 (10%)
+    DefiantStrikeChargesPercentage = 0.10,
 
     -- The elemental damage type of this ability. Default: 6 (Dark) / Default in Vanilla: 1 (Physical)
     -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
@@ -638,13 +638,193 @@ return
 
     ------------------------------------------------------------------------
 
-    -- Angel's Eyes: These are the settings for Angel's Eyes.
-    -- This is a gradient ability and it's the only one that interacts with Perfection, so it will interact with Overcharge as well.
-    -- No cost or elemental damage settings though, there is no reason to modify it since gradients are special.
-    -- Maybe if this mod overhauls the gradients too in the future so they feel unique, but not right now.
+    -- Gommage: These are the settings for Gommage.
 
-    -- Extra charges per hit with this ability. Default: 3
-    AngelsEyesAdditionalChargesPerHit = 3,
+    -- Percentage amount of total charges refilled when using this ability. Default: 1.00 (100%)
+    GommageChargesPercentage = 1.00,
+
+    ------------------------------------------------------------------------
+    -- Weapon settings: These settings decide if a weapon should get patched and receive its custom passives and new elemental type or not.
+    -- This doesn't patch their damage and attribute scalings, so using mods that change all weapon attributes to something like Luck/Agility would still work.
+    ------------------------------------------------------------------------
+
+    -- Default: All true except Noahram.
+    -- VALUES: true = enabled, false = disabled.
+    PatchNoahram = false,
+    PatchLanceram = true,
+    PatchCruleram = true,
+    PatchAbysseram = true,
+    PatchSakaram = true,
+    PatchDemonam = true,
+    PatchGaulteram = true,
+    PatchDelaram = true,
+    PatchCultam = true,
+    PatchBlodam = true,
+    PatchChevalam = true,
+    PatchNosaram = true,
+    PatchGesam = true,
+    PatchSeeram = true,
+
+    ------------------------------------------------------------------------
+    -- Passive settings: These are the passive settings for all weapons.
+    -- Featuring a setting for the elemental type of the weapon and settings for certain values of their passives, as well weapon names.
+    ------------------------------------------------------------------------
+
+    ------------------------------------------------------------------------
+    -- Lanceram passive settings:
+
+    -- Additional charges per base attack hit. Default: 5
+    LuminaAdditionalChargesPerBaseAttackHit = 5,
+
+    ------------------------------------------------------------------------
+    -- Cruleram passive settings:
+
+    -- Additional charges per successful dodge and parry. Default: 2
+    LuminaAdditionalChargesPerDodgeParry = 2,
+
+    -- Percentage chance to freeze an enemy with a free-aim shot. Default: 0.10 (10%)
+    -- NOTE: The value works like this: 0.10 = 10% of chance, 0.33 = 33% of chance, 1.00 = 100% chance aka every shot freezes.
+    LuminaFreezeChance = 0.10,
+
+    -- Additional charges per hit using ice skills. Default: 2
+    LuminaAdditionalChargesPerIceSkillHit = 2,
+
+    ------------------------------------------------------------------------
+    -- Abysseram passive settings:
+
+    -- Percentage amount of charges refilled when breaking an enemy in any way. Default: 0.25 (25%)
+    -- NOTE: The value works like this: 0.25 = 25% of max. charges, 0.33 = 33% of max. charges, 1.00 = 100% of max charges aka. complete refill.
+    LuminaAdditionalChargesOnBreakPercentage = 0.25,
+
+    -- Percentage amount of charges refilled when breaking an enemy in any way. Default: 0.25 (25%)
+    -- NOTE: The value works like this: 0.25 = 25% of max. charges, 0.33 = 33% of max. charges, 1.00 = 100% of max charges aka. complete refill.
+    LuminaMoreChargesOnBreakPercentage = 0.25,
+
+    ------------------------------------------------------------------------
+    -- Sakaram passive settings.
+
+    -- Percentage amount of charges received on battle start. Default: 0.25 (25%)
+    -- NOTE: Does NOT stack with other custom luminas that change the maximum charge cap.
+    LuminaStartingChargesQuarterPercentage = 0.25,
+
+    -- Every x consumed charges generates 1 shield. Default: 25
+    -- NOTE: If 127 charges total are consumed during the whole battle, this would generate 5 shields total over the course of the battle.
+    LuminaAdditionalShieldPerCharges = 25,
+
+    -- Percentage amount of charges received on any turn start that isn't the first. Default: 0.10 (10%)
+    -- NOTE: Does NOT stack with other custom luminas that change the maximum charge cap.
+    LuminaAdditionalChargesPerTurn = 0.10,
+
+    ------------------------------------------------------------------------
+    -- Demonam's passive settings.
+
+    -- Additional charges per free aim shot. Default: 1
+    LuminaAdditionalChargesPerFreeAim = 1,
+
+    ------------------------------------------------------------------------
+    -- Gaulteram's passive settings.
+
+    -- Additional charges per any type of counter-attack. Default: 10
+    LuminaAdditionalChargesPerAnyCounterAttack = 10,
+
+    ------------------------------------------------------------------------
+    -- Delaram's passive settings.
+
+    -- Percentage amount of bonus damage per currently available charge for skills that can generate bonus charges. Default: 0.01 (+1%)
+    -- NOTE: With default settings, holding 59 charges would increase damage by 59% for skills like Lumière Assault, Shared Pain, Lightning Rush, Fading Hope and so on.
+    -- Does NOT include Fist of Lumière, Sword of Lumière and Absolute Zero, despite refilling charges on a break.
+    LuminaIncreasedDamagePerChargePercentage = 0.01,
+
+    -- Percentage amount of increased maximum charge cap. Default: 0.20 (+20%)
+    -- NOTE: If the maximum charge cap is 100, then this makes it 120. If it is 10, then this makes it 12.
+    LuminaIncreaseMaxChargesPercentage = 0.20,
+
+    ------------------------------------------------------------------------
+    -- Chevalam's passive settings.
+
+    -- Percentage amount of charges received on battle start. Default: 1.00 (100%)
+    LuminaStartingChargesFullPercentage = 1.00,
+
+    -- Percentage amount of bonus damage for all skills when at 0 charges. Default: 1.00 (100%)
+    LuminaIncreasedDamageWhenNoCharges = 1.00,
+
+    -- Percentage amount of increased maximum charge cap. Default: 1.00 (+100%)
+    -- NOTE: If the maximum charge cap is 100, then this makes it 200. If it is 10, then this makes it 20.
+    LuminaDoubleMaxChargesPercentage = 1.00,
+
+    ------------------------------------------------------------------------
+    -- Seeram's passive settings.
+
+    -- Minimum percentage of charges required to ignore any damage. Default: 0.50 (50%)
+    -- NOTE: Does not scale with luminas that increase/decrease the maximum charge cap. This means that if we have 79/240 charges, the condition is met and damage is ignored since it's above 49.
+    LuminaInvulnerabilityMinimumRequiredCharges = 0.50,
+
+    -- Percentage amount of charges lost when hit by an enemy. Default: 0.10 (10%)
+    -- NOTE: Shields do not prevent this event. Does not scale with luminas that increase/decrease the maximum charge cap.
+    LuminaInvulnerabilityChargesLostOnHitPercentage = 0.10,
+
+    -- Percentage amount of maximum charges received on any turn start that isn't the first. Default: 0.10 (+10%)
+    -- NOTE: This increases the maximum charge cap based on the original cap: 100 -> 110 -> 120 -> 130 -> 140 -> 150 and so on.
+    LuminaAdditionalMaxChargesPercentage = 0.10,
+
+    ------------------------------------------------------------------------
+    -- Cultam's passive settings.
+
+    -- Additional charges per successful  parry. Default: 8
+    LuminaAdditionalChargesPerParry = 8,
+
+    -- Amount of charges lost per successful dodge. Default: 4
+    LuminaLostChargesPerDodge = 4,
+
+    -- Turn duration of the Curse debuff on non-boss enemies. Default: 5
+    -- NOTE: If the turn duration is 5, the cursed enemy immediately dies on his 5th turn.
+    LuminaCurseDuration = 5,
+
+    -- Turn duration of Blight stacks applied on any enemy. Default: 1
+    -- NOTE: Blight removes 10% max health per stack so if the enemy is at 30% health, applying 1 Blight would do nothing.
+    -- Blight is most effective while enemies are at high health, or to reduce the effectiveness of their healing abilities.
+    LuminaBlightDuration = 1,
+
+    ------------------------------------------------------------------------
+    -- Nosaram's passive settings.
+
+    -- Amount of consumed charges in order to restore 1 AP when damaging an enemy with a free-aim shot. Default: 2
+    LuminaFreeAimChargesConsumed = 2,
+
+    ------------------------------------------------------------------------
+    -- Gesam's passive settings.
+
+    -- Percentage amount of reduced maximum charge cap. Default: 0.50 (50%)
+    -- NOTE: If the maximum charge cap is 100, then this makes it 50. If it is 10, then this makes it 5.
+    LuminaReducedMaxChargesPercentage = 0.50,
+    
+    -- Percentage amount of bonus damage per consumed charge. Default: 0.75 (75%)
+    LuminaIncreasedDamagePerConsumedChargePercentage = 0.75,
+
+    -- Percentage amount of bonus damage for skills that generate charges. Default: 0.50 (50%)
+    LuminaIncreasedDamageChargeGeneratingSkills = 0.50,
+
+    ------------------------------------------------------------------------
+    -- Blodam's passive settings.
+
+    -- Amount of Burn stacks inflicted per hit using Dark, Fire and Lightning skills. Default: 2
+    LuminaBurnPerDarkFireLightningSkillHit = 2,
+
+    -- Turn duration of the Charm debuff. Default: 2
+    -- NOTE: Charm is a bit weird because it goes away on turn start and can't be reapplied while it's still active.
+    -- Trying to charm an already charmed enemy won't reset its duration like with other buffs/debuffs, so on his 3rd turn charm is gone and he is guaranteed to attack once before it can be reapplied.
+    LuminaCharmDuration = 2,
+
+    -- Percentage amount of bonus damage per consumed charge. Default: 0.50 (50%)
+    LuminaIncreasedDamagePerConsumedChargePercentageWeaker = 0.50,
+
+    ------------------------------------------------------------------------
+    -- Noahram's passive settings.
+    -- By default its passives are disabled to match other early starting weapons.
+    -- But it still has passives incase you wish to turn them on.
+
+    -- Additional charges per critical hit from skills, base attacks and counter-attacks. Default: 2
+    LuminaAdditionalChargesOnCriticals = 2,
 
     ------------------------------------------------------------------------
     -- Camp settings.
@@ -664,16 +844,7 @@ return
 
     -- This allows you to enable switch between your characters while in the camp. Default: false
     -- VALUES: true = enabled, false = disabled.
-    AllowSwitchingCharactersInCamp = false,
-
-    ------------------------------------------------------------------------
-    -- Passive settings: These are the passive settings for all weapons.
-    -- Featuring a setting for the elemental type of the weapon and settings for certain values of their passives, as well weapon names.
-    ------------------------------------------------------------------------
-
-    -- Amount of additional charges per base attack hit.
-    -- NOTE: Used by Lanceram.
-    LuminaAdditionalChargesPerBaseAttackHit = 4,
+    AllowSwitchingCharactersInCamp = true,
 
     ------------------------------------------------------------------------
     -- BERSERK: This setting fixes the Berserk buff to not scale the size of our character when receiving it with enough charges via "Powerful".

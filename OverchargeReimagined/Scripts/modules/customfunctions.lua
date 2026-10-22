@@ -1,6 +1,6 @@
 
 --[[
-------- Overcharge Reimagined v3.0 - By Killera -------
+------- Overcharge Reimagined v4.0 - By Killera -------
 
         This module contains some custom functions that were made for this mod.
 
@@ -116,6 +116,18 @@ local function FTextCustom(skillObject, propertyName, newDescription, abilityNam
     return result
 end
 
+-- Returns true if a charge generating ability was used.
+local function UsedChargeGeneratingAbility(usedLumiereAssault, usedFromFire, usedDefiantStrike, usedSpeedBurst, usedStrikeStorm, usedLightHolder, usedEndbringer, usedAngelsEyes)
+    return usedLumiereAssault
+    or usedFromFire
+    or usedDefiantStrike
+    or usedSpeedBurst
+    or usedStrikeStorm
+    or usedLightHolder
+    or usedEndbringer
+    or usedAngelsEyes
+end
+
 -- Expose the functions to main.lua.
 return
 {
@@ -124,4 +136,5 @@ return
     read_int = read_int,
     FTextCustom = FTextCustom,
     EscapeStringCharacters = EscapeStringCharacters,
+    UsedChargeGeneratingAbility = UsedChargeGeneratingAbility,
 }

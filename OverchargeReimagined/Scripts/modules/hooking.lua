@@ -1,6 +1,6 @@
 
 --[[
-------- Overcharge Reimagined v3.0 - By Killera -------
+------- Overcharge Reimagined v4.0 - By Killera -------
 
         This module holds strings of all the hook paths that we need to modify the game's functionality.
 
@@ -63,8 +63,8 @@ return
     PURIFICATION_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_NEW_15.BP_Battle_SkillScript_NEW_15_C:OnExecuteSkill",
     EGIDE_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Maelle/BP_Battle_SkillScript_New7_Egide.BP_Battle_SkillScript_New7_Egide_C:OnExecuteSkill",
     SABOTAGE_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_Verso_Sabotage.BP_Battle_SkillScript_Verso_Sabotage_C:OnExecuteSkill",
-    STRIKER_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Maelle/BP_Battle_SkillScript_PhoenixFlame.BP_Battle_SkillScript_PhoenixFlame_C:OnExecuteSkill",
-    ANGELS_EYES_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_Verso_AngelsEyes.BP_Battle_SkillScript_Verso_AngelsEyes_C:OnExecuteSkill",
+    PHOENIX_FLAME_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Maelle/BP_Battle_SkillScript_PhoenixFlame.BP_Battle_SkillScript_PhoenixFlame_C:OnExecuteSkill",
+    GOMMAGE_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Maelle/BP_Battle_SkillScript_Gommage.BP_Battle_SkillScript_Gommage_C:OnExecuteSkill",
 
     -- Hooks that manipulate the cost and damage multiplier of abilities on the fly.
     GET_BASE_COST = "/Game/Gameplay/SkillTree/BP_DataAsset_Skill.BP_DataAsset_Skill_C:GetSkillBaseCost",
@@ -75,6 +75,7 @@ return
     AUDIO_MANAGER_INIT = "/Game/Audio/Blueprints/BP_AudioCharacter_BattleManager.BP_AudioCharacter_BattleManager_C:Init",
     PLAY_SKILL_BATTLE_LINE_INTERNAL = "/Game/Audio/Blueprints/BP_AudioCharacter_BattleManager.BP_AudioCharacter_BattleManager_C:PlaySkillBattleLineInternal",
     LOAD_DEPENDENCIES_FROM_OBJECT = "/Game/Gameplay/LoadingSystem/BP_LoadingSystemComponent.BP_LoadingSystemComponent_C:LoadDependenciesFromObject",
+    ROLL_CRITICAL_HIT = "/Game/Gameplay/Battle/BP_BattleDamages.BP_BattleDamages_C:RollCriticalHit",
 
     -- Camp and overworld related hooks.
     CAN_SWITCH_CHARACTER = "/Game/jRPGTemplate/Blueprints/Basics/BP_jRPG_Character_World.BP_jRPG_Character_World_C:CanSwitchCharacter",
@@ -87,5 +88,9 @@ return
     LOAD_PASSIVE_EFFECT_DATA = "/Game/UI/Widgets/InGame_Menu/WeaponPanel/WBP_WeaponTooltipLumina.WBP_WeaponTooltipLumina_C:LoadPassiveEffectData",
 
     -- Skill tree related hooks.
+    INIT_SKILL_GRAPH_SYSTEM = "/Game/Gameplay/SkillTree/BP_CharacterSkillGraphSystem.BP_CharacterSkillGraphSystem_C:Init",
     GET_TOTAL_SKILL_POINTS = "/Game/Gameplay/SkillTree/BP_CharacterSkillGraphSystem.BP_CharacterSkillGraphSystem_C:GetAvailableSkillPoints",
+
+    -- Merchant related hooks.
+    COMPUTE_WEAPON_PRICE = "/Game/Gameplay/Inventory/Merchant/BP_MerchantComponent.BP_MerchantComponent_C:ComputeWeaponPrice",
 }
