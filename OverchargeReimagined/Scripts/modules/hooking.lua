@@ -93,4 +93,17 @@ return
 
     -- Merchant related hooks.
     COMPUTE_WEAPON_PRICE = "/Game/Gameplay/Inventory/Merchant/BP_MerchantComponent.BP_MerchantComponent_C:ComputeWeaponPrice",
+
+    -- Gustave animation related notifiers.
+    BP_NOAH_BATTLE = "/Game/Characters/Heros/BP_Noah_Battle.BP_Noah_Battle_C",
+    ABP_NOAH_BATTLE = "/Game/Characters/Heros/AnimBP/Noah/ABP_Battle_Noah.ABP_Battle_Noah_C",
+    CHARACTER_EXCLUSION = "/Game/Gameplay/GameActionsSystem/SetCurrentParty/BP_GameAction_CharacterExclusion.BP_GameAction_CharacterExclusion_C",
+
+    -- Save manager related hooks.
+    PREPARE_LOADING_SAVE_GAME = "/Game/Gameplay/Save/BP_SaveManager.BP_SaveManager_C:PrepareToLoadSaveGame",
+    START_NEW_GAME = "/Game/Gameplay/Save/BP_SaveManager.BP_SaveManager_C:StartNewGame", -- params: bool FromMainMenu, nameproperty OverrideStartLevelDataID
+
+    -- Character replacer hooks, which prevent the game from removing Gustave/Verso from the party.
+    ADD_CHARACTER_TO_COLLECTION = "/Game/Gameplay/GameActionsSystem/ReplaceCharacter/BP_GameActionInstance_ReplaceCharacter.BP_GameActionInstance_ReplaceCharacter_C:AddNewCharacterToCollection",
+    GET_CHARACTER_IDS = "/Game/Gameplay/GameActionsSystem/ReplaceCharacter/BP_GameActionInstance_ReplaceCharacter.BP_GameActionInstance_ReplaceCharacter_C:GetCharacterIDs",
 }

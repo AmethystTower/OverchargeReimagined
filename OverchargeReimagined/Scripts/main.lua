@@ -270,7 +270,6 @@ local onReceivedDamageHookRegistered = false
 local changeChargeHookRegistered = false
 local updateCurrentValueHookRegistered = false
 local constructPortraitHookRegistered = false
-local skillGraphSystemHookRegistered = false
 
 -- These let us know if we need to refresh the patch functions incase someone loaded a new save.
 local patchedCharacterSample = nil
@@ -292,7 +291,11 @@ local updatedDynamicElement = false
 local updatedWeaponPassives = false
 local disableChargeGeneration = false
 
--- Ints that we need to monitor stats.
+-- Needed because of a weird interaction with the "Online Expedition" mod where for some weird reason, that mod keeps re-initializing the skillgraphs several times.
+-- That causes massive lagspikes so this flag will make sure we only patch the skillgraph when actually loading a save file.
+local patchSkillGraph = false
+
+-- Ints that we need to monitor states.
 local ascendingAssaultCounter = 0
 local skillHitCounter = 0
 
@@ -611,7 +614,7 @@ local function ModifyAbilityCostAndDescription(param, modifyAPCostOnly)
         -- Dynamically update Marking Shot's short description with the current stun chance we have based off the available amount of charges.
         -- Use the VirtualMaxCharges from the config incase we have luminas modifying the max charge cap.
         if abilityNameID == "MarkingShot_Gustave" then
-            assembledShortDescription = assembledShortDescription .. ("\nHas a " .. string.format("%g", (virtualCurrentCharges / config.VirtualMaxCharges * markingShotMaxStunChance) * 100) .. " " .. abilityValues.OverchargeDynamicDescriptionPiece)
+            assembledShortDescription = assembledShortDescription .. ("\nHas a " .. string.format("%g", math.min((virtualCurrentCharges / config.VirtualMaxCharges * markingShotMaxStunChance) * 100, 100)) .. " " .. abilityValues.OverchargeDynamicDescriptionPiece)
         -- Dynamically update the current amount of consumed charges for Ascending Assault.
         elseif abilityNameID == "AscendingAssault" then
             local consumedCharges = ascendingAssaultChargesConsumed + (ascendingAssaultCounter * ascendingAssaultAdditionalChargesConsumed)
@@ -2178,11 +2181,6 @@ local function TryRegisterAbilityHooks()
 
                 chargeComponent.ChangeCharge(addedCharges)
                 Log("Gommage: Adding " .. addedCharges .. " charges to the counter.")
-
-                -- 50% chance to play the voiceline.
-                if math.random(1, 100) <= 50 then
-                    PlayVoiceLine(battleAudioManager, "overcharge4")
-                end
             end)
         end)
 
@@ -2374,7 +2372,7 @@ local function TryRegisterChargeComponentHooks()
 
                     -- Add a 2 second delay before applying the starting charges.
                     -- Otherwise we'd get an error and no charges due to calling this too early when the character is not fully initialized yet.
-                    ExecuteWithDelay(4000, function()
+                    ExecuteWithDelay(3000, function()
                         -- This is another safety check to see if self still exists, since we are exceuting delayed code here.
                         if self:IsValid() then
                             Log("Adding " .. tostring(config.StartingCharges) .. " starting charges.")
@@ -2519,11 +2517,6 @@ local function TryRegisterChargeComponentHooks()
     if not dodgeSuccessfulHookRegistered then
         local ok = pcall(function()
             RegisterHook(hooking.DODGE_SUCCESSFUL, function(param, character, enemy)
-                -- We have kept the default value of +1 charge per successful dodge, do nothing.
-                if config.ChargesOnDodge == 1 then
-                    return
-                end
-
                 if not IsValidChargeComponent() then
                     return
                 end
@@ -2568,11 +2561,6 @@ local function TryRegisterChargeComponentHooks()
     if not parrySuccessfulHookRegistered then
         local ok = pcall(function()
             RegisterHook(hooking.PARRY_SUCCESSFUL, function(param, character, enemy)
-                -- We have kept the default value of +1 charge per successful parry, do nothing.
-                if config.ChargesOnParry == 1 then
-                    return
-                end
-
                 if not IsValidChargeComponent() then
                     return
                 end
@@ -2666,20 +2654,20 @@ local function TryRegisterChargeComponentHooks()
                         Log("Player caused break using the ability Phantom Stars, instantly refilling charges by " .. (phantomStarsChargesPercentage * 100) .. "% of " .. virtualMaxCharges .. " total charges.")
                         chargeComponent.ChangeCharge(math.floor(virtualMaxCharges * phantomStarsChargesPercentage))
                     end
-                else
-                    -- Lumina Passive: Broken in any way while having the "Perfection_HealRankDownMedium" passive equipped, refill additional charges.
-                    if equippedCustomPassives["Perfection_HealRankDownMedium"] then
-                        Log("Lumina 'Perfection_HealRankDownMedium': +" .. math.floor(virtualMaxCharges * config.LuminaAdditionalChargesOnBreakPercentage) .. " additional charges added.")
-                        chargeComponent.ChangeCharge(math.floor(virtualMaxCharges * config.LuminaAdditionalChargesOnBreakPercentage))
-                        WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Perfection_HealRankDownMedium"])
-                    end
+                end
 
-                    -- Lumina Passive: Broken in any way while having the "Perfection_Dodgex2" passive equipped, refill even more additional charges.
-                    if equippedCustomPassives["Perfection_SwitchRankSOnBreak"] then
-                        Log("Lumina 'Perfection_SwitchRankSOnBreak': +" .. math.floor(virtualMaxCharges * config.LuminaMoreChargesOnBreakPercentage) .. " additional charges added.")
-                        chargeComponent.ChangeCharge(math.floor(virtualMaxCharges * config.LuminaMoreChargesOnBreakPercentage))
-                        WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Perfection_SwitchRankSOnBreak"])
-                    end
+                -- Lumina Passive: Broken in any way while having the "Perfection_HealRankDownMedium" passive equipped, refill additional charges.
+                if equippedCustomPassives["Perfection_HealRankDownMedium"] then
+                    Log("Lumina 'Perfection_HealRankDownMedium': +" .. math.floor(virtualMaxCharges * config.LuminaAdditionalChargesOnBreakPercentage) .. " additional charges added.")
+                    chargeComponent.ChangeCharge(math.floor(virtualMaxCharges * config.LuminaAdditionalChargesOnBreakPercentage))
+                    WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Perfection_HealRankDownMedium"])
+                end
+
+                -- Lumina Passive: Broken in any way while having the "Perfection_Dodgex2" passive equipped, refill even more additional charges.
+                if equippedCustomPassives["Perfection_SwitchRankSOnBreak"] then
+                    Log("Lumina 'Perfection_SwitchRankSOnBreak': +" .. math.floor(virtualMaxCharges * config.LuminaMoreChargesOnBreakPercentage) .. " additional charges added.")
+                    chargeComponent.ChangeCharge(math.floor(virtualMaxCharges * config.LuminaMoreChargesOnBreakPercentage))
+                    WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Perfection_SwitchRankSOnBreak"])
                 end
             end)
         end)
@@ -2703,6 +2691,10 @@ local function TryRegisterChargeComponentHooks()
 
                 local statsComponentSource = damageObject.SourceCharacter
                 local statsComponentTarget = damageObject.TargetCharacter
+
+                if not statsComponentSource or not statsComponentTarget then
+                    return
+                end
 
                 local sourceOwner = statsComponentSource.GetOwner()
                 local targetOwner = statsComponentTarget.GetOwner()
@@ -2882,6 +2874,12 @@ local function TryRegisterChargeComponentHooks()
                                     WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Foretell_OnlyJusticeChariot"])
                                 end
                             end
+                        -- Lumiere Assault can break on the last hit now.
+                        elseif usedLumiereAssault and skillHitCounter == 5 then
+                            -- Break reason 1: Skill.
+                            local outParam = {}
+                            statsComponentTarget:TryPerformBreakStun(statsComponentSource, 1, outParam)
+                            Log("Lumiere Assault break attempt result: " .. tostring(outParam.Success))
                         end
 
                         -- Defiant Strike, Marking Shot and Sabotage apply Blight if there's a specific weapon passive being used.
@@ -2968,6 +2966,7 @@ local function TryRegisterChargeComponentHooks()
 
                                 -- Apply the debuff.
                                 local freezeClass = StaticFindObject("/Game/Gameplay/Buffs/GenericBuff/BP_BattleBuff_Frozen.BP_BattleBuff_Frozen_C")
+                                
                                 temp_SkillScript:ApplyBuff(freezeClass, statsComponentTarget, 1, statsComponentSource, 4, appliedDebuff)
                                 WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Stance_VirtuoseDoubleBurn"])
                             end
@@ -3211,8 +3210,7 @@ local function TryRegisterChargeComponentHooks()
 end
 
 -- This hook runs when loading a save.
-RegisterHook(hooking.CLIENT_RESTART, function()
-
+RegisterHook(hooking.CLIENT_RESTART, function(param)
     -- For the first time we load into a save: Attempt to modify all descriptions and AP costs so that they are correct right away.
     -- We also cache a few abilities related to voicelines that are tied to them for later use.
     if not patchedSkillSample or not patchedSkillSample:IsValid() then
@@ -3358,6 +3356,7 @@ RegisterHook(hooking.CLIENT_RESTART, function()
         -- We used Lumiere Assault.
         elseif usedLumiereAssault then
             modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "Combo1_Gustave")
+            skillHitCounter = skillHitCounter + 1
 
         -- We used Strike Storm.
         elseif usedStrikeStorm then
@@ -3731,6 +3730,8 @@ RegisterHook(hooking.CLIENT_RESTART, function()
             voiceLine = voiceLinesList["takethemdown"]
         elseif usedSabotage then
             voiceLine = voiceLinesList["battlewon"]
+        elseif usedAngelsEyes then
+            voiceLine = voiceLinesList["overcharge4"]
         else
             return
         end
@@ -3767,28 +3768,28 @@ RegisterHook(hooking.CLIENT_RESTART, function()
         -- But if we don't have an overcharge component (character missing) then it would be nice to check if we really need to load them for the current fight.
         -- Again, this would be a very small but nice optimization to respect the game's loading patterns, but this is something for a future clean-up update.
         -- This causes no performance issues or much increased memory usage, it's just a few extra abilities that always get loaded so we can use their tied voicelines.
-        -- Comparing the fact that using 3 characters with 6 skils each loads 18 of them in a battle, this isn't a big deal.
+        -- Comparing the fact that using 3 characters with 6 skills each loads 18 of them in a battle, this isn't a big deal.
         if cachedSkills["UnleashCharge"] and cachedSkills["UnleashCharge"]:IsValid() then
             self:LoadDependenciesFromObject(cachedSkills["UnleashCharge"])
             Log("Loaded skill and sound dependencies for UnleashCharge skill.")
         end
 
-        if cachedSkills["UnleashCharge"] and cachedSkills["MarkingShot_Gustave"]:IsValid() then
+        if cachedSkills["MarkingShot_Gustave"] and cachedSkills["MarkingShot_Gustave"]:IsValid() then
             self:LoadDependenciesFromObject(cachedSkills["MarkingShot_Gustave"])
             Log("Loaded skill and sound dependencies for MarkingShot_Gustave skill.")
         end
 
-        if cachedSkills["UnleashCharge"] and cachedSkills["StrikeStorm_Gustave"]:IsValid() then
+        if cachedSkills["StrikeStorm_Gustave"] and cachedSkills["StrikeStorm_Gustave"]:IsValid() then
             self:LoadDependenciesFromObject(cachedSkills["StrikeStorm_Gustave"])
             Log("Loaded skill and sound dependencies for StrikeStorm_Gustave skill.")
         end
 
-        if cachedSkills["UnleashCharge"] and cachedSkills["PerfectRecovery_Gustave"]:IsValid() then
+        if cachedSkills["PerfectRecovery_Gustave"] and cachedSkills["PerfectRecovery_Gustave"]:IsValid() then
             self:LoadDependenciesFromObject(cachedSkills["PerfectRecovery_Gustave"])
             Log("Loaded skill and sound dependencies for PerfectRecovery_Gustave skill.")
         end
 
-        if cachedSkills["UnleashCharge"] and cachedSkills["Powerful_Gustave"]:IsValid() then
+        if cachedSkills["Powerful_Gustave"] and cachedSkills["Powerful_Gustave"]:IsValid() then
             self:LoadDependenciesFromObject(cachedSkills["Powerful_Gustave"])
             Log("Loaded skill and sound dependencies for Powerful_Gustave skill.")
         end
@@ -3882,39 +3883,291 @@ RegisterHook(hooking.CLIENT_RESTART, function()
     -- Patches the weapon passive tooltips menu so that they can show for Gustave in the menu.
     RegisterHook(hooking.LOAD_WEAPON, WeaponHelper.WeaponTooltipsHook)
 
-    -- Helps us get the luminas of the currently selected weapon in the character menu to show custom descriptions in cominbation with our LOAD_PASSIVE_EFFECT_DATA hook.
+    -- Gets the luminas of the currently selected weapon in the character menu to show custom descriptions in cominbation with the LOAD_PASSIVE_EFFECT_DATA hook.
     RegisterHook(hooking.LOAD_WEAPON_LUMINAS, WeaponHelper.WeaponLoadLuminasHook)
 
-    -- Injects our custom descriptions into the weapon passives tooltip menu.
+    -- Injects custom descriptions into the weapon passives tooltip menu.
     RegisterHook(hooking.LOAD_PASSIVE_EFFECT_DATA, WeaponHelper.WeaponLuminaTooltipsHook)
 
-    -- Gets called when a calculating the price of a weapon in a merchant shop.
+    -- Gets called when calculating the price of a weapon in a merchant shop.
     RegisterHook(hooking.COMPUTE_WEAPON_PRICE, WeaponHelper.ModifyWeaponPrice)
+
+    RegisterHook(hooking.GET_CHARACTER_IDS, function(param, remoteOldCharacter, remoteNewCharacter)
+        local oldID = CustomFunctions.unwrap(remoteOldCharacter)
+        local newID = CustomFunctions.unwrap(remoteNewCharacter)
+
+        Log("Game tries to replace " .. tostring(oldID:ToString()) .. " with " .. tostring(newID:ToString()) .. ".")
+
+        -- Make sure the game can't remove the old character by setting the name ID to the new character.
+        -- We basically make the game "replace" the new character with themselves so that they keep their level if we already have them in our party.
+        -- If we don't have the new character in our party yet then he will start with clean stats and not copy the loadout of the old character.
+        remoteOldCharacter:Set(newID)
+        Log("Preventing replacement of old character.")
+    end)
+
+    RegisterHook(hooking.ADD_CHARACTER_TO_COLLECTION, function(param)
+        local self = CustomFunctions.unwrap(param)
+
+        if not self or not self:IsValid() then
+            return
+        end
+
+        Log(tostring(self.NewCharacterData.HardcodedNameID:ToString()) .. " level: " .. tostring(self.NewCharacterData.CurrentLevel))
+
+        -- Check if the game is trying to replace Gustave with Verso.
+        -- In this case set Verso's level to 20 if it's lower than that since he can no longer copy Gustave's stats and loadout so he would start at level 0 otherwise.
+        if self.NewCharacterData.HardcodedNameID:ToString() == "Verso" and self.NewCharacterData.CurrentLevel < 20 then
+            Log(tostring(self.NewCharacterData.HardcodedNameID:ToString()) .. "'s level is lower than 20: " .. tostring(self.NewCharacterData.CurrentLevel) .. ".")
+            self.NewCharacterData:SetLevel(20)
+
+            -- Also fix the health being 0.
+            local result = {}
+            self.NewCharacterData:GetMaxHP(result)
+            self.NewCharacterData.CurrentHP = result.MaxHP
+            Log("Setting the level of " .. tostring(self.NewCharacterData.HardcodedNameID:ToString()) .. " to 20.")
+        end
+
+        -- Prevent the character getting removed from the party by setting the old character data to an instance with default settings.
+        -- The game handles the "None" character and just does nothing when trying to remove a character.
+        -- It is done here at the end so that if we already have Verso/Gustave, they keep their level and stats and then don't get removed afterwards.
+        -- Right after this the game calls the "RemoveOldCharacterFromCollection" function, so this was an easy patch :)
+        local newData = LoadAsset("/Game/Gameplay/CharacterData/BP_CharacterData.BP_CharacterData_C")
+        self.OldCharacterData = newData
+    end)
 end)
 
+local function TryPatchGustaveSkilltree(gustaveSkillGraph, manuallyLoadedSkills)
+    if not gustaveSkillGraph or not gustaveSkillGraph:IsValid() then
+        return
+    end
+
+    PatchHelper.PatchGustaveSkilltree(gustaveSkillGraph.TempCharacterData)
+
+    -- This function is used by Recoats to reset the skilltree by re-initializing a new instance.
+    -- Since the skilltree is being patched before any save data gets loaded, this will make sure the skilltree is fully initialized with the patched values.
+    -- This also fixes the issue of Gustave ALWAYS starting with his "Overcharge" skill since the game is hardcoded to ALWAYS give it to him, even if removed from the skilltree :D
+    patchSkillTreeGuard = true
+    gustaveSkillGraph:ResetProgression()
+    patchSkillTreeGuard = false
+end
+
+-- Grab the skillgraph object as early as possible and hook its init function so that we can patch it right before loading into a save.
 ExecuteInGameThread(function()
     local skillGraphSystem = LoadAsset("/Game/Gameplay/SkillTree/BP_CharacterSkillGraphSystem.BP_CharacterSkillGraphSystem_C")
 
+    -- Hook the save game manager's function as early as possible so that we know the player is loading a save file.
+    -- It needs to be done incase the player doesn't have the characters that Gustave borrows abilities from in his party.
+    -- Or if Gustave is first in load order, then the skill assets are missing and the skillgraph doesn't get patched properly.
+    RegisterHook(hooking.PREPARE_LOADING_SAVE_GAME, function(param)
+        Log("Save game is being prepared, load missing skill assets for skillgraph patch...")
+
+        patchedCharacterSample = nil
+        patchedSkillSample = nil
+        patchedWeaponSample = nil
+        patchSkillGraph = true
+
+        -- Schedule all skill assets to be loaded after the save loader has initialized.
+        -- This is the perfect hook point because it allows us to load the missing skill assets before everything else starts loading.
+        -- It is important because the game can freeze if we try loading the missing skill assets while everything else is loading as well.
+        -- THIS TRASH TOOK ME THE WHOLE DAY TO FIGURE OUT, FUCKING HELL I'M DONE WITH MODDING THIS GAME. RANT OVER.
+        ExecuteInGameThread(function()
+            cachedSkills["SpeedBurst"] = LoadAsset("/Game/Gameplay/SkillTree/Content/NoahVerso/DA_Skills/DA_Skill_Verso_NEW_Speedburst.DA_Skill_Verso_NEW_Speedburst")
+            cachedSkills["BerserkSlash"] = LoadAsset("/Game/Gameplay/SkillTree/Content/NoahVerso/DA_Skills/DA_Skill_Verso_BerserkSlash.DA_Skill_Verso_BerserkSlash")
+            cachedSkills["Overcharge"] = LoadAsset("/Game/Gameplay/SkillTree/Content/NoahVerso/DA_Skills/DA_Skill_Verso_NEW_Overcharge.DA_Skill_Verso_NEW_Overcharge")
+            cachedSkills["EndBringer"] = LoadAsset("/Game/Gameplay/SkillTree/Content/NoahVerso/DA_Skills/DA_Skill_Verso_Endbringer.DA_Skill_Verso_Endbringer")
+            cachedSkills["Egide"] = LoadAsset("/Game/Gameplay/SkillTree/Content/Maelle/Skills/DA_Skill_Maelle_NEW7_Egide.DA_Skill_Maelle_NEW7_Egide")
+            cachedSkills["Sabotage"] = LoadAsset("/Game/Gameplay/SkillTree/Content/NoahVerso/DA_Skills/DA_Skill_Verso_NEW_Sabotage.DA_Skill_Verso_NEW_Sabotage")
+            cachedSkills["PhoenixFlame"] = LoadAsset("/Game/Gameplay/SkillTree/Content/Maelle/Skills/DA_Skill_Maelle_PhoenixFlame.DA_Skill_Maelle_PhoenixFlame")
+            cachedSkills["Gommage"] = LoadAsset("/Game/Gameplay/SkillTree/Content/Maelle/Skills/DA_Skill_Maelle_Gommage.DA_Skill_Maelle_Gommage")
+        end)
+    end)
+
+    -- PREPARE_LOADING_SAVE_GAME doesn't get called when starting a new game so this needs to be hooked as well.
+    -- Since it gets called after the skillgraphs are initialized, patch it here.
+    -- The player has no save data yet that he could lose anyway.
+    RegisterHook(hooking.START_NEW_GAME, function(param)
+        Log("New game is being started, load missing skill assets and patch skillgraph...")
+
+        cachedSkills["SpeedBurst"] = LoadAsset("/Game/Gameplay/SkillTree/Content/NoahVerso/DA_Skills/DA_Skill_Verso_NEW_Speedburst.DA_Skill_Verso_NEW_Speedburst")
+        cachedSkills["BerserkSlash"] = LoadAsset("/Game/Gameplay/SkillTree/Content/NoahVerso/DA_Skills/DA_Skill_Verso_BerserkSlash.DA_Skill_Verso_BerserkSlash")
+        cachedSkills["Overcharge"] = LoadAsset("/Game/Gameplay/SkillTree/Content/NoahVerso/DA_Skills/DA_Skill_Verso_NEW_Overcharge.DA_Skill_Verso_NEW_Overcharge")
+        cachedSkills["EndBringer"] = LoadAsset("/Game/Gameplay/SkillTree/Content/NoahVerso/DA_Skills/DA_Skill_Verso_Endbringer.DA_Skill_Verso_Endbringer")
+        cachedSkills["Egide"] = LoadAsset("/Game/Gameplay/SkillTree/Content/Maelle/Skills/DA_Skill_Maelle_NEW7_Egide.DA_Skill_Maelle_NEW7_Egide")
+        cachedSkills["Sabotage"] = LoadAsset("/Game/Gameplay/SkillTree/Content/NoahVerso/DA_Skills/DA_Skill_Verso_NEW_Sabotage.DA_Skill_Verso_NEW_Sabotage")
+        cachedSkills["PhoenixFlame"] = LoadAsset("/Game/Gameplay/SkillTree/Content/Maelle/Skills/DA_Skill_Maelle_PhoenixFlame.DA_Skill_Maelle_PhoenixFlame")
+        cachedSkills["Gommage"] = LoadAsset("/Game/Gameplay/SkillTree/Content/Maelle/Skills/DA_Skill_Maelle_Gommage.DA_Skill_Maelle_Gommage")
+
+        local skillgraphs = FindAllOf("BP_CharacterSkillGraphSystem_C")
+
+        for _, skillGraphSystem in pairs(skillgraphs) do
+            -- If the ability is radiant strike or light holder, modify description as well because it doesn't update in the menu when the skills aren't unlocked yet.
+            if skillGraphSystem and skillGraphSystem:IsValid() and skillGraphSystem.TempCharacterData.HardcodedNameID:ToString() == "Frey" then
+                TryPatchGustaveSkilltree(skillGraphSystem, cachedSkills)
+                return
+            end
+        end
+    end)
+
+    -- Patches the skilltree whenever the game initializes it.
+    -- Only patch it when loading into a save though due to the online mod having a weird interaction.
     RegisterHook(hooking.INIT_SKILL_GRAPH_SYSTEM, function(param)
         if patchSkillTreeGuard then
             return
         end
 
+        if not patchSkillGraph then
+            return
+        end
+
         local skillGraphSystem = CustomFunctions.unwrap(param)
 
-        if not skillGraphSystem or not skillGraphSystem:IsValid() then
+        if not skillGraphSystem or not skillGraphSystem:IsValid() or not skillGraphSystem.TempCharacterData then
             return
         end
 
         if skillGraphSystem.TempCharacterData.HardcodedNameID:ToString() == "Frey" then
-            PatchHelper.PatchGustaveSkilltree(skillGraphSystem.TempCharacterData)
-
-            -- This function is used by Recoats to reset the skilltree by re-initializing a new instance.
-            -- Since the skilltree is being patched before any save data gets loaded, this will make sure the skilltree is fully initialized with the patched values.
-            -- This also fixes the issue of Gustave ALWAYS starting with his "Overcharge" skill since the game is hardcoded to ALWAYS give it to him, even if removed from the skilltree :D
-            patchSkillTreeGuard = true
-            skillGraphSystem:ResetProgression()
-            patchSkillTreeGuard = false
+            TryPatchGustaveSkilltree(skillGraphSystem, cachedSkills)
+            patchSkillGraph = false
         end
     end)
+end)
+
+-- Listens for events that spawn Gustave's battle model and patches his gradient animations.
+NotifyOnNewObject(hooking.BP_NOAH_BATTLE, function(object)
+    if not object or not object:IsValid() then
+        return
+    end
+
+    local versoGradientParry = StaticFindObject("/Game/Characters/Heros/Verso/Animations/Battle/BattleTurn/Verso_Gradient_Parry_Montage.Verso_Gradient_Parry_Montage")
+    local versoGradientCounter = StaticFindObject("/Game/Gameplay/EpicBattleSequence/Verso/NotSkills/SEQ_SkillVerso_GradientCounter.SEQ_SkillVerso_GradientCounter")
+    local versoGradientPoseCamera = StaticFindObject("/Game/Animations/BattleTurn/SEQ_BattleTurn_SeeEnemies_MaelleUltimate.SEQ_BattleTurn_SeeEnemies_MaelleUltimate")
+
+    if versoGradientParry and versoGradientParry:IsValid() and object.AnimGradientParry ~= versoGradientParry then
+        object.AnimGradientParry = versoGradientParry
+        Log("Patched Noah's gradient parry animation.")
+    end
+
+    if versoGradientCounter and versoGradientCounter:IsValid() and object.GradientCounterSequence ~= versoGradientCounter then
+        object.GradientCounterSequence = versoGradientCounter
+        Log("Patched Noah's gradient counter animation.")
+    end
+
+    if versoGradientPoseCamera and versoGradientPoseCamera:IsValid() and object.BattleSequenceData.UltimateSelection_11_00E904274715D2FC287707AB64ED5557 ~= versoGradientPoseCamera then
+        object.BattleSequenceData.UltimateSelection_11_00E904274715D2FC287707AB64ED5557 = versoGradientPoseCamera
+        Log("Patched Noah's gradient selection camera animation.")
+    end
+
+    object.PPGradientCenter.X = 0.452
+    object.PPGradientCenter.Y = 0.5
+    object.PPGradientCenter.Z = 0
+end)
+
+-- Listens for events that spawn Gustave's battle model and patches his gradient animations.
+NotifyOnNewObject(hooking.ABP_NOAH_BATTLE, function(object)
+    if not object or not object:IsValid() then
+        return
+    end
+
+    local versoGradientPoseIntro = StaticFindObject("/Game/Characters/Heros/Verso/Animations/Battle/BattleTurn/Verso_Base_to_Ultimate.Verso_Base_to_Ultimate")
+    local versoGradientPoseIdle = StaticFindObject("/Game/Characters/Heros/Verso/Animations/Battle/BattleTurn/Verso_Idle_Ultimate.Verso_Idle_Ultimate")
+
+    if versoGradientPoseIntro and versoGradientPoseIntro:IsValid() and object.CharaTurn_MainIdle_Ultimate_Intro ~= versoGradientPoseIntro then
+        object.CharaTurn_MainIdle_Ultimate_Intro = versoGradientPoseIntro
+        Log("Patched Noah's gradient intro animation.")
+    end
+
+    if versoGradientPoseIdle and versoGradientPoseIdle:IsValid() then
+        if object.CharaTurn_MainIdle_Ultimate_Idle ~= versoGradientPoseIdle then
+            object.CharaTurn_MainIdle_Ultimate_Idle = versoGradientPoseIdle
+            Log("Patched Noah's gradient idle animation.")
+        end
+
+        if object.CharaTurn_MainIdle_Ultimate_Targeting ~= versoGradientPoseIdle then
+            object.CharaTurn_MainIdle_Ultimate_Targeting = versoGradientPoseIdle
+            Log("Patched Noah's gradient targeting animation.")
+        end
+    end
+end)
+
+-- Listens for the event that hides/unhides team members in specific parts of the story.
+NotifyOnNewObject(hooking.CHARACTER_EXCLUSION, function(object)
+    if not object or not object:IsValid() then
+        return
+    end
+
+    local objectName = object:GetFullName()
+
+    Log("Character exclusion event detected, patching Gustave into hide/unhide array!")
+    Log("Name of character exclusion manager: " .. objectName)
+
+    -- Event triggered in Chapter 3 where Maelle revives Lune/Sciel.
+    -- Unhide Gustave and the other characters in the party.
+    if objectName == "BP_GameAction_CharacterExclusion_C /Game/Levels/Lumiere/GameActions/ACT02/DA_GA_SQT_MeetingRealRenoir.DA_GA_SQT_MeetingRealRenoir:BP_GameAction_CharacterExclusion_C_0" then
+        object.CharactersToInclude =
+        {
+            0, -- Gustave
+            2, -- Lune
+            3, -- Sciel
+            5, -- Monoco
+        }
+    -- Event triggered in Chapter 2 when facing Painted Renoir at the Old Lumière Manor.
+    -- Unhide Gustave and everyone else.
+    elseif objectName == "BP_GameAction_CharacterExclusion_C /Game/Levels/OldLumiere/GameActions/DA_GA_SQT_MirrorRenoirRound2.DA_GA_SQT_MirrorRenoirRound2:BP_GameAction_CharacterExclusion_C_0" then
+        object.CharactersToInclude =
+        {
+            0, -- Gustave
+            2, -- Lune
+            3, -- Sciel
+            4, -- Verso
+            5, -- Monoco
+        }
+    -- Event triggered in Chapter 2 when Verso disappears and leaves Maelle on her own.
+    -- Hide Gustave along with Verso.
+    elseif objectName == "BP_GameAction_CharacterExclusion_C /Game/Levels/OldLumiere/GameActions/DA_GA_SQT_VersoDisapears.DA_GA_SQT_VersoDisapears:BP_GameAction_CharacterExclusion_C_0" then
+        object.CharactersToExclude =
+        {
+            0, -- Gustave
+            4, -- Verso
+        }
+    -- Event triggered in Chapter 2 when reaching the Axon in Old Lumière and it's switching to Maelle/Verso.
+    -- Unhide Gustave along with Verso and Maelle.
+    elseif objectName == "BP_GameAction_CharacterExclusion_C /Game/Levels/OldLumiere/GameActions/DA_GA_SQT_DiscoveringTheTruth.DA_GA_SQT_DiscoveringTheTruth:BP_GameAction_CharacterExclusion_C_1" then
+        object.CharactersToInclude =
+        {
+            0, -- Gustave
+            1, -- Maelle
+            4, -- Verso
+        }
+    -- THE REACHER: 1 of 2 events triggered in the Reacher when fighting Alicia.
+    -- Unhide Gustave and everyone else.
+    elseif objectName == "BP_GameAction_CharacterExclusion_C /Game/Levels/Reacher/GameActions/DA_GA_SQT_BossReacher.DA_GA_SQT_BossReacher:BP_GameAction_CharacterExclusion_C_0" then
+        object.CharactersToInclude =
+        {
+            0, -- Gustave
+            2, -- Lune
+            3, -- Sciel
+            4, -- Verso
+            5, -- Monoco
+        }
+    -- THE REACHER: 1 of 2 events triggered in the Reacher when fighting Alicia.
+    -- Hide Gustave and everyone else.
+    elseif objectName == "BP_GameAction_CharacterExclusion_C /Game/Levels/Reacher/GameActions/DA_GA_SQT_BossReacher.DA_GA_SQT_BossReacher:BP_GameAction_CharacterExclusion_C_1" then
+        object.CharactersToExclude =
+        {
+            0, -- Gustave
+            2, -- Lune
+            3, -- Sciel
+            4, -- Verso
+            5, -- Monoco
+        }
+    -- Event triggered in Chapter 2 entering Old Lumière after Monoco broke the building.
+    -- Hide Gustave along with Verso and Maelle.
+    elseif objectName == "BP_GameAction_CharacterExclusion_C /Game/Levels/OldLumiere/GameActions/DA_GA_SQT_ArrivingInOldLumiere.DA_GA_SQT_ArrivingInOldLumiere:BP_GameAction_CharacterExclusion_C_0" then
+        object.CharactersToExclude =
+        {
+            0, -- Gustave
+            1, -- Maelle
+            4, -- Verso
+        }
+    end
 end)

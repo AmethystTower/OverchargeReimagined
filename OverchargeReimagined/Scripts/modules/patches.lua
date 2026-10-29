@@ -107,7 +107,7 @@ local function PatchSkilltreeNode(characterInstance, skillNodeID, newSkillName, 
         skillTreeInstance.Nodes[skillNodeID].SkillUnlock_3_15FA1C06433ACE049603919CDF6155FF.Skill_2_9E4FC5804778258FBAA04BBF7F68F799 = newSkill
         Log("Patched " .. newSkillName .. " into node: " .. tostring(skillNodeID) .. ".")
     else
-        Log("Couldn't find and patch skill into skilltree: " .. tostring(newSkill) .. ".")
+        Log("Couldn't find and patch skill into skilltree: " .. tostring(newSkillName) .. ".")
     end
 
     if coords then
@@ -223,12 +223,6 @@ local function PatchGustaveVerso(patchedCharacterSample)
             character.CharacterDefinition.DisableWeaponPassiveEffects_209_0C54A5E74EB0A751C44708913AA9F775 = false
             Log("Successfully enabled weapon passives on Noah!")
 
-            --- TEST
-            local test = {}
-            character:GetEquippedSkillsSaveData(test)
-
-            --- TEST END
-
             -- Allow Noah Weapons only.
             -- 1 is the enum value for Noah Weapons.
             character.CharacterDefinition.AllowedEquipmentSubtypes_30_BFAD31F7402E66AC596911BFA36BF9AF =
@@ -268,6 +262,28 @@ local function PatchGustaveVerso(patchedCharacterSample)
             {
                 10,
             }
+
+            -- Also patch Verso's passives incase the equipped weapon is Verleso since it can be patched as well.
+            local isValid = {}
+            local weaponInstance = character:GetEquippedWeaponItemInstance(isValid)
+            local name = weapon.WeaponDefinition.DefinitionID_22_2E1ECEC74A7814AEAC1E35ACAD9FC16D:ToString()
+
+            if name == "Verleso" then
+                local luminas =
+                {
+                    weaponInstance.WeaponDefinition.Level1Lumina_37_784B3E9C481C775586D1A89DCF6D6FD4,
+                    weaponInstance.WeaponDefinition.Level2Lumina_38_82A460E444079A36F26DDCA706CF3CFA,
+                    weaponInstance.WeaponDefinition.Level3Lumina_39_307DE22A4854A7781B622B91C882BC69,
+                    weaponInstance.WeaponDefinition.Level4Lumina_40_0EB7E00747F0CED5D7259C995D5AB4A7
+                }
+
+                -- Try to equip each lumina!
+                for i = 1, #luminas do
+                    local result = {}
+                    character:TryEquipLuminaPassive(luminas[i], result)
+                    Log("Equipped passive " .. tostring(i) .. " successful: " .. tostring(result.Successful))
+                end
+            end
 
             Log("Successfully patched Verso to only use Verso weapons!")
         end

@@ -98,7 +98,7 @@ local function Init(log, config, elementalEnum)
     abilityValues["Combo1_Gustave"].ChargesConsumed = nil
     abilityValues["Combo1_Gustave"].ChargesMultiplier = nil
     abilityValues["Combo1_Gustave"].OverchargeName = config.LumiereAssaultName
-    abilityValues["Combo1_Gustave"].OverchargeBonusDescription = "<keyword id=\"CriticalHit\">Critical Hits</> generate " .. (config.LumiereAssaultChargesPerCritical) .. " additional <keyword id=\"Gustave_Charges\">Charge(s)</>"
+    abilityValues["Combo1_Gustave"].OverchargeBonusDescription = "Can <keyword id=\"Break\">Break</>\n<keyword id=\"CriticalHit\">Critical Hits</> generate " .. (config.LumiereAssaultChargesPerCritical) .. " additional <keyword id=\"Gustave_Charges\">Charge(s)</>"
     abilityValues["Combo1_Gustave"].OverchargeLongDescription = "Deals low single target " .. GetElementString(config.LumiereAssaultElement, elementalEnum, false) .. " damage. 5 hits.\n" .. abilityValues["Combo1_Gustave"].OverchargeBonusDescription
     abilityValues["Combo1_Gustave"].OverchargeShortDescription = "Low " .. GetElementString(config.LumiereAssaultElement, elementalEnum, true) .. " damage. 5 hits.\n" .. abilityValues["Combo1_Gustave"].OverchargeBonusDescription
     abilityValues["Combo1_Gustave"].PerfectionName = nil

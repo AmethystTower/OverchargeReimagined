@@ -847,6 +847,31 @@ return
     AllowSwitchingCharactersInCamp = true,
 
     ------------------------------------------------------------------------
+    -- Verleso settings.
+    ------------------------------------------------------------------------
+    -- Verso loses access to some unique weapon passives to Gustave since their weapons are separate now.
+    -- This setting allows you to modify Verso's starting weapon into any of the weapons he lost.
+    -- The elemental type and the passives will be added to Verleso, however the attribute scalings and base damage remain unmodified.
+
+    -- Valid settings:
+    -- 0 (Nothing)
+    -- 1 (Lanceram)
+    -- 2 (Cruleram)
+    -- 3 (Abysseram)
+    -- 4 (Sakaram)
+    -- 5 (Demonam)
+    -- 6 (Gaulteram)
+    -- 7 (Delaram)
+    -- 8 (Cultam)
+    -- 9 (Blodam)
+    -- 10 (Chevalam)
+    -- 11 (Nosaram)
+    -- 12 (Gesam)
+    -- 13 (Seeram)
+    -- Default: 12 (Gesam). These passives seem to fit the best for an useful early and late game weapon.
+    VerlesoPassiveLoadout = 12,
+
+    ------------------------------------------------------------------------
     -- BERSERK: This setting fixes the Berserk buff to not scale the size of our character when receiving it with enough charges via "Powerful".
     -- This has a setting because the Berserk buff has a built-in feature to slowly increase the scaling size of affected characters (I never knew nor noticed this on enemies tbh, did you?).
     -- It is very subtle but you can notice it in longer battles and it can make the character and menus look weird, this setting fixes it so this doesn't happen anymore.
