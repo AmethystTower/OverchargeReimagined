@@ -367,12 +367,26 @@ local function Init(log, config, elementalEnum)
     abilityValues["Purification"].ChargesMultiplier = config.PurificationDamagePerCharge
     abilityValues["Purification"].OverchargeName = config.PurificationName
     abilityValues["Purification"].OverchargeBonusDescription = "Consumes up to " .. (config.PurificationChargesConsumed) .. " <keyword id=\"Gustave_Charges\">Charges</> for increased damage.\nIf all charges are available, inflicts <keyword id=\"Buff_Powerless_Left\">Powerless</> for 3 turns."
-    abilityValues["Purification"].OverchargeLongDescription = "Deals medium single target " .. GetElementString(config.PurificationElement, elementalEnum, false) .. " damage. 2 hits.\n" .. "Dispels self status effects.\n" .. abilityValues["Purification"].OverchargeBonusDescription
-    abilityValues["Purification"].OverchargeShortDescription = "Medium " .. GetElementString(config.PurificationElement, elementalEnum, true) .. " damage. 2 hits.\n" .. "Dispels self status effects.\n" .. abilityValues["Purification"].OverchargeBonusDescription
+    abilityValues["Purification"].OverchargeLongDescription = "Deals medium single target " .. GetElementString(config.PurificationElement, elementalEnum, false) .. " damage. 2 hits.\nDispels self status effects.\n" .. abilityValues["Purification"].OverchargeBonusDescription
+    abilityValues["Purification"].OverchargeShortDescription = "Medium " .. GetElementString(config.PurificationElement, elementalEnum, true) .. " damage. 2 hits.\nDispels self status effects.\n" .. abilityValues["Purification"].OverchargeBonusDescription
     abilityValues["Purification"].PerfectionName = "Purification"
     abilityValues["Purification"].PerfectionBonusDescription = "<img id=\"Rank_B\"/>: Increased damage."
     abilityValues["Purification"].PerfectionLongDescription = "Deals medium single target <keyword id=\"Element_Light\">Light</> damage. 2 hits.\n" .. "Dispels self status effects.\n" .. abilityValues["Purification"].PerfectionBonusDescription
     abilityValues["Purification"].PerfectionShortDescription = "Medium <keyword id=\"Element_Light\">Light</> damage. 2 hits.\n" .. "Dispels self status effects.\n" .. abilityValues["Purification"].PerfectionBonusDescription
+
+    -- Gustave's Homage
+    abilityValues["GustavesMemoire"] = {}
+    abilityValues["GustavesMemoire"].APCost = config.GustavesHomageAPCost
+    abilityValues["GustavesMemoire"].ChargesConsumed = config.GustavesHomageChargesConsumed
+    abilityValues["GustavesMemoire"].ChargesMultiplier = config.GustavesHomageDamagePerCharge
+    abilityValues["GustavesMemoire"].OverchargeName = config.GustavesHomageName
+    abilityValues["GustavesMemoire"].OverchargeBonusDescription = "Increased damage to <keyword id=\"StatusEffect_Mark\">Marked</> targets.\nDoesn't remove Mark.\nConsumes up to " .. (config.GustavesHomageChargesConsumed) .. " <keyword id=\"Gustave_Charges\">Charges</> for increased damage.\nIf all charges are available, inflicts 2 <keyword id=\"StatusEffect_Burn\">Burn</> per hit."
+    abilityValues["GustavesMemoire"].OverchargeLongDescription = "Deals high single target " .. GetElementString(config.GustavesHomageElement, elementalEnum, false) .. " damage. 8 hits.\n" .. abilityValues["GustavesMemoire"].OverchargeBonusDescription
+    abilityValues["GustavesMemoire"].OverchargeShortDescription = "High " .. GetElementString(config.GustavesHomageElement, elementalEnum, true) .. " damage. 8 hits.\n" .. abilityValues["GustavesMemoire"].OverchargeBonusDescription
+    abilityValues["GustavesMemoire"].PerfectionName = "Gustave's Homage"
+    abilityValues["GustavesMemoire"].PerfectionBonusDescription = "Increased damage to <keyword id=\"StatusEffect_Mark\">Marked</> targets.\nDoesn't remove Mark."
+    abilityValues["GustavesMemoire"].PerfectionLongDescription = "Deals high single target <keyword id=\"Element_Lightning\">Lightning</> damage. 8 hits.\n" .. abilityValues["GustavesMemoire"].PerfectionBonusDescription
+    abilityValues["GustavesMemoire"].PerfectionShortDescription = "High <keyword id=\"Element_Lightning\">Lightning</> damage. 8 hits.\n" .. abilityValues["GustavesMemoire"].PerfectionBonusDescription
 
     -- Egide
     abilityValues["Egide"] = {}
@@ -381,22 +395,50 @@ local function Init(log, config, elementalEnum)
     abilityValues["Egide"].ChargesMultiplier = nil
     abilityValues["Egide"].OverchargeName = config.EgideName
     abilityValues["Egide"].OverchargeBonusDescription = "Consumes up to " .. (config.EgideChargesConsumed) .. " <keyword id=\"Gustave_Charges\">Charges</> to <keyword id=\"Heal\">recover</> " .. string.format("%g", (config.EgideHealPerCharge) * 100) .. "% max health per charge.\nIf all charges are available, applies <keyword id=\"Buff_Regen\">Regen</> to self for 2 turns.\nDuration is extended by 1 on gaining <keyword id=\"Buff_Shell\">Shell</>"
-    abilityValues["Egide"].OverchargeLongDescription = "Protects allies by taking damage in their place, for 2 turns.\n" .. abilityValues["Egide"].OverchargeBonusDescription
+    abilityValues["Egide"].OverchargeLongDescription = "Protects allies by taking damage in their place for 2 turns.\n" .. abilityValues["Egide"].OverchargeBonusDescription
     abilityValues["Egide"].OverchargeShortDescription = "Protects allies by taking damage in their place for 2 turns.\n" .. abilityValues["Egide"].OverchargeBonusDescription
     abilityValues["Egide"].PerfectionName = "Egide"
     abilityValues["Egide"].PerfectionBonusDescription = "Duration is extended by 1 on gaining <keyword id=\"Buff_Shell\">Shell</>"
-    abilityValues["Egide"].PerfectionLongDescription = "Protects allies by taking damage in their place, for 2 turns.\n" .. abilityValues["Egide"].PerfectionBonusDescription
+    abilityValues["Egide"].PerfectionLongDescription = "Protects allies by taking damage in their place for 2 turns.\n" .. abilityValues["Egide"].PerfectionBonusDescription
     abilityValues["Egide"].PerfectionShortDescription = "Protects allies by taking damage in their place for 2 turns.\n" .. abilityValues["Egide"].PerfectionBonusDescription
 
-    -- Angel's Eyes
+    -- Sabotage
+    abilityValues["Sabotage"] = {}
+    abilityValues["Sabotage"].APCost = 1 -- This is the gradient cost, modifiying this is not recommended.
+    abilityValues["Sabotage"].ChargesConsumed = nil
+    abilityValues["Sabotage"].ChargesMultiplier = nil
+    abilityValues["Sabotage"].OverchargeName = "Thundergun"
+    abilityValues["Sabotage"].OverchargeBonusDescription = ""
+    abilityValues["Sabotage"].OverchargeLongDescription = "Deals medium " .. GetElementString(config.SabotageElement, elementalEnum, false) .. " damage to all enemies. 1 hit.\nApplies <keyword id=\"StatusEffect_Mark\">Mark</>" .. abilityValues["Sabotage"].OverchargeBonusDescription
+    abilityValues["Sabotage"].OverchargeShortDescription = "Medium " .. GetElementString(config.SabotageElement, elementalEnum, true) .. " damage to all enemies. 1 hit.\nApplies <keyword id=\"StatusEffect_Mark\">Mark</>" .. abilityValues["Sabotage"].OverchargeBonusDescription
+    abilityValues["Sabotage"].PerfectionName = "Sabotage"
+    abilityValues["Sabotage"].PerfectionBonusDescription = ""
+    abilityValues["Sabotage"].PerfectionLongDescription = "Deals medium <keyword id=\"Element_Physical\">Physical</> damage to all enemies. 1 hit.\nApplies <keyword id=\"StatusEffect_Mark\">Mark</>" .. abilityValues["Sabotage"].PerfectionBonusDescription
+    abilityValues["Sabotage"].PerfectionShortDescription = "Medium <keyword id=\"Element_Physical\">Physical</> damage to all enemies. 1 hit.\nApplies <keyword id=\"StatusEffect_Mark\">Mark</>" .. abilityValues["Sabotage"].PerfectionBonusDescription
+
+    -- Phoenix Flame
+    abilityValues["PhoenixFlame"] = {}
+    abilityValues["PhoenixFlame"].APCost = 2 -- This is the gradient cost, modifiying this is not recommended.
+    abilityValues["PhoenixFlame"].ChargesConsumed = nil
+    abilityValues["PhoenixFlame"].ChargesMultiplier = nil
+    abilityValues["PhoenixFlame"].OverchargeName = "Redemption"
+    abilityValues["PhoenixFlame"].OverchargeBonusDescription = "Applies <keyword id=\"StatusEffect_Berserk_Left\">Berserk</> to Gustave for 3 turns."
+    abilityValues["PhoenixFlame"].OverchargeLongDescription = "Inflicts 10 <keyword id=\"StatusEffect_Burn\">Burn</> to all enemies and revives all allies with 50% - 70% Health.\n" .. abilityValues["PhoenixFlame"].OverchargeBonusDescription
+    abilityValues["PhoenixFlame"].OverchargeShortDescription = "Inflicts 10 <keyword id=\"StatusEffect_Burn\">Burn</> to all enemies and revives all allies with 50% - 70% Health.\n" .. abilityValues["PhoenixFlame"].OverchargeBonusDescription
+    abilityValues["PhoenixFlame"].PerfectionName = "Phoenix Flame"
+    abilityValues["PhoenixFlame"].PerfectionBonusDescription = ""
+    abilityValues["PhoenixFlame"].PerfectionLongDescription = "Inflicts 10 <keyword id=\"StatusEffect_Burn\">Burn</> to all enemies and revives all allies with 50% - 70% Health." .. abilityValues["PhoenixFlame"].PerfectionBonusDescription
+    abilityValues["PhoenixFlame"].PerfectionShortDescription = "Inflicts 10 <keyword id=\"StatusEffect_Burn\">Burn</> to all enemies and revives all allies with 50% - 70% Health." .. abilityValues["PhoenixFlame"].PerfectionBonusDescription
+
+    -- Gommage
     abilityValues["Gommage"] = {}
     abilityValues["Gommage"].APCost = 3 -- This is the gradient cost, modifiying this is not recommended.
     abilityValues["Gommage"].ChargesConsumed = nil
     abilityValues["Gommage"].ChargesMultiplier = nil
     abilityValues["Gommage"].OverchargeName = "Sophie's Homage"
     abilityValues["Gommage"].OverchargeBonusDescription = "Refills " .. string.format("%g", (config.GommageChargesPercentage) * 100) .. "% of total <keyword id=\"Gustave_Charges\">Charge(s)</>"
-    abilityValues["Gommage"].OverchargeLongDescription = "Kills weak targets.\nOtherwise deals extreme <keyword id=\"Element_Void\">Void</> damage. 1 hit.\n" .. abilityValues["Gommage"].OverchargeBonusDescription
-    abilityValues["Gommage"].OverchargeShortDescription = "Kills weak targets.\nOtherwise deals extreme <keyword id=\"Element_Void\">Void</> damage. 1 hit.\n" .. abilityValues["Gommage"].OverchargeBonusDescription
+    abilityValues["Gommage"].OverchargeLongDescription = "Kills weak targets.\nOtherwise deals extreme " .. GetElementString(config.GommageElement, elementalEnum, false) .. " damage. 1 hit.\n" .. abilityValues["Gommage"].OverchargeBonusDescription
+    abilityValues["Gommage"].OverchargeShortDescription = "Kills weak targets.\nOtherwise deals extreme " .. GetElementString(config.GommageElement, elementalEnum, true) .. " damage. 1 hit.\n" .. abilityValues["Gommage"].OverchargeBonusDescription
     abilityValues["Gommage"].PerfectionName = "Gommage"
     abilityValues["Gommage"].PerfectionBonusDescription = ""
     abilityValues["Gommage"].PerfectionLongDescription = "Kills weak targets.\nOtherwise deals extreme <keyword id=\"Element_Void\">Void</> damage. 1 hit." .. abilityValues["Gommage"].PerfectionBonusDescription

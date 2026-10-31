@@ -40,6 +40,9 @@ local function CreateCustomSkillCostValues()
     CustomSkillCost["PerfectBreak_Gustave"] = 10
     CustomSkillCost["UnleashCharge"] = 10
 
+    -- Special ability unlocked along with Maelle's painter skills.
+    CustomSkillCost["GustavesMemoire"] = 0
+
     -- Gradient abilities.
     CustomSkillCost["Sabotage"] = 0
     CustomSkillCost["PhoenixFlame"] = 0
@@ -167,13 +170,17 @@ local function PatchGustaveSkilltree(character)
     PatchSkilltreeNode(character, 22, "PerfectBreak_Gustave", false, false, {537.5, 825}, nil, nil)
     PatchSkilltreeNode(character, 23, "UnleashCharge", true, false, {787.5, 825}, nil, nil)
 
+    -- Maelle's Homage - unlocked at the same time as the paintress skills because that's when Maelle dies.
+    local unlockTable = StaticFindObject("/Game/jRPGTemplate/Datatables/DT_jRPG_Items_Composite.DT_jRPG_Items_Composite")
+    PatchSkilltreeNode(character, 24, "GustavesMemoire", true, true, {662.5, 125}, "Quest_MaellePainterSkillsUnlock", unlockTable)
+
     -- Gradient abilities.
     local gradientUnlocksTable = StaticFindObject("/Game/Gameplay/SkillTree/Content/DT_Items_GradientAttackUnlocks.DT_Items_GradientAttackUnlocks")
     --local test = gradientUnlocksTable:FindRow("GradientUnlock_Verso1")
     --Log("gradientUnlocksTable: " .. tostring(gradientUnlocksTable:FindRow("GradientUnlock_Maelle1").Item_HardcodedName_90_C7F763B74AAB28EF890A66854D7D95AA:ToString()))
-    PatchSkilltreeNode(character, 24, "Sabotage", true, true, {1100, 400}, "GradientUnlock_Maelle1", gradientUnlocksTable)
-    PatchSkilltreeNode(character, 25, "PhoenixFlame", true, true, {1100, 550}, "GradientUnlock_Maelle2", gradientUnlocksTable)
-    PatchSkilltreeNode(character, 26, "Gommage", true, true, {1100, 700}, "GradientUnlock_Maelle3", gradientUnlocksTable)
+    PatchSkilltreeNode(character, 25, "Sabotage", true, true, {1100, 400}, "GradientUnlock_Maelle1", gradientUnlocksTable)
+    PatchSkilltreeNode(character, 26, "PhoenixFlame", true, true, {1100, 550}, "GradientUnlock_Maelle2", gradientUnlocksTable)
+    PatchSkilltreeNode(character, 27, "Gommage", true, true, {1100, 700}, "GradientUnlock_Maelle3", gradientUnlocksTable)
 
     -- Patch skilltree edges.
     PatchSkilltreeEdge(character, 1, "Combo1_Gustave", "AscendingAssault")
@@ -266,7 +273,7 @@ local function PatchGustaveVerso(patchedCharacterSample)
             -- Also patch Verso's passives incase the equipped weapon is Verleso since it can be patched as well.
             local isValid = {}
             local weaponInstance = character:GetEquippedWeaponItemInstance(isValid)
-            local name = weapon.WeaponDefinition.DefinitionID_22_2E1ECEC74A7814AEAC1E35ACAD9FC16D:ToString()
+            local name = weaponInstance.WeaponDefinition.DefinitionID_22_2E1ECEC74A7814AEAC1E35ACAD9FC16D:ToString()
 
             if name == "Verleso" then
                 local luminas =

@@ -256,6 +256,7 @@ local phantomStarsHookRegistered = false
 local paradigmShiftHookRegistered = false
 local purificationHookRegistered = false
 local egideHookRegistered = false
+local homageHookRegistered = false
 local angelsEyesHookRegistered = false
 local strikerHookRegistered = false
 local sabotageHookRegistered = false
@@ -327,6 +328,7 @@ local usedSabotage = false
 local usedParadigmShift = false
 local usedRecovery = false
 local usedOverload = false
+local usedHomage = false
 
 -- Tells if we have consumed some charges this turn with any ability that isn't the "Overcharge" skill.
 local consumedChargesFromAbility = 0
@@ -496,10 +498,9 @@ local function ModifyAbilityCostAndDescription(param, modifyAPCostOnly)
         return
     end
 
-    -- Check if the skill type is 1 and if it isn't, do nothing.
-    -- 2 are gradient abilities and 3 are items, we ignore those.
-    -- UNLESS it is Gommage, we want to modify the ability's description and add charges on criticals but not make its cost customizable.
-    if self.SkillType ~= 1 and self.NameID:ToString() ~= "Gommage" then
+    -- Check if the skill type is 1 or 2 and if it isn't, do nothing.
+    -- 1 are abiliies, 2 are gradient abilities and 3 are items. Ignore items.
+    if self.SkillType ~= 1 and self.SkillType ~= 2 then
         return
     end
 
@@ -923,6 +924,7 @@ local function ResetAbilityStates()
     usedParadigmShift = false
     usedRecovery = false
     usedOverload = false
+    usedHomage = false
     fullChargeBonus = false
 
     -- Only reset it at the end of our turn if we actually executed the ability.
@@ -952,6 +954,9 @@ local function LoadSoundAssets()
     -- For some reason the "battle won" voicelines use the "Death Lune" soundalias as a name while there are no actual voicelines for her death, quite weird.
     voiceLinesList["counter"] = StaticFindObject("/Game/Audio/MetaSound/VO/Noah/BattleLine/VO_BL_Battle_Counter_Gustave.VO_BL_Battle_Counter_Gustave")
     voiceLinesList["battlewon"] = StaticFindObject("/Game/Audio/MetaSound/VO/Noah/BattleLine/VO_BL_Battle_DeathLune_Gustave.VO_BL_Battle_DeathLune_Gustave")
+
+    -- Unused voiceline where Gustave reacts to Maelle's death during battle, will be used for the "Maelle's Homage" ability :)
+    voiceLinesList["maelle_concerned"] = StaticFindObject("/Game/Audio/MetaSound/VO/Noah/BattleLine/VO_BL_Battle_DeathMaelle_Gustave.VO_BL_Battle_DeathMaelle_Gustave")
 
     -- Clear the cached loading system component, we no longer need it for this fight.
     loadingSystemComponent = nil
@@ -1322,7 +1327,7 @@ local function TryRegisterAbilityHooks()
                 if not castingCharacterClass then
                     return
                 end
-
+ 
                 -- Apply bonus buffs to our character depending on the charges he consumed for this.
                 -- If this ability can't consume charges because it was configured to be 0 then don't give any bonus effects or duration.
                 if config.PowerfulChargesConsumed > 0 then
@@ -2104,6 +2109,34 @@ local function TryRegisterAbilityHooks()
     end
 
     -- Try to register Sabotage's hooks.
+    if not homageHookRegistered then
+        local ok = pcall(function()
+            -- This hook runs whenever someone uses Angel's Eyes.
+            RegisterHook(hooking.HOMAGE_ON_EXECUTE, function(param)
+                if not IsValidChargeComponent() then
+                    return
+                end
+
+                -- A different character used this ability, do nothing.
+                if not overchargeCharacterTurn then
+                    return
+                end
+
+                Log("Gustave's Homage used this turn.")
+                usedHomage = true
+
+                CalculateAmountOfConsumedCharges("GustavesMemoire", "Maelle's Homage")
+            end)
+        end)
+
+        -- If it was successful, mark the hooks registrations as true.
+        if ok then
+            homageHookRegistered = true
+            Log("Successfully registered Gustave's Homage's ability execution hooks.")
+        end
+    end
+
+    -- Try to register Sabotage's hooks.
     if not sabotageHookRegistered then
         local ok = pcall(function()
             -- This hook runs whenever someone uses Angel's Eyes.
@@ -2132,7 +2165,7 @@ local function TryRegisterAbilityHooks()
     -- Try to register Phoenix Flame's hooks.
     if not strikerHookRegistered then
         local ok = pcall(function()
-            -- This hook runs whenever someone uses Angel's Eyes.
+            -- This hook runs whenever someone uses Phoenix Flame.
             RegisterHook(hooking.PHOENIX_FLAME_ON_EXECUTE, function(param)
                 if not IsValidChargeComponent() then
                     return
@@ -2151,19 +2184,65 @@ local function TryRegisterAbilityHooks()
                     PlayVoiceLine(battleAudioManager, "buffteam")
                 end
             end)
+
+            RegisterHook(hooking.PHOENIX_FLAME_ON_EFFECT, function(param)
+                if not IsValidChargeComponent() then
+                    return
+                end
+
+                -- A different character used this ability or berserk turn duration is 0, do nothing.
+                if not overchargeCharacterTurn or config.PhoenixFlameBerserkDuration <= 0 then
+                    return
+                end
+
+                local skillScript = CustomFunctions.unwrap(param)
+
+                if not skillScript then
+                    return
+                end
+
+                -- The character class we need for ApplyBuff().
+                local statsClass = StaticFindObject("/Game/jRPGTemplate/Blueprints/Components/AC_jRPG_CharacterBattleStats.AC_jRPG_CharacterBattleStats_C")
+
+                -- Get the character who's casting Powerful.
+                local castingChar = {}
+                skillScript:GetCurrentCharacter(castingChar)
+
+                if not castingChar or not castingChar.CurrentCharacter then
+                    return
+                end
+
+                -- Retrieve the character's class component.
+                local castingCharacterClass = castingChar.CurrentCharacter:GetComponentByClass(statsClass)
+
+                if not castingCharacterClass then
+                    return
+                end
+
+                local appliedBuff = {}
+                local aureoleClass = StaticFindObject("/Game/Gameplay/Buffs/UniqueBuffs/BP_LU_aureole.BP_LU_aureole_C")
+
+                -- Apply Berserk upon using this ability.
+                local berserkBuffClass = StaticFindObject("/Game/Gameplay/Buffs/GenericBuff/BP_BattleBuff_Berserk.BP_BattleBuff_Berserk_C")
+                skillScript:ApplyBuff(berserkBuffClass, castingCharacterClass, config.PhoenixFlameBerserkDuration, castingCharacterClass, 4, appliedBuff)
+
+                -- Berserk is hardcoded to be permanent, set this to false.
+                appliedBuff.CreatedBuffInstance.IsPermanent = false
+                Log("Phoenix Flame applied Berserk.")
+            end)
         end)
 
         -- If it was successful, mark the hooks registrations as true.
         if ok then
             strikerHookRegistered = true
-            Log("Successfully registered Striker's ability execution hooks.")
+            Log("Successfully registered Phoenix Flame's ability execution hooks.")
         end
     end
 
     -- Try to register Gommage's hooks.
     if not angelsEyesHookRegistered then
         local ok = pcall(function()
-            -- This hook runs whenever someone uses Angel's Eyes.
+            -- This hook runs whenever someone uses Gommage.
             RegisterHook(hooking.GOMMAGE_ON_EXECUTE, function(param)
                 if not IsValidChargeComponent() then
                     return
@@ -2754,7 +2833,11 @@ local function TryRegisterChargeComponentHooks()
                             
                             -- Apply the debuff.
                             local burnClass = StaticFindObject("/Game/Gameplay/Buffs/GenericBuff/BP_BattleBuff_Burn.BP_BattleBuff_Burn_C")
-                            temp_SkillScript:ApplyBuff(burnClass, statsComponentTarget, 3, statsComponentSource, 4, appliedDebuff)
+
+                            -- Apply x amount of stacks defined by the config.
+                            for _ = 1, config.LuminaBurnPerDarkFireLightningSkillHit do
+                                temp_SkillScript:ApplyBuff(burnClass, statsComponentTarget, 3, statsComponentSource, 4, appliedDebuff)
+                            end
 
                             WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Stains_AdditionalFire"])
                         end
@@ -2865,6 +2948,32 @@ local function TryRegisterChargeComponentHooks()
 
                                 -- Lumina Passive: Weapon lumina passive "Foretell_OnlyJusticeChariot" applies Curse for 5 turns on non-boss enemies for skills that apply Powerless or Burn.
                                 if equippedCustomPassives["Foretell_OnlyJusticeChariot"] and not statsComponentTarget.IsBoss and config.LuminaCurseDuration > 0 then
+                                    Log("Lumina 'Foretell_OnlyJusticeChariot' applying Curse for " .. config.LuminaCurseDuration .. " turns.")
+
+                                    -- Apply Curse for 5 turns.
+                                    local cursedClass = StaticFindObject("/Game/Gameplay/Buffs/GenericBuff/BP_BattleBuff_Cursed.BP_BattleBuff_Cursed_C")
+                                    temp_SkillScript:ApplyBuff(cursedClass, statsComponentTarget, config.LuminaCurseDuration, statsComponentSource, 4, appliedDebuff)
+
+                                    WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Foretell_OnlyJusticeChariot"])
+                                end
+                            end
+
+                        -- Gustave's Homage inflicts Burn for 3 turns if enough charges are consumed.
+                        elseif usedHomage and consumedChargesFromAbility == config.GustavesHomageChargesConsumed then
+                            if temp_SkillScript and temp_SkillScript:IsValid() then
+                                local appliedDebuff = {}
+                                
+                                -- Inflict Burn on this enemy.
+                                local burnClass = StaticFindObject("/Game/Gameplay/Buffs/GenericBuff/BP_BattleBuff_Burn.BP_BattleBuff_Burn_C")
+                                -- Apply 2 burn stacks.
+                                for _ = 1, 2 do
+                                    temp_SkillScript:ApplyBuff(burnClass, statsComponentTarget, 3, statsComponentSource, 4, appliedDebuff)
+                                end
+                                Log("Gustave's Homage inflicted Burn.")
+
+                                -- Lumina Passive: Weapon lumina passive "Foretell_OnlyJusticeChariot" applies Curse for 5 turns on non-boss enemies for skills that apply Powerless or Burn.
+                                -- Apply on the last hit.
+                                if skillHitCounter == 8 and equippedCustomPassives["Foretell_OnlyJusticeChariot"] and not statsComponentTarget.IsBoss and config.LuminaCurseDuration > 0 then
                                     Log("Lumina 'Foretell_OnlyJusticeChariot' applying Curse for " .. config.LuminaCurseDuration .. " turns.")
 
                                     -- Apply Curse for 5 turns.
@@ -3034,6 +3143,11 @@ local function TryRegisterChargeComponentHooks()
 
                 -- We took a hit from an enemy!
                 if isTargetOwner then
+                    -- Incase Steeled Strike is enabled, disable it now since we got hit and it was cancelled.
+                    if usedSteeledStrike then
+                        usedSteeledStrike = false
+                    end
+
                     -- Lumina Passive: "Stains_FireDMGUp" applies Charm for 1 turn for skills that apply Mark. Charmed enemies deal no damage to Gustave and provide buffs to him when hitting him.
                     -- Penalties still apply.
                     if equippedCustomPassives["Stains_FireDMGUp"] and statsComponentSource:HasForcedAutoAttack() then
@@ -3058,11 +3172,6 @@ local function TryRegisterChargeComponentHooks()
                         for _ = 1, 10 do
                             temp_SkillScript:ApplyBuff(burnClass, statsComponentSource, 3, statsComponentTarget, 4, appliedBuff)
                         end
-                    end
-
-                    -- Incase Steeled Strike is enabled, disable it now since we got hit and it was cancelled.
-                    if usedSteeledStrike then
-                        usedSteeledStrike = false
                     end
 
                     -- Lumina Passive: "Perfection_SurvivorRankA" makes the character ignore any kind of damage while above a certain amount of charges.
@@ -3318,7 +3427,7 @@ RegisterHook(hooking.CLIENT_RESTART, function(param)
             return
         end
 
-        -- We used Overcharge, this will let us further increase its damage per charge if so desired.
+        -- Used Overcharge, this will let us further increase its damage per charge if so desired.
         if usedOvercharge then
             modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "UnleashCharge", consumedChargesFromAbility)
             modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "UnleashCharge")
@@ -3329,7 +3438,7 @@ RegisterHook(hooking.CLIENT_RESTART, function(param)
                 Log("Full charge bonus: Increasing Overcharge's damage by another +" .. overchargeMaxChargesBonus .. " to a total of " .. modifier.FinalDamageMultiplier .. ".")
             end
 
-        -- We used Shatter, it consumes ALL charges for increased damage!
+        -- Used Shatter, it consumes ALL charges for increased damage!
         -- This is basically another version of Overcharge now, except it's slightly weaker but hits all enemies instead.
         elseif usedShatter then
             modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "PerfectBreak_Gustave", consumedChargesFromAbility)
@@ -3341,7 +3450,7 @@ RegisterHook(hooking.CLIENT_RESTART, function(param)
                 Log("Full charge bonus: Increasing Shatter's damage by another +" .. shatterMaxChargesBonus .. " to a total of " .. modifier.FinalDamageMultiplier .. ".")
             end
 
-        -- We used Marking Shot, it consumes ALL charges for increased damage and a chance to instantly break!
+        -- Used Marking Shot, it consumes ALL charges for increased damage and a chance to instantly break!
         -- This is the third Overcharge-like ability now, except it's the weakest in damage but has a chance to stun an enemy immediately.
         elseif usedMarkingShot then
             modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "MarkingShot_Gustave", consumedChargesFromAbility)
@@ -3353,16 +3462,16 @@ RegisterHook(hooking.CLIENT_RESTART, function(param)
                 Log("Full charge bonus: Increasing Marking Shot's damage by another +" .. markingShotMaxChargesBonus .. " to a total of " .. modifier.FinalDamageMultiplier .. ".")
             end
 
-        -- We used Lumiere Assault.
+        -- Used Lumiere Assault.
         elseif usedLumiereAssault then
             modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "Combo1_Gustave")
             skillHitCounter = skillHitCounter + 1
 
-        -- We used Strike Storm.
+        -- Used Strike Storm.
         elseif usedStrikeStorm then
             modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "StrikeStorm_Gustave")
 
-        -- We used From Fire.
+        -- Used From Fire.
         elseif usedFromFire then
             modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "FromFire_Gustave", consumedChargesFromAbility)
             modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "FromFire_Gustave")
@@ -3383,12 +3492,12 @@ RegisterHook(hooking.CLIENT_RESTART, function(param)
                 modifier.DamageSource.RecoverHP(healAmount, modifier.DamageSource, true, 1, "none")
             end
 
-        -- We used the unused version of Radiant Strike.
+        -- Used the unused version of Radiant Strike.
         elseif usedRadiantStrike then
             modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "RadiantStrike", consumedChargesFromAbility)
             modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "RadiantStrike")
 
-        -- We used the unused version of Light Holder which says it scales with health, get the max HP!
+        -- Used the unused version of Light Holder which says it scales with health, get the max HP!
         -- I decided to not go for current health since that is a bit lame really, makes low-health builds not good with it then.
         -- This ability does not consume charges, it generates bonus charges on criticals instead.
         elseif usedLightHolder then
@@ -3407,57 +3516,72 @@ RegisterHook(hooking.CLIENT_RESTART, function(param)
 
             Log("FinalDamageMultiplier after: " .. tostring(modifier.FinalDamageMultiplier))
 
-        -- We used Steeled strike.
-        elseif usedSteeledStrike then
-            modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "SteeledStrike", consumedChargesFromAbility)
-            modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "SteeledStrike")
-
+        -- Used Endbringer.
         elseif usedEndbringer then
             modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "EndBringer")
 
-        -- We used Berserk Slash
+        -- Used Berserk Slash.
         elseif usedBerserkSlash then
             modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "BerserkSlash", consumedChargesFromAbility)
             modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "BerserkSlash")
 
-        -- We used Defiant Strike
+        -- Used Defiant Strike.
         elseif usedDefiantStrike then
             modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "DefiantStrike")
             skillHitCounter = skillHitCounter + 1
 
-        -- We used Blitz
+        -- Used Blitz.
         elseif usedBlitz then
             modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "Blitz", consumedChargesFromAbility)
             modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "Blitz")
 
-        -- We used Follow Up
+        -- Used Follow Up.
         elseif usedFollowUp then
             modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "FollowUp", consumedChargesFromAbility)
             modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "FollowUp")
 
-        -- We used Ascending Assault
+        -- Used Ascending Assault.
         elseif usedAscendingAssault then
             modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "AscendingAssault", consumedChargesFromAbility)
             modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "AscendingAssault")
 
-        -- We used Speed Burst.
+        -- Used Speed Burst.
         elseif usedSpeedBurst then
             modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "SpeedBurst")
 
-        -- We used Phantom Stars
+        -- Used Phantom Stars.
         elseif usedPhantomStars then
             modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "PhantomStars", consumedChargesFromAbility)
             modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "PhantomStars")
 
-        -- We used Paradigm Shift.
+        -- Used Paradigm Shift.
         elseif usedParadigmShift then
             modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "ParadigmShift")
 
-        -- We used Purification
+        -- Used Purification.
         elseif usedPurification then
             modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "Purification", consumedChargesFromAbility)
             modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "Purification")
             skillHitCounter = skillHitCounter + 1
+
+        -- Used Gustave's Homage.
+        elseif usedHomage then
+            modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "GustavesMemoire", consumedChargesFromAbility)
+            modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "GustavesMemoire")
+            skillHitCounter = skillHitCounter + 1
+
+        -- Used Sabotage.
+        elseif usedSabotage then
+            modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "Sabotage")
+
+        -- Used Gommage.
+        elseif usedAngelsEyes then
+            modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "Gommage")
+
+        -- Used Steeled strike.
+        elseif usedSteeledStrike then
+            modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "SteeledStrike", consumedChargesFromAbility)
+            modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "SteeledStrike")
         end
 
         -- Check if any charge generating abilities were used because they have a couple luminas affecting them.
@@ -3728,6 +3852,8 @@ RegisterHook(hooking.CLIENT_RESTART, function(param)
             voiceLine = voiceLinesList["overcharge3"]
         elseif usedLightHolder then
             voiceLine = voiceLinesList["takethemdown"]
+        elseif usedHomage then
+            voiceLine = voiceLinesList["maelle_concerned"]
         elseif usedSabotage then
             voiceLine = voiceLinesList["battlewon"]
         elseif usedAngelsEyes then
@@ -3936,7 +4062,7 @@ RegisterHook(hooking.CLIENT_RESTART, function(param)
     end)
 end)
 
-local function TryPatchGustaveSkilltree(gustaveSkillGraph, manuallyLoadedSkills)
+local function TryPatchGustaveSkilltree(gustaveSkillGraph)
     if not gustaveSkillGraph or not gustaveSkillGraph:IsValid() then
         return
     end
@@ -3979,6 +4105,7 @@ ExecuteInGameThread(function()
             cachedSkills["Sabotage"] = LoadAsset("/Game/Gameplay/SkillTree/Content/NoahVerso/DA_Skills/DA_Skill_Verso_NEW_Sabotage.DA_Skill_Verso_NEW_Sabotage")
             cachedSkills["PhoenixFlame"] = LoadAsset("/Game/Gameplay/SkillTree/Content/Maelle/Skills/DA_Skill_Maelle_PhoenixFlame.DA_Skill_Maelle_PhoenixFlame")
             cachedSkills["Gommage"] = LoadAsset("/Game/Gameplay/SkillTree/Content/Maelle/Skills/DA_Skill_Maelle_Gommage.DA_Skill_Maelle_Gommage")
+            cachedSkills["GustavesMemoire"] = LoadAsset("/Game/Gameplay/SkillTree/Content/Maelle/Skills/DA_Skill_Maelle_GustaveSMemoire.DA_Skill_Maelle_GustaveSMemoire")
         end)
     end)
 
@@ -3996,13 +4123,14 @@ ExecuteInGameThread(function()
         cachedSkills["Sabotage"] = LoadAsset("/Game/Gameplay/SkillTree/Content/NoahVerso/DA_Skills/DA_Skill_Verso_NEW_Sabotage.DA_Skill_Verso_NEW_Sabotage")
         cachedSkills["PhoenixFlame"] = LoadAsset("/Game/Gameplay/SkillTree/Content/Maelle/Skills/DA_Skill_Maelle_PhoenixFlame.DA_Skill_Maelle_PhoenixFlame")
         cachedSkills["Gommage"] = LoadAsset("/Game/Gameplay/SkillTree/Content/Maelle/Skills/DA_Skill_Maelle_Gommage.DA_Skill_Maelle_Gommage")
+        cachedSkills["GustaveSMemoire"] = LoadAsset("/Game/Gameplay/SkillTree/Content/Maelle/Skills/DA_Skill_Maelle_GustaveSMemoire.DA_Skill_Maelle_GustaveSMemoire")
 
         local skillgraphs = FindAllOf("BP_CharacterSkillGraphSystem_C")
 
         for _, skillGraphSystem in pairs(skillgraphs) do
             -- If the ability is radiant strike or light holder, modify description as well because it doesn't update in the menu when the skills aren't unlocked yet.
             if skillGraphSystem and skillGraphSystem:IsValid() and skillGraphSystem.TempCharacterData.HardcodedNameID:ToString() == "Frey" then
-                TryPatchGustaveSkilltree(skillGraphSystem, cachedSkills)
+                TryPatchGustaveSkilltree(skillGraphSystem)
                 return
             end
         end
@@ -4026,7 +4154,7 @@ ExecuteInGameThread(function()
         end
 
         if skillGraphSystem.TempCharacterData.HardcodedNameID:ToString() == "Frey" then
-            TryPatchGustaveSkilltree(skillGraphSystem, cachedSkills)
+            TryPatchGustaveSkilltree(skillGraphSystem)
             patchSkillGraph = false
         end
     end)

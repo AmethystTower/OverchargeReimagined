@@ -638,10 +638,52 @@ return
 
     ------------------------------------------------------------------------
 
+    -- Gustave's Homage: These are the settings for Gustave's Homage.
+
+    -- Maximum amount of charges this ability can consume for bonus damage. Default: 50
+    GustavesHomageChargesConsumed = 50,
+
+    -- Additional damage multiplier per consumed charge. Default: 0.05 (5%)
+    -- NOTE: This is added for each hit and not just the total damage.
+    GustavesHomageDamagePerCharge = 0.05,
+
+    -- The elemental damage type of this ability. Default: 2 (Fire) / Default in Vanilla: 4 (Lightning)
+    -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
+    GustavesHomageElement = 2,
+
+    -- AP cost of this ability. Default: 8
+    -- NOTE: This setting affects the Perfection character as well!
+    GustavesHomageAPCost = 8,
+
+    -- The custom name for this ability displayed in-game.
+    -- NOTE: Don't remove the quotes otherwise the config will fail to load. They don't get shown in-game.
+    GustavesHomageName = "Maelle's Homage",
+
+    ------------------------------------------------------------------------
+
+    -- Sabotage: These are the settings for Sabotage.
+
+    -- The elemental damage type of this ability. Default: 4 (Lightning) / Default in Vanilla: 1 (Physical)
+    -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
+    SabotageElement = 4,
+
+    ------------------------------------------------------------------------
+
+    -- Phoenix Flame: These are the settings for Phoenix Flame.
+
+    -- Turn duration of the Berserk buff. Default: 3.
+    PhoenixFlameBerserkDuration = 3,
+
+    ------------------------------------------------------------------------
+
     -- Gommage: These are the settings for Gommage.
 
     -- Percentage amount of total charges refilled when using this ability. Default: 1.00 (100%)
     GommageChargesPercentage = 1.00,
+
+    -- The elemental damage type of this ability. Default: 8 (Void)
+    -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
+    GommageElement = 8,
 
     ------------------------------------------------------------------------
     -- Weapon settings: These settings decide if a weapon should get patched and receive its custom passives and new elemental type or not.
@@ -868,8 +910,8 @@ return
     -- 11 (Nosaram)
     -- 12 (Gesam)
     -- 13 (Seeram)
-    -- Default: 12 (Gesam). These passives seem to fit the best for an useful early and late game weapon.
-    VerlesoPassiveLoadout = 12,
+    -- Default: 11 (Nosaram). These passives seem good for both new and experienced players and don't force a specific playstyle, which is ideal for a starter weapon.
+    VerlesoPassiveLoadout = 11,
 
     ------------------------------------------------------------------------
     -- BERSERK: This setting fixes the Berserk buff to not scale the size of our character when receiving it with enough charges via "Powerful".

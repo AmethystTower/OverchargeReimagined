@@ -53,6 +53,9 @@ local function Init(log, config)
     abilityElement["PhantomStars"] = config.PhantomStarsElement
     abilityElement["ParadigmShift"] = config.ParadigmShiftElement
     abilityElement["Purification"] = config.PurificationElement
+    abilityElement["GustavesMemoire"] = config.GustavesHomageElement
+    abilityElement["Sabotage"] = config.SabotageElement
+    abilityElement["Gommage"] = config.GommageElement
 
     log("Initialized abilityElement array in elements.lua successfully!")
 end

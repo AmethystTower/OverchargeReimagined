@@ -229,124 +229,126 @@ local function ModifyVerleso(weapon)
     local name = weapon.WeaponDefinition.DefinitionID_22_2E1ECEC74A7814AEAC1E35ACAD9FC16D:ToString()
 
     -- Make sure the provided weapon is Verleso and the config's setting is higher than 0 and lower than 14.
-    if name == "Verleso" and config.VerlesoPassiveLoadout > 0 and config.VerlesoPassiveLoadout < 14 then
-        -- Lanceram's passives set.
-        if config.VerlesoPassiveLoadout == 1 then
-            weapon.WeaponDefinition.BaseDamageType_31_00CBF5EC48FCC5F58D3E21BCCFF7CEAD = ElementEnum.Physical
-            weapon.WeaponDefinition.Level1Lumina_37_784B3E9C481C775586D1A89DCF6D6FD4 = FName("None")
-            weapon.WeaponDefinition.Level2Lumina_38_82A460E444079A36F26DDCA706CF3CFA = FName("Perfection_MinC")
-            weapon.WeaponDefinition.Level3Lumina_39_307DE22A4854A7781B622B91C882BC69 = FName("Perfection_Attackx2")
-            weapon.WeaponDefinition.Level4Lumina_40_0EB7E00747F0CED5D7259C995D5AB4A7 = FName("Perfection_Parryx2")
-            Log("Patched Verleso as Lanceram.")
+    if name ~= "Verleso" or config.VerlesoPassiveLoadout <= 0 or config.VerlesoPassiveLoadout > 13 then
+        return
+    end
 
-        -- Cruleram's passives set.
-        elseif config.VerlesoPassiveLoadout == 2 then
-            weapon.WeaponDefinition.BaseDamageType_31_00CBF5EC48FCC5F58D3E21BCCFF7CEAD = ElementEnum.Ice
-            weapon.WeaponDefinition.Level1Lumina_37_784B3E9C481C775586D1A89DCF6D6FD4 = FName("None")
-            weapon.WeaponDefinition.Level2Lumina_38_82A460E444079A36F26DDCA706CF3CFA = FName("Perfection_NoPerfectionLossOnPowerlessEnemy")
-            weapon.WeaponDefinition.Level3Lumina_39_307DE22A4854A7781B622B91C882BC69 = FName("Perfection_Perfection+1OnPowerlessEnemy")
-            weapon.WeaponDefinition.Level4Lumina_40_0EB7E00747F0CED5D7259C995D5AB4A7 = FName("PowerlessOnCounter")
-            Log("Patched Verleso as Cruleram.")
+    -- Lanceram's passives set.
+    if config.VerlesoPassiveLoadout == 1 then
+        weapon.WeaponDefinition.BaseDamageType_31_00CBF5EC48FCC5F58D3E21BCCFF7CEAD = ElementEnum.Physical
+        weapon.WeaponDefinition.Level1Lumina_37_784B3E9C481C775586D1A89DCF6D6FD4 = FName("None")
+        weapon.WeaponDefinition.Level2Lumina_38_82A460E444079A36F26DDCA706CF3CFA = FName("Perfection_MinC")
+        weapon.WeaponDefinition.Level3Lumina_39_307DE22A4854A7781B622B91C882BC69 = FName("Perfection_Attackx2")
+        weapon.WeaponDefinition.Level4Lumina_40_0EB7E00747F0CED5D7259C995D5AB4A7 = FName("Perfection_Parryx2")
+        Log("Patched Verleso as Lanceram.")
 
-        -- Abysseram's passives set.
-        elseif config.VerlesoPassiveLoadout == 3 then
-            weapon.WeaponDefinition.BaseDamageType_31_00CBF5EC48FCC5F58D3E21BCCFF7CEAD = ElementEnum.Physical
-            weapon.WeaponDefinition.Level1Lumina_37_784B3E9C481C775586D1A89DCF6D6FD4 = FName("None")
-            weapon.WeaponDefinition.Level2Lumina_38_82A460E444079A36F26DDCA706CF3CFA = FName("Perfection_IncreasedDamageOnRankD")
-            weapon.WeaponDefinition.Level3Lumina_39_307DE22A4854A7781B622B91C882BC69 = FName("AugmentedAttack_Weapon")
-            weapon.WeaponDefinition.Level4Lumina_40_0EB7E00747F0CED5D7259C995D5AB4A7 = FName("Perfection_AttackLifestealOnD")
-            Log("Patched Verleso as Abysseram.")
+    -- Cruleram's passives set.
+    elseif config.VerlesoPassiveLoadout == 2 then
+        weapon.WeaponDefinition.BaseDamageType_31_00CBF5EC48FCC5F58D3E21BCCFF7CEAD = ElementEnum.Ice
+        weapon.WeaponDefinition.Level1Lumina_37_784B3E9C481C775586D1A89DCF6D6FD4 = FName("None")
+        weapon.WeaponDefinition.Level2Lumina_38_82A460E444079A36F26DDCA706CF3CFA = FName("Perfection_NoPerfectionLossOnPowerlessEnemy")
+        weapon.WeaponDefinition.Level3Lumina_39_307DE22A4854A7781B622B91C882BC69 = FName("Perfection_Perfection+1OnPowerlessEnemy")
+        weapon.WeaponDefinition.Level4Lumina_40_0EB7E00747F0CED5D7259C995D5AB4A7 = FName("PowerlessOnCounter")
+        Log("Patched Verleso as Cruleram.")
 
-        -- Sakaram's passives set.
-        elseif config.VerlesoPassiveLoadout == 4 then
-            weapon.WeaponDefinition.BaseDamageType_31_00CBF5EC48FCC5F58D3E21BCCFF7CEAD = ElementEnum.Physical
-            weapon.WeaponDefinition.Level1Lumina_37_784B3E9C481C775586D1A89DCF6D6FD4 = FName("None")
-            weapon.WeaponDefinition.Level2Lumina_38_82A460E444079A36F26DDCA706CF3CFA = FName("Perfection_NoPerfectionLossButNoDamageIncrease")
-            weapon.WeaponDefinition.Level3Lumina_39_307DE22A4854A7781B622B91C882BC69 = FName("AugmentedAttack_Weapon")
-            weapon.WeaponDefinition.Level4Lumina_40_0EB7E00747F0CED5D7259C995D5AB4A7 = FName("Perfection_Attackx2")
-            Log("Patched Verleso as Sakaram.")
+    -- Abysseram's passives set.
+    elseif config.VerlesoPassiveLoadout == 3 then
+        weapon.WeaponDefinition.BaseDamageType_31_00CBF5EC48FCC5F58D3E21BCCFF7CEAD = ElementEnum.Physical
+        weapon.WeaponDefinition.Level1Lumina_37_784B3E9C481C775586D1A89DCF6D6FD4 = FName("None")
+        weapon.WeaponDefinition.Level2Lumina_38_82A460E444079A36F26DDCA706CF3CFA = FName("Perfection_IncreasedDamageOnRankD")
+        weapon.WeaponDefinition.Level3Lumina_39_307DE22A4854A7781B622B91C882BC69 = FName("AugmentedAttack_Weapon")
+        weapon.WeaponDefinition.Level4Lumina_40_0EB7E00747F0CED5D7259C995D5AB4A7 = FName("Perfection_AttackLifestealOnD")
+        Log("Patched Verleso as Abysseram.")
 
-        -- Demonam's passives set.
-        elseif config.VerlesoPassiveLoadout == 5 then
-            weapon.WeaponDefinition.BaseDamageType_31_00CBF5EC48FCC5F58D3E21BCCFF7CEAD = ElementEnum.Light
-            weapon.WeaponDefinition.Level1Lumina_37_784B3E9C481C775586D1A89DCF6D6FD4 = FName("None")
-            weapon.WeaponDefinition.Level2Lumina_38_82A460E444079A36F26DDCA706CF3CFA = FName("DMG+OnAlternatingPhysicalLight")
-            weapon.WeaponDefinition.Level3Lumina_39_307DE22A4854A7781B622B91C882BC69 = FName("SkillsPhysicalDMG+")
-            weapon.WeaponDefinition.Level4Lumina_40_0EB7E00747F0CED5D7259C995D5AB4A7 = FName("LightSkillsRegenHP")
-            Log("Patched Verleso as Demonam.")
+    -- Sakaram's passives set.
+    elseif config.VerlesoPassiveLoadout == 4 then
+        weapon.WeaponDefinition.BaseDamageType_31_00CBF5EC48FCC5F58D3E21BCCFF7CEAD = ElementEnum.Physical
+        weapon.WeaponDefinition.Level1Lumina_37_784B3E9C481C775586D1A89DCF6D6FD4 = FName("None")
+        weapon.WeaponDefinition.Level2Lumina_38_82A460E444079A36F26DDCA706CF3CFA = FName("Perfection_NoPerfectionLossButNoDamageIncrease")
+        weapon.WeaponDefinition.Level3Lumina_39_307DE22A4854A7781B622B91C882BC69 = FName("AugmentedAttack_Weapon")
+        weapon.WeaponDefinition.Level4Lumina_40_0EB7E00747F0CED5D7259C995D5AB4A7 = FName("Perfection_Attackx2")
+        Log("Patched Verleso as Sakaram.")
 
-        -- Gaulteram's passives set.
-        elseif config.VerlesoPassiveLoadout == 6 then
-            weapon.WeaponDefinition.BaseDamageType_31_00CBF5EC48FCC5F58D3E21BCCFF7CEAD = ElementEnum.Earth
-            weapon.WeaponDefinition.Level1Lumina_37_784B3E9C481C775586D1A89DCF6D6FD4 = FName("None")
-            weapon.WeaponDefinition.Level2Lumina_38_82A460E444079A36F26DDCA706CF3CFA = FName("Perfection_RankLossOneByOne")
-            weapon.WeaponDefinition.Level3Lumina_39_307DE22A4854A7781B622B91C882BC69 = FName("Perfection_RushOnS")
-            weapon.WeaponDefinition.Level4Lumina_40_0EB7E00747F0CED5D7259C995D5AB4A7 = FName("Perfection_OnTurnStart")
-            Log("Patched Verleso as Gaulteram.")
+    -- Demonam's passives set.
+    elseif config.VerlesoPassiveLoadout == 5 then
+        weapon.WeaponDefinition.BaseDamageType_31_00CBF5EC48FCC5F58D3E21BCCFF7CEAD = ElementEnum.Light
+        weapon.WeaponDefinition.Level1Lumina_37_784B3E9C481C775586D1A89DCF6D6FD4 = FName("None")
+        weapon.WeaponDefinition.Level2Lumina_38_82A460E444079A36F26DDCA706CF3CFA = FName("DMG+OnAlternatingPhysicalLight")
+        weapon.WeaponDefinition.Level3Lumina_39_307DE22A4854A7781B622B91C882BC69 = FName("SkillsPhysicalDMG+")
+        weapon.WeaponDefinition.Level4Lumina_40_0EB7E00747F0CED5D7259C995D5AB4A7 = FName("LightSkillsRegenHP")
+        Log("Patched Verleso as Demonam.")
 
-        -- Delaram's passives set.
-        elseif config.VerlesoPassiveLoadout == 7 then
-            weapon.WeaponDefinition.BaseDamageType_31_00CBF5EC48FCC5F58D3E21BCCFF7CEAD = ElementEnum.Light
-            weapon.WeaponDefinition.Level1Lumina_37_784B3E9C481C775586D1A89DCF6D6FD4 = FName("None")
-            weapon.WeaponDefinition.Level2Lumina_38_82A460E444079A36F26DDCA706CF3CFA = FName("Perfection_StartRankBButLessHP")
-            weapon.WeaponDefinition.Level3Lumina_39_307DE22A4854A7781B622B91C882BC69 = FName("AttackLifesteal_Weapon")
-            weapon.WeaponDefinition.Level4Lumina_40_0EB7E00747F0CED5D7259C995D5AB4A7 = FName("Perfection_PowerfulOnB")
-            Log("Patched Verleso as Delaram.")
+    -- Gaulteram's passives set.
+    elseif config.VerlesoPassiveLoadout == 6 then
+        weapon.WeaponDefinition.BaseDamageType_31_00CBF5EC48FCC5F58D3E21BCCFF7CEAD = ElementEnum.Earth
+        weapon.WeaponDefinition.Level1Lumina_37_784B3E9C481C775586D1A89DCF6D6FD4 = FName("None")
+        weapon.WeaponDefinition.Level2Lumina_38_82A460E444079A36F26DDCA706CF3CFA = FName("Perfection_RankLossOneByOne")
+        weapon.WeaponDefinition.Level3Lumina_39_307DE22A4854A7781B622B91C882BC69 = FName("Perfection_RushOnS")
+        weapon.WeaponDefinition.Level4Lumina_40_0EB7E00747F0CED5D7259C995D5AB4A7 = FName("Perfection_OnTurnStart")
+        Log("Patched Verleso as Gaulteram.")
 
-        -- Cultam's passives set.
-        elseif config.VerlesoPassiveLoadout == 8 then
-            weapon.WeaponDefinition.BaseDamageType_31_00CBF5EC48FCC5F58D3E21BCCFF7CEAD = ElementEnum.Dark
-            weapon.WeaponDefinition.Level1Lumina_37_784B3E9C481C775586D1A89DCF6D6FD4 = FName("None")
-            weapon.WeaponDefinition.Level2Lumina_38_82A460E444079A36F26DDCA706CF3CFA = FName("Perfection_PerfectionLostOnHeal")
-            weapon.WeaponDefinition.Level3Lumina_39_307DE22A4854A7781B622B91C882BC69 = FName("APOnCounter")
-            weapon.WeaponDefinition.Level4Lumina_40_0EB7E00747F0CED5D7259C995D5AB4A7 = FName("Perfection_RankUpOnCounter")
-            Log("Patched Verleso as Cultam.")
+    -- Delaram's passives set.
+    elseif config.VerlesoPassiveLoadout == 7 then
+        weapon.WeaponDefinition.BaseDamageType_31_00CBF5EC48FCC5F58D3E21BCCFF7CEAD = ElementEnum.Light
+        weapon.WeaponDefinition.Level1Lumina_37_784B3E9C481C775586D1A89DCF6D6FD4 = FName("None")
+        weapon.WeaponDefinition.Level2Lumina_38_82A460E444079A36F26DDCA706CF3CFA = FName("Perfection_StartRankBButLessHP")
+        weapon.WeaponDefinition.Level3Lumina_39_307DE22A4854A7781B622B91C882BC69 = FName("AttackLifesteal_Weapon")
+        weapon.WeaponDefinition.Level4Lumina_40_0EB7E00747F0CED5D7259C995D5AB4A7 = FName("Perfection_PowerfulOnB")
+        Log("Patched Verleso as Delaram.")
 
-        -- Blodam's passives set.
-        elseif config.VerlesoPassiveLoadout == 9 then
-            weapon.WeaponDefinition.BaseDamageType_31_00CBF5EC48FCC5F58D3E21BCCFF7CEAD = ElementEnum.Light
-            weapon.WeaponDefinition.Level1Lumina_37_784B3E9C481C775586D1A89DCF6D6FD4 = FName("None")
-            weapon.WeaponDefinition.Level2Lumina_38_82A460E444079A36F26DDCA706CF3CFA = FName("Perfection_PerfectionBaseOnCurrentHP")
-            weapon.WeaponDefinition.Level3Lumina_39_307DE22A4854A7781B622B91C882BC69 = FName("SkillsLightDMG+")
-            weapon.WeaponDefinition.Level4Lumina_40_0EB7E00747F0CED5D7259C995D5AB4A7 = FName("Perfection_GainAPOnRankUp")
-            Log("Patched Verleso as Blodam.")
+    -- Cultam's passives set.
+    elseif config.VerlesoPassiveLoadout == 8 then
+        weapon.WeaponDefinition.BaseDamageType_31_00CBF5EC48FCC5F58D3E21BCCFF7CEAD = ElementEnum.Dark
+        weapon.WeaponDefinition.Level1Lumina_37_784B3E9C481C775586D1A89DCF6D6FD4 = FName("None")
+        weapon.WeaponDefinition.Level2Lumina_38_82A460E444079A36F26DDCA706CF3CFA = FName("Perfection_PerfectionLostOnHeal")
+        weapon.WeaponDefinition.Level3Lumina_39_307DE22A4854A7781B622B91C882BC69 = FName("APOnCounter")
+        weapon.WeaponDefinition.Level4Lumina_40_0EB7E00747F0CED5D7259C995D5AB4A7 = FName("Perfection_RankUpOnCounter")
+        Log("Patched Verleso as Cultam.")
 
-        -- Chevalam's passives set.
-        elseif config.VerlesoPassiveLoadout == 10 then
-            weapon.WeaponDefinition.BaseDamageType_31_00CBF5EC48FCC5F58D3E21BCCFF7CEAD = ElementEnum.Physical
-            weapon.WeaponDefinition.Level1Lumina_37_784B3E9C481C775586D1A89DCF6D6FD4 = FName("None")
-            weapon.WeaponDefinition.Level2Lumina_38_82A460E444079A36F26DDCA706CF3CFA = FName("Perfection_StartRankSButNoHeal")
-            weapon.WeaponDefinition.Level3Lumina_39_307DE22A4854A7781B622B91C882BC69 = FName("DMG+WhenNoDMGTaken")
-            weapon.WeaponDefinition.Level4Lumina_40_0EB7E00747F0CED5D7259C995D5AB4A7 = FName("Perfection_RushOnS")
-            Log("Patched Verleso as Chevalam.")
+    -- Blodam's passives set.
+    elseif config.VerlesoPassiveLoadout == 9 then
+        weapon.WeaponDefinition.BaseDamageType_31_00CBF5EC48FCC5F58D3E21BCCFF7CEAD = ElementEnum.Light
+        weapon.WeaponDefinition.Level1Lumina_37_784B3E9C481C775586D1A89DCF6D6FD4 = FName("None")
+        weapon.WeaponDefinition.Level2Lumina_38_82A460E444079A36F26DDCA706CF3CFA = FName("Perfection_PerfectionBaseOnCurrentHP")
+        weapon.WeaponDefinition.Level3Lumina_39_307DE22A4854A7781B622B91C882BC69 = FName("SkillsLightDMG+")
+        weapon.WeaponDefinition.Level4Lumina_40_0EB7E00747F0CED5D7259C995D5AB4A7 = FName("Perfection_GainAPOnRankUp")
+        Log("Patched Verleso as Blodam.")
 
-        -- Nosaram's passives set.
-        elseif config.VerlesoPassiveLoadout == 11 then
-            weapon.WeaponDefinition.BaseDamageType_31_00CBF5EC48FCC5F58D3E21BCCFF7CEAD = ElementEnum.Physical
-            weapon.WeaponDefinition.Level1Lumina_37_784B3E9C481C775586D1A89DCF6D6FD4 = FName("None")
-            weapon.WeaponDefinition.Level2Lumina_38_82A460E444079A36F26DDCA706CF3CFA = FName("Perfection_DoubleOnFreeAimShots")
-            weapon.WeaponDefinition.Level3Lumina_39_307DE22A4854A7781B622B91C882BC69 = FName("FreeAimBreaksMoreShields")
-            weapon.WeaponDefinition.Level4Lumina_40_0EB7E00747F0CED5D7259C995D5AB4A7 = FName("AugmentedAim_Weapon")
-            Log("Patched Verleso as Nosaram.")
+    -- Chevalam's passives set.
+    elseif config.VerlesoPassiveLoadout == 10 then
+        weapon.WeaponDefinition.BaseDamageType_31_00CBF5EC48FCC5F58D3E21BCCFF7CEAD = ElementEnum.Physical
+        weapon.WeaponDefinition.Level1Lumina_37_784B3E9C481C775586D1A89DCF6D6FD4 = FName("None")
+        weapon.WeaponDefinition.Level2Lumina_38_82A460E444079A36F26DDCA706CF3CFA = FName("Perfection_StartRankSButNoHeal")
+        weapon.WeaponDefinition.Level3Lumina_39_307DE22A4854A7781B622B91C882BC69 = FName("DMG+WhenNoDMGTaken")
+        weapon.WeaponDefinition.Level4Lumina_40_0EB7E00747F0CED5D7259C995D5AB4A7 = FName("Perfection_RushOnS")
+        Log("Patched Verleso as Chevalam.")
 
-        -- Gesam's passives set.
-        elseif config.VerlesoPassiveLoadout == 12 then
-            weapon.WeaponDefinition.BaseDamageType_31_00CBF5EC48FCC5F58D3E21BCCFF7CEAD = ElementEnum.Physical
-            weapon.WeaponDefinition.Level1Lumina_37_784B3E9C481C775586D1A89DCF6D6FD4 = FName("None")
-            weapon.WeaponDefinition.Level2Lumina_38_82A460E444079A36F26DDCA706CF3CFA = FName("SkillsLightToPhysical")
-            weapon.WeaponDefinition.Level3Lumina_39_307DE22A4854A7781B622B91C882BC69 = FName("SkillsPhysicalDMG+")
-            weapon.WeaponDefinition.Level4Lumina_40_0EB7E00747F0CED5D7259C995D5AB4A7 = FName("PhysicalAPCost-")
-            Log("Patched Verleso as Gesam.")
+    -- Nosaram's passives set.
+    elseif config.VerlesoPassiveLoadout == 11 then
+        weapon.WeaponDefinition.BaseDamageType_31_00CBF5EC48FCC5F58D3E21BCCFF7CEAD = ElementEnum.Physical
+        weapon.WeaponDefinition.Level1Lumina_37_784B3E9C481C775586D1A89DCF6D6FD4 = FName("None")
+        weapon.WeaponDefinition.Level2Lumina_38_82A460E444079A36F26DDCA706CF3CFA = FName("Perfection_DoubleOnFreeAimShots")
+        weapon.WeaponDefinition.Level3Lumina_39_307DE22A4854A7781B622B91C882BC69 = FName("FreeAimBreaksMoreShields")
+        weapon.WeaponDefinition.Level4Lumina_40_0EB7E00747F0CED5D7259C995D5AB4A7 = FName("AugmentedAim_Weapon")
+        Log("Patched Verleso as Nosaram.")
 
-        -- Seeram's passives set.
-        elseif config.VerlesoPassiveLoadout == 13 then
-            weapon.WeaponDefinition.BaseDamageType_31_00CBF5EC48FCC5F58D3E21BCCFF7CEAD = ElementEnum.Light
-            weapon.WeaponDefinition.Level1Lumina_37_784B3E9C481C775586D1A89DCF6D6FD4 = FName("None")
-            weapon.WeaponDefinition.Level2Lumina_38_82A460E444079A36F26DDCA706CF3CFA = FName("Perfection_Perfection+butDMG+")
-            weapon.WeaponDefinition.Level3Lumina_39_307DE22A4854A7781B622B91C882BC69 = FName("Perfection_Attackx2")
-            weapon.WeaponDefinition.Level4Lumina_40_0EB7E00747F0CED5D7259C995D5AB4A7 = FName("SkillsLightDMG+")
-            Log("Patched Verleso as Seeram.")
-        end
+    -- Gesam's passives set.
+    elseif config.VerlesoPassiveLoadout == 12 then
+        weapon.WeaponDefinition.BaseDamageType_31_00CBF5EC48FCC5F58D3E21BCCFF7CEAD = ElementEnum.Physical
+        weapon.WeaponDefinition.Level1Lumina_37_784B3E9C481C775586D1A89DCF6D6FD4 = FName("None")
+        weapon.WeaponDefinition.Level2Lumina_38_82A460E444079A36F26DDCA706CF3CFA = FName("SkillsLightToPhysical")
+        weapon.WeaponDefinition.Level3Lumina_39_307DE22A4854A7781B622B91C882BC69 = FName("SkillsPhysicalDMG+")
+        weapon.WeaponDefinition.Level4Lumina_40_0EB7E00747F0CED5D7259C995D5AB4A7 = FName("PhysicalAPCost-")
+        Log("Patched Verleso as Gesam.")
+
+    -- Seeram's passives set.
+    elseif config.VerlesoPassiveLoadout == 13 then
+        weapon.WeaponDefinition.BaseDamageType_31_00CBF5EC48FCC5F58D3E21BCCFF7CEAD = ElementEnum.Light
+        weapon.WeaponDefinition.Level1Lumina_37_784B3E9C481C775586D1A89DCF6D6FD4 = FName("None")
+        weapon.WeaponDefinition.Level2Lumina_38_82A460E444079A36F26DDCA706CF3CFA = FName("Perfection_Perfection+butDMG+")
+        weapon.WeaponDefinition.Level3Lumina_39_307DE22A4854A7781B622B91C882BC69 = FName("Perfection_Attackx2")
+        weapon.WeaponDefinition.Level4Lumina_40_0EB7E00747F0CED5D7259C995D5AB4A7 = FName("SkillsLightDMG+")
+        Log("Patched Verleso as Seeram.")
     end
 end
 
@@ -361,6 +363,7 @@ local function ModifyAllWeapons(patchedWeaponSample)
     if weapons then
         for _, weapon in pairs(weapons) do
             ModifyWeapon(weapon)
+            ModifyVerleso(weapon)
 
             -- Take a sample of a weapon so we know if a new save has been loaded later.
             if not patchedWeapon then

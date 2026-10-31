@@ -64,7 +64,9 @@ return
     EGIDE_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Maelle/BP_Battle_SkillScript_New7_Egide.BP_Battle_SkillScript_New7_Egide_C:OnExecuteSkill",
     SABOTAGE_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Verso/BP_Battle_SkillScript_Verso_Sabotage.BP_Battle_SkillScript_Verso_Sabotage_C:OnExecuteSkill",
     PHOENIX_FLAME_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Maelle/BP_Battle_SkillScript_PhoenixFlame.BP_Battle_SkillScript_PhoenixFlame_C:OnExecuteSkill",
+    PHOENIX_FLAME_ON_EFFECT = "/Game/Gameplay/Battle/Skills/Content/Maelle/BP_Battle_SkillScript_PhoenixFlame.BP_Battle_SkillScript_PhoenixFlame_C:OnActionEffect",
     GOMMAGE_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Maelle/BP_Battle_SkillScript_Gommage.BP_Battle_SkillScript_Gommage_C:OnExecuteSkill",
+    HOMAGE_ON_EXECUTE = "/Game/Gameplay/Battle/Skills/Content/Maelle/BP_Battle_SkillScript_GustaveSMemoire.BP_Battle_SkillScript_GustaveSMemoire_C:OnExecuteSkill",
 
     -- Hooks that manipulate the cost and damage multiplier of abilities on the fly.
     GET_BASE_COST = "/Game/Gameplay/SkillTree/BP_DataAsset_Skill.BP_DataAsset_Skill_C:GetSkillBaseCost",
