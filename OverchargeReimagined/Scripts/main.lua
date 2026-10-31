@@ -4115,25 +4115,27 @@ ExecuteInGameThread(function()
     RegisterHook(hooking.START_NEW_GAME, function(param)
         Log("New game is being started, load missing skill assets and patch skillgraph...")
 
-        cachedSkills["SpeedBurst"] = LoadAsset("/Game/Gameplay/SkillTree/Content/NoahVerso/DA_Skills/DA_Skill_Verso_NEW_Speedburst.DA_Skill_Verso_NEW_Speedburst")
-        cachedSkills["BerserkSlash"] = LoadAsset("/Game/Gameplay/SkillTree/Content/NoahVerso/DA_Skills/DA_Skill_Verso_BerserkSlash.DA_Skill_Verso_BerserkSlash")
-        cachedSkills["Overcharge"] = LoadAsset("/Game/Gameplay/SkillTree/Content/NoahVerso/DA_Skills/DA_Skill_Verso_NEW_Overcharge.DA_Skill_Verso_NEW_Overcharge")
-        cachedSkills["EndBringer"] = LoadAsset("/Game/Gameplay/SkillTree/Content/NoahVerso/DA_Skills/DA_Skill_Verso_Endbringer.DA_Skill_Verso_Endbringer")
-        cachedSkills["Egide"] = LoadAsset("/Game/Gameplay/SkillTree/Content/Maelle/Skills/DA_Skill_Maelle_NEW7_Egide.DA_Skill_Maelle_NEW7_Egide")
-        cachedSkills["Sabotage"] = LoadAsset("/Game/Gameplay/SkillTree/Content/NoahVerso/DA_Skills/DA_Skill_Verso_NEW_Sabotage.DA_Skill_Verso_NEW_Sabotage")
-        cachedSkills["PhoenixFlame"] = LoadAsset("/Game/Gameplay/SkillTree/Content/Maelle/Skills/DA_Skill_Maelle_PhoenixFlame.DA_Skill_Maelle_PhoenixFlame")
-        cachedSkills["Gommage"] = LoadAsset("/Game/Gameplay/SkillTree/Content/Maelle/Skills/DA_Skill_Maelle_Gommage.DA_Skill_Maelle_Gommage")
-        cachedSkills["GustaveSMemoire"] = LoadAsset("/Game/Gameplay/SkillTree/Content/Maelle/Skills/DA_Skill_Maelle_GustaveSMemoire.DA_Skill_Maelle_GustaveSMemoire")
+        ExecuteInGameThread(function()
+            cachedSkills["SpeedBurst"] = LoadAsset("/Game/Gameplay/SkillTree/Content/NoahVerso/DA_Skills/DA_Skill_Verso_NEW_Speedburst.DA_Skill_Verso_NEW_Speedburst")
+            cachedSkills["BerserkSlash"] = LoadAsset("/Game/Gameplay/SkillTree/Content/NoahVerso/DA_Skills/DA_Skill_Verso_BerserkSlash.DA_Skill_Verso_BerserkSlash")
+            cachedSkills["Overcharge"] = LoadAsset("/Game/Gameplay/SkillTree/Content/NoahVerso/DA_Skills/DA_Skill_Verso_NEW_Overcharge.DA_Skill_Verso_NEW_Overcharge")
+            cachedSkills["EndBringer"] = LoadAsset("/Game/Gameplay/SkillTree/Content/NoahVerso/DA_Skills/DA_Skill_Verso_Endbringer.DA_Skill_Verso_Endbringer")
+            cachedSkills["Egide"] = LoadAsset("/Game/Gameplay/SkillTree/Content/Maelle/Skills/DA_Skill_Maelle_NEW7_Egide.DA_Skill_Maelle_NEW7_Egide")
+            cachedSkills["Sabotage"] = LoadAsset("/Game/Gameplay/SkillTree/Content/NoahVerso/DA_Skills/DA_Skill_Verso_NEW_Sabotage.DA_Skill_Verso_NEW_Sabotage")
+            cachedSkills["PhoenixFlame"] = LoadAsset("/Game/Gameplay/SkillTree/Content/Maelle/Skills/DA_Skill_Maelle_PhoenixFlame.DA_Skill_Maelle_PhoenixFlame")
+            cachedSkills["Gommage"] = LoadAsset("/Game/Gameplay/SkillTree/Content/Maelle/Skills/DA_Skill_Maelle_Gommage.DA_Skill_Maelle_Gommage")
+            cachedSkills["GustaveSMemoire"] = LoadAsset("/Game/Gameplay/SkillTree/Content/Maelle/Skills/DA_Skill_Maelle_GustaveSMemoire.DA_Skill_Maelle_GustaveSMemoire")
 
-        local skillgraphs = FindAllOf("BP_CharacterSkillGraphSystem_C")
+            local skillgraphs = FindAllOf("BP_CharacterSkillGraphSystem_C")
 
-        for _, skillGraphSystem in pairs(skillgraphs) do
-            -- If the ability is radiant strike or light holder, modify description as well because it doesn't update in the menu when the skills aren't unlocked yet.
-            if skillGraphSystem and skillGraphSystem:IsValid() and skillGraphSystem.TempCharacterData.HardcodedNameID:ToString() == "Frey" then
-                TryPatchGustaveSkilltree(skillGraphSystem)
-                return
+            for _, skillGraphSystem in pairs(skillgraphs) do
+                -- If the ability is radiant strike or light holder, modify description as well because it doesn't update in the menu when the skills aren't unlocked yet.
+                if skillGraphSystem and skillGraphSystem:IsValid() and skillGraphSystem.TempCharacterData.HardcodedNameID:ToString() == "Frey" then
+                    TryPatchGustaveSkilltree(skillGraphSystem)
+                    return
+                end
             end
-        end
+        end)
     end)
 
     -- Patches the skilltree whenever the game initializes it.
