@@ -128,6 +128,17 @@ local function UsedChargeGeneratingAbility(usedLumiereAssault, usedFromFire, use
     or usedAngelsEyes
 end
 
+-- Retrieve all skill data objects.
+local function GetAllSkillAssets()
+    local skill_assets = FindAllOf("BP_DataAsset_Skill_C")
+
+    if skill_assets then
+        return skill_assets
+    end
+
+    return nil
+end
+
 -- Expose the functions to main.lua.
 return
 {
@@ -137,4 +148,5 @@ return
     FTextCustom = FTextCustom,
     EscapeStringCharacters = EscapeStringCharacters,
     UsedChargeGeneratingAbility = UsedChargeGeneratingAbility,
+    GetAllSkillAssets = GetAllSkillAssets,
 }

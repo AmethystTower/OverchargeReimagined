@@ -10,6 +10,8 @@
         PS:
         I do NOT recommend modifying the settings for the Berserk buff at the bottom of this file.
         Unless you want to see a gigantic or tiny Gustave for a laugh, leave them default for proper gameplay!
+
+        ALSO: It is recommended to modify this file using an editor like Visual Studio Code or notepad++ since they highlight the actual settings and gray out the descriptions.
 ]]--
 
 return
@@ -24,15 +26,15 @@ return
     VirtualMaxCharges = 100,
 
     ------------------------------------------------------------------------
-    -- Charge generation settings below.
-    -- This is a config with recommended charge generation settings for the best balance:
-    -- Parries and all types of counter attacks generate 2 charges and free aim shots generate 1 charge per hit.
+    -- Charge generation and ability settings below.
 
     -- IMPORTANT NOTE: ALL SETTINGS ACCEPT BOTH POSITIVE AND NEGATIVE VALUES.
     -- This means that depending on the settings, they can ADD OR REMOVE charges.
     -- For example: If 'ChargesOnReceivedHit' is -5, then your character loses 5 charges when getting hit by an enemy.
     -- However, the settings DO NOT accept decimal values (e.g. 1.75, 2.25, 3.5 etc.) - this will break charge generation.
+    
     ------------------------------------------------------------------------
+    -- Weapon passives, Verleso, Camp and skilltree settings are at the bottom of this file.
 
     ------------------------------------------------------------------------
     -- DEFAULT EVENTS: These are the events that already generate charges in the base game.
@@ -75,7 +77,7 @@ return
     -- NOTE: This affects additional hits from Simoso's ethereal sword passive.
     ChargesOnLuminaDamage = 0,
 
-    -- Charges per free aim shot. Default: 0
+    -- Charges per free aim shot. Default: 1 / Default in Vanilla: 0
     ChargesOnFreeAim = 1,
 
     -- Charges per damage event from buffs (e.g. burn). Default: 0
@@ -691,6 +693,7 @@ return
     ------------------------------------------------------------------------
 
     -- Default: All true except Noahram.
+    -- Noahram does have a set of unique passives incase you would like to enable its patch.
     -- VALUES: true = enabled, false = disabled.
     PatchNoahram = false,
     PatchLanceram = true,
@@ -869,27 +872,7 @@ return
     LuminaAdditionalChargesOnCriticals = 2,
 
     ------------------------------------------------------------------------
-    -- Camp settings.
-    ------------------------------------------------------------------------
-    
-    -- Forces the game to use the selected character as the main protagonist for the camp during each respective chapter.
-    -- NOTE: If you have a character selected here that YOU DO NOT CURRENTLY HAVE IN YOUR SAVE, then it will result in Gustave/Verso being used as fallback otherwise the game will crash.
-    -- Valid Settings: 0 (Gustave), 1 (Lune), 2 (Maelle), 3 (Verso), 4 (Monoco), 5 (Sciel)
-    -- Defaults: 0, 3, 3, 3.
-    CampMainCharacter = 
-    {
-        ["Act1"] = 0,
-        ["Act2"] = 3,
-        ["Act3"] = 3,
-        ["Postgame"] = 3,
-    },
-
-    -- This allows you to enable switch between your characters while in the camp. Default: false
-    -- VALUES: true = enabled, false = disabled.
-    AllowSwitchingCharactersInCamp = true,
-
-    ------------------------------------------------------------------------
-    -- Verleso settings.
+    -- Verleso weapon settings.
     ------------------------------------------------------------------------
     -- Verso loses access to some unique weapon passives to Gustave since their weapons are separate now.
     -- This setting allows you to modify Verso's starting weapon into any of the weapons he lost.
@@ -914,12 +897,97 @@ return
     VerlesoPassiveLoadout = 11,
 
     ------------------------------------------------------------------------
+    -- Camp settings.
+    ------------------------------------------------------------------------
+    
+    -- Forces the game to use the selected character as the main protagonist for the camp during each respective chapter.
+    -- NOTE: If you have a character selected here that YOU DO NOT CURRENTLY HAVE IN YOUR SAVE, then it will result in Gustave/Verso being used as fallback otherwise the game will crash.
+    -- Valid Settings: 0 (Gustave), 1 (Lune), 2 (Maelle), 3 (Verso), 4 (Monoco), 5 (Sciel)
+    -- Defaults: 0, 3, 3, 3.
+    CampMainCharacter = 
+    {
+        ["Act1"] = 0,
+        ["Act2"] = 3,
+        ["Act3"] = 3,
+        ["Postgame"] = 3,
+    },
+
+    -- This allows you to enable switch between your characters while in the camp. Default: false
+    -- VALUES: true = enabled, false = disabled.
+    AllowSwitchingCharactersInCamp = true,
+
+    ------------------------------------------------------------------------
+    -- Skilltree settings.
+
+    -- WARNING: MODIFY AT YOUR OWN RISK!
+    ------------------------------------------------------------------------
+    -- These are the settings for Gustave's skilltree, defining their order and unlock cost.
+    -- IMPORTANT NOTE: If you severely modify the skilltree for an active and patched save file, you will have to use a recoat in order to fix the ability unlocks!
+
+    -- Unlock costs for each ability.
+    -- NOTE: Starter abilities should ALWAYS have an unlock cost of 0 otherwise you may start with a negative amount of skillpoints at level 1!
+    -- Maelle in the base game has an issue like this where if you use a recoat when she's level 1 (practically impossible without save editing),
+    -- Percè is unlearned and she starts with -2 points or something like that.
+    -- WARNING: You have 98 skillpoints available without mods so make sure the total cost doesn't go over that number.
+    LumiereAssaultUnlockCost = 0, -- Lumière Assault
+    MarkingUnlockCost = 0, -- Gunslinger of Lumière
+    AscendingAssaultUnlockCost = 1, -- Relentless Assault
+    ParadigmShiftUnlockCost = 1, -- Calculated Shift
+    FromFireUnlockCost = 2, -- Burning Hatred
+    SpeedBurstUnlockCost = 2, -- Lightning Rush
+    RecoveryUnlockCost = 1, -- Second Wind
+    BerserkSlashUnlockCost = 1, -- Engineer's Wrath
+    DefiantStrikeUnlockCost = 2, -- Shared Pain
+    BlitzUnlockCost = 3, -- Sturm
+    EgideUnlockCost = 3, -- Guardian
+    RadiantStrikeUnlockCost = 4, -- Fire of Verdun
+    PurificationUnlockCost = 4, -- Grim Embrace
+    FollowUpUnlockCost = 4, -- Volt Strike
+    PowerfulUnlockCost = 4, -- Blind Rage
+    StrikeStormUnlockCost = 5, -- Blade Storm
+    LightHolderUnlockCost = 5, -- Fading Hope
+    SteeledStrikeUnlockCost = 9, -- Rolling Thunder
+    OverloadUnlockCost = 9, -- Overload
+    PhantomStarsUnlockCost = 9, -- Absolute Zero
+    EndBringerUnlockCost = 9, -- Final Judgement
+    ShatterUnlockCost = 10, -- Sword of Lumière
+    OverchargeUnlockCost = 10, -- Fist of Lumière
+
+    -- Decides where each skill is located on the skilltree.
+    -- Does NOT include hidden abilities and gradient abilities.
+    -- WARNING: The settings use their ID text names so if you do a single typo without the quotes, the whole skilltree can break or abilities can go missing!
+    AbilityNode_1 = "Combo1_Gustave", -- Lumière Assault
+    AbilityNode_2 = "MarkingShot_Gustave", -- Gunslinger of Lumière
+    AbilityNode_3 = "AscendingAssault", -- Relentless Assault
+    AbilityNode_4 = "ParadigmShift", -- Calculated Shift
+    AbilityNode_5 = "FromFire_Gustave", -- Burning Hatred
+    AbilityNode_6 = "SpeedBurst", -- Lightning Rush
+    AbilityNode_7 = "PerfectRecovery_Gustave", -- Second Wind
+    AbilityNode_8 = "BerserkSlash", -- Engineer's Wrath
+    AbilityNode_9 = "DefiantStrike", -- Shared Pain
+    AbilityNode_10 = "Blitz", -- Sturm
+    AbilityNode_11 = "Egide", -- Guardian
+    AbilityNode_12 = "RadiantStrike", -- Fire of Verdun
+    AbilityNode_13 = "Purification", -- Grim Embrace
+    AbilityNode_14 = "FollowUp", -- Volt Strike
+    AbilityNode_15 = "Powerful_Gustave", -- Blind Rage
+    AbilityNode_16 = "StrikeStorm_Gustave", -- Blade Storm
+    AbilityNode_17 = "OldLightHolder", -- Fading Hope
+    AbilityNode_18 = "SteeledStrike", -- Rolling Thunder
+    AbilityNode_19 = "Overcharge", -- Overload
+    AbilityNode_20 = "PhantomStars", -- Absolute Zero
+    AbilityNode_21 = "EndBringer", -- Final Judgement
+    AbilityNode_22 = "PerfectBreak_Gustave", -- Sword of Lumière
+    AbilityNode_23 = "UnleashCharge", -- Fist of Lumière
+
+    ------------------------------------------------------------------------
     -- BERSERK: This setting fixes the Berserk buff to not scale the size of our character when receiving it with enough charges via "Powerful".
     -- This has a setting because the Berserk buff has a built-in feature to slowly increase the scaling size of affected characters (I never knew nor noticed this on enemies tbh, did you?).
     -- It is very subtle but you can notice it in longer battles and it can make the character and menus look weird, this setting fixes it so this doesn't happen anymore.
 
     -- WARNING: THESE SETTINGS CAN MAKE USING THE UI AND SHOOTING ENEMIES IMPOSSIBLE! DO NOT MODIFY IF YOU WANT PROPER GAMEPLAY.
-    -- Modify this at your own risk.
+
+    -- Modify this at your own risk!
     ------------------------------------------------------------------------
 
     -- This defines the percentage scale size the character gets set to. Default: 1.00 (100%)

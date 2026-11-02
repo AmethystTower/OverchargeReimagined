@@ -1,6 +1,7 @@
-# Overcharge Reimagined v3.1
+# Overcharge Reimagined v4.0
 
 This is an UE4SS mod for Expedition 33 that overhauls Gustave as a character and allows all of his skills to interact with his Overcharge mechanic.
+Also adds custom weapon passives, a custom skilltree and more!
 Does NOT interfere with Verso's gameplay like other mods do.
 The ability receive new names, descriptions, elemental damage types, new effects and more!
 

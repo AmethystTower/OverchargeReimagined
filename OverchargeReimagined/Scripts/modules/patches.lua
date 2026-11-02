@@ -16,29 +16,29 @@ local read_int
 local CustomSkillCost = {}
 
 local function CreateCustomSkillCostValues()
-    CustomSkillCost["Combo1_Gustave"] = 0
-    CustomSkillCost["MarkingShot_Gustave"] = 0
-    CustomSkillCost["AscendingAssault"] = 1
-    CustomSkillCost["ParadigmShift"] = 1
-    CustomSkillCost["FromFire_Gustave"] = 2
-    CustomSkillCost["SpeedBurst"] = 2
-    CustomSkillCost["PerfectRecovery_Gustave"] = 1
-    CustomSkillCost["BerserkSlash"] = 1
-    CustomSkillCost["DefiantStrike"] = 2
-    CustomSkillCost["Blitz"] = 3
-    CustomSkillCost["Egide"] = 3
-    CustomSkillCost["RadiantStrike"] = 4
-    CustomSkillCost["Purification"] = 4
-    CustomSkillCost["FollowUp"] = 4
-    CustomSkillCost["Powerful_Gustave"] = 4
-    CustomSkillCost["StrikeStorm_Gustave"] = 5
-    CustomSkillCost["OldLightHolder"] = 5
-    CustomSkillCost["SteeledStrike"] = 9
-    CustomSkillCost["Overcharge"] = 9
-    CustomSkillCost["PhantomStars"] = 9
-    CustomSkillCost["EndBringer"] = 9
-    CustomSkillCost["PerfectBreak_Gustave"] = 10
-    CustomSkillCost["UnleashCharge"] = 10
+    CustomSkillCost["Combo1_Gustave"] = config.LumiereAssaultUnlockCost
+    CustomSkillCost["MarkingShot_Gustave"] = config.MarkingUnlockCost
+    CustomSkillCost["AscendingAssault"] = config.AscendingAssaultUnlockCost
+    CustomSkillCost["ParadigmShift"] = config.ParadigmShiftUnlockCost
+    CustomSkillCost["FromFire_Gustave"] = config.FromFireUnlockCost
+    CustomSkillCost["SpeedBurst"] = config.SpeedBurstUnlockCost
+    CustomSkillCost["PerfectRecovery_Gustave"] = config.RecoveryUnlockCost
+    CustomSkillCost["BerserkSlash"] = config.BerserkSlashUnlockCost
+    CustomSkillCost["DefiantStrike"] = config.DefiantStrikeUnlockCost
+    CustomSkillCost["Blitz"] = config.BlitzUnlockCost
+    CustomSkillCost["Egide"] = config.EgideUnlockCost
+    CustomSkillCost["RadiantStrike"] = config.RadiantStrikeUnlockCost
+    CustomSkillCost["Purification"] = config.PurificationUnlockCost
+    CustomSkillCost["FollowUp"] = config.FollowUpUnlockCost
+    CustomSkillCost["Powerful_Gustave"] = config.PowerfulUnlockCost
+    CustomSkillCost["StrikeStorm_Gustave"] = config.StrikeStormUnlockCost
+    CustomSkillCost["OldLightHolder"] = config.LightHolderUnlockCost
+    CustomSkillCost["SteeledStrike"] = config.SteeledStrikeUnlockCost
+    CustomSkillCost["Overcharge"] = config.OverloadUnlockCost
+    CustomSkillCost["PhantomStars"] = config.PhantomStarsUnlockCost
+    CustomSkillCost["EndBringer"] = config.EndBringerUnlockCost
+    CustomSkillCost["PerfectBreak_Gustave"] = config.ShatterUnlockCost
+    CustomSkillCost["UnleashCharge"] = config.OverchargeUnlockCost
 
     -- Special ability unlocked along with Maelle's painter skills.
     CustomSkillCost["GustavesMemoire"] = 0
@@ -146,29 +146,29 @@ end
 
 local function PatchGustaveSkilltree(character)
     -- Patch skilltree nodes.
-    PatchSkilltreeNode(character, 1, "Combo1_Gustave", false, true, {600, 225}, nil, nil)
-    PatchSkilltreeNode(character, 2, "MarkingShot_Gustave", false, true, {725, 225}, nil, nil)
-    PatchSkilltreeNode(character, 3, "AscendingAssault", false, false, {537.5, 325}, nil, nil)
-    PatchSkilltreeNode(character, 4, "ParadigmShift", false, false, {662.5, 325}, nil, nil)
-    PatchSkilltreeNode(character, 5, "FromFire_Gustave", false, false, {787.5, 325}, nil, nil)
-    PatchSkilltreeNode(character, 6, "SpeedBurst", false, false, {475, 425}, nil, nil)
-    PatchSkilltreeNode(character, 7, "PerfectRecovery_Gustave", false, false, {600, 425}, nil, nil)
-    PatchSkilltreeNode(character, 8, "BerserkSlash", false, false, {725, 425}, nil, nil)
-    PatchSkilltreeNode(character, 9, "DefiantStrike", false, false, {850, 425}, nil, nil)
-    PatchSkilltreeNode(character, 10, "Blitz", false, false, {475, 525}, nil, nil)
-    PatchSkilltreeNode(character, 11, "Egide", false, false, {600, 525}, nil, nil)
-    PatchSkilltreeNode(character, 12, "RadiantStrike", false, false, {725, 525}, nil, nil)
-    PatchSkilltreeNode(character, 13, "Purification", false, false, {850, 525}, nil, nil)
-    PatchSkilltreeNode(character, 14, "FollowUp", false, false, {475, 625}, nil, nil)
-    PatchSkilltreeNode(character, 15, "Powerful_Gustave", false, false, {600, 625}, nil, nil)
-    PatchSkilltreeNode(character, 16, "StrikeStorm_Gustave", false, false, {725, 625}, nil, nil)
-    PatchSkilltreeNode(character, 17, "OldLightHolder", false, false, {850, 625}, nil, nil)
-    PatchSkilltreeNode(character, 18, "SteeledStrike", false, false, {475, 725}, nil, nil)
-    PatchSkilltreeNode(character, 19, "Overcharge", false, false, {600, 725}, nil, nil)
-    PatchSkilltreeNode(character, 20, "PhantomStars", false, false, {725, 725}, nil, nil)
-    PatchSkilltreeNode(character, 21, "EndBringer", false, false, {850, 725}, nil, nil)
-    PatchSkilltreeNode(character, 22, "PerfectBreak_Gustave", false, false, {537.5, 825}, nil, nil)
-    PatchSkilltreeNode(character, 23, "UnleashCharge", true, false, {787.5, 825}, nil, nil)
+    PatchSkilltreeNode(character, 1, config.AbilityNode_1, false, true, {600, 225}, nil, nil)
+    PatchSkilltreeNode(character, 2, config.AbilityNode_2, false, true, {725, 225}, nil, nil)
+    PatchSkilltreeNode(character, 3, config.AbilityNode_3, false, false, {537.5, 325}, nil, nil)
+    PatchSkilltreeNode(character, 4, config.AbilityNode_4, false, false, {662.5, 325}, nil, nil)
+    PatchSkilltreeNode(character, 5, config.AbilityNode_5, false, false, {787.5, 325}, nil, nil)
+    PatchSkilltreeNode(character, 6, config.AbilityNode_6, false, false, {475, 425}, nil, nil)
+    PatchSkilltreeNode(character, 7, config.AbilityNode_7, false, false, {600, 425}, nil, nil)
+    PatchSkilltreeNode(character, 8, config.AbilityNode_8, false, false, {725, 425}, nil, nil)
+    PatchSkilltreeNode(character, 9, config.AbilityNode_9, false, false, {850, 425}, nil, nil)
+    PatchSkilltreeNode(character, 10, config.AbilityNode_10, false, false, {475, 525}, nil, nil)
+    PatchSkilltreeNode(character, 11, config.AbilityNode_11, false, false, {600, 525}, nil, nil)
+    PatchSkilltreeNode(character, 12, config.AbilityNode_12, false, false, {725, 525}, nil, nil)
+    PatchSkilltreeNode(character, 13, config.AbilityNode_13, false, false, {850, 525}, nil, nil)
+    PatchSkilltreeNode(character, 14, config.AbilityNode_14, false, false, {475, 625}, nil, nil)
+    PatchSkilltreeNode(character, 15, config.AbilityNode_15, false, false, {600, 625}, nil, nil)
+    PatchSkilltreeNode(character, 16, config.AbilityNode_16, false, false, {725, 625}, nil, nil)
+    PatchSkilltreeNode(character, 17, config.AbilityNode_17, false, false, {850, 625}, nil, nil)
+    PatchSkilltreeNode(character, 18, config.AbilityNode_18, false, false, {475, 725}, nil, nil)
+    PatchSkilltreeNode(character, 19, config.AbilityNode_19, false, false, {600, 725}, nil, nil)
+    PatchSkilltreeNode(character, 20, config.AbilityNode_20, false, false, {725, 725}, nil, nil)
+    PatchSkilltreeNode(character, 21, config.AbilityNode_21, false, false, {850, 725}, nil, nil)
+    PatchSkilltreeNode(character, 22, config.AbilityNode_22, false, false, {537.5, 825}, nil, nil)
+    PatchSkilltreeNode(character, 23, config.AbilityNode_23, true, false, {787.5, 825}, nil, nil)
 
     -- Maelle's Homage - unlocked at the same time as the paintress skills because that's when Maelle dies.
     local unlockTable = StaticFindObject("/Game/jRPGTemplate/Datatables/DT_jRPG_Items_Composite.DT_jRPG_Items_Composite")
@@ -182,35 +182,35 @@ local function PatchGustaveSkilltree(character)
     PatchSkilltreeNode(character, 26, "PhoenixFlame", true, true, {1100, 550}, "GradientUnlock_Maelle2", gradientUnlocksTable)
     PatchSkilltreeNode(character, 27, "Gommage", true, true, {1100, 700}, "GradientUnlock_Maelle3", gradientUnlocksTable)
 
-    -- Patch skilltree edges.
-    PatchSkilltreeEdge(character, 1, "Combo1_Gustave", "AscendingAssault")
-    PatchSkilltreeEdge(character, 2, "Combo1_Gustave", "ParadigmShift")
-    PatchSkilltreeEdge(character, 3, "MarkingShot_Gustave", "ParadigmShift")
-    PatchSkilltreeEdge(character, 4, "MarkingShot_Gustave", "FromFire_Gustave")
-    PatchSkilltreeEdge(character, 5, "AscendingAssault", "PerfectRecovery_Gustave")
-    PatchSkilltreeEdge(character, 6, "AscendingAssault", "SpeedBurst")
-    PatchSkilltreeEdge(character, 7, "ParadigmShift", "PerfectRecovery_Gustave")
-    PatchSkilltreeEdge(character, 8, "ParadigmShift", "BerserkSlash")
-    PatchSkilltreeEdge(character, 9, "FromFire_Gustave", "BerserkSlash")
-    PatchSkilltreeEdge(character, 10, "FromFire_Gustave", "DefiantStrike")
-    PatchSkilltreeEdge(character, 11, "SpeedBurst", "Blitz")
-    PatchSkilltreeEdge(character, 12, "Blitz", "FollowUp")
-    PatchSkilltreeEdge(character, 13, "FollowUp", "SteeledStrike")
-    PatchSkilltreeEdge(character, 14, "PerfectRecovery_Gustave", "Egide")
-    PatchSkilltreeEdge(character, 15, "Egide", "Powerful_Gustave")
-    PatchSkilltreeEdge(character, 16, "Powerful_Gustave", "Overcharge")
-    PatchSkilltreeEdge(character, 17, "BerserkSlash", "RadiantStrike")
-    PatchSkilltreeEdge(character, 18, "RadiantStrike", "StrikeStorm_Gustave")
-    PatchSkilltreeEdge(character, 19, "StrikeStorm_Gustave", "PhantomStars")
-    PatchSkilltreeEdge(character, 20, "DefiantStrike", "Purification")
-    PatchSkilltreeEdge(character, 21, "Purification", "OldLightHolder")
-    PatchSkilltreeEdge(character, 22, "OldLightHolder", "EndBringer")
-    PatchSkilltreeEdge(character, 23, "SteeledStrike", "PerfectBreak_Gustave")
-    PatchSkilltreeEdge(character, 24, "Overcharge", "PerfectBreak_Gustave")
-    PatchSkilltreeEdge(character, 25, "PhantomStars", "UnleashCharge")
-    PatchSkilltreeEdge(character, 26, "EndBringer", "UnleashCharge")
-    PatchSkilltreeEdge(character, 27, "Combo1_Gustave", "MarkingShot_Gustave")
-    PatchSkilltreeEdge(character, 28, "MarkingShot_Gustave", "Combo1_Gustave")
+    -- Patch skilltree edges -- this connects each ability with each other.
+    PatchSkilltreeEdge(character, 1, config.AbilityNode_1, config.AbilityNode_3)
+    PatchSkilltreeEdge(character, 2, config.AbilityNode_1, config.AbilityNode_4)
+    PatchSkilltreeEdge(character, 3, config.AbilityNode_2, config.AbilityNode_4)
+    PatchSkilltreeEdge(character, 4, config.AbilityNode_2, config.AbilityNode_5)
+    PatchSkilltreeEdge(character, 5, config.AbilityNode_3, config.AbilityNode_7)
+    PatchSkilltreeEdge(character, 6, config.AbilityNode_3, config.AbilityNode_6)
+    PatchSkilltreeEdge(character, 7, config.AbilityNode_4, config.AbilityNode_7)
+    PatchSkilltreeEdge(character, 8, config.AbilityNode_4, config.AbilityNode_8)
+    PatchSkilltreeEdge(character, 9, config.AbilityNode_5, config.AbilityNode_8)
+    PatchSkilltreeEdge(character, 10, config.AbilityNode_5, config.AbilityNode_9)
+    PatchSkilltreeEdge(character, 11, config.AbilityNode_6, config.AbilityNode_10)
+    PatchSkilltreeEdge(character, 12, config.AbilityNode_10, config.AbilityNode_14)
+    PatchSkilltreeEdge(character, 13, config.AbilityNode_14, config.AbilityNode_18)
+    PatchSkilltreeEdge(character, 14, config.AbilityNode_7, config.AbilityNode_11)
+    PatchSkilltreeEdge(character, 15, config.AbilityNode_11, config.AbilityNode_15)
+    PatchSkilltreeEdge(character, 16, config.AbilityNode_15, config.AbilityNode_19)
+    PatchSkilltreeEdge(character, 17, config.AbilityNode_8, config.AbilityNode_12)
+    PatchSkilltreeEdge(character, 18, config.AbilityNode_12, config.AbilityNode_16)
+    PatchSkilltreeEdge(character, 19, config.AbilityNode_16, config.AbilityNode_20)
+    PatchSkilltreeEdge(character, 20, config.AbilityNode_9, config.AbilityNode_13)
+    PatchSkilltreeEdge(character, 21, config.AbilityNode_13, config.AbilityNode_17)
+    PatchSkilltreeEdge(character, 22, config.AbilityNode_17, config.AbilityNode_21)
+    PatchSkilltreeEdge(character, 23, config.AbilityNode_18, config.AbilityNode_22)
+    PatchSkilltreeEdge(character, 24, config.AbilityNode_19, config.AbilityNode_22)
+    PatchSkilltreeEdge(character, 25, config.AbilityNode_20, config.AbilityNode_23)
+    PatchSkilltreeEdge(character, 26, config.AbilityNode_21, config.AbilityNode_23)
+    PatchSkilltreeEdge(character, 27, config.AbilityNode_1, config.AbilityNode_2)
+    PatchSkilltreeEdge(character, 28, config.AbilityNode_2, config.AbilityNode_1)
 
     Log("Successfully patched Noah's skilltree.")
 end

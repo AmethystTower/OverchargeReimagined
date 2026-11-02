@@ -29,9 +29,9 @@ local function CreateCustomLuminaDescriptions()
     CustomLuminaDescriptions["Foretell_HealOnApply"] = "Generate " .. config.LuminaAdditionalChargesPerIceSkillHit .. " additional charge(s) on a hit using Ice skills."
     CustomLuminaDescriptions["Perfection_HealRankDownMedium"] = "Refill " .. string.format("%g", (config.LuminaAdditionalChargesOnBreakPercentage) * 100) .. "% of total charges upon breaking an enemy."
     CustomLuminaDescriptions["Perfection_SwitchRankSOnBreak"] = "Refill an additional " .. string.format("%g", (config.LuminaMoreChargesOnBreakPercentage) * 100) .. "% of total charges upon breaking an enemy.\nBase Attack can break."
-    CustomLuminaDescriptions["Stance_ShieldOnOSstance"] = "Start battle with " .. string.format("%g", (config.VirtualMaxCharges * config.LuminaStartingChargesQuarterPercentage)) .. " charges available."
+    CustomLuminaDescriptions["Stance_ShieldOnOSstance"] = "Start battle with " .. string.format("%g", math.floor(config.VirtualMaxCharges * config.LuminaStartingChargesQuarterPercentage)) .. " charges available."
     CustomLuminaDescriptions["Stance_ShieldDStance"] = "+1 Shield for every " .. config.LuminaAdditionalShieldPerCharges .. " total charges consumed during battle."
-    CustomLuminaDescriptions["Stance_DefensiveGradientCharges"] = "After the first turn, generate " .. string.format("%g", (config.VirtualMaxCharges * config.LuminaAdditionalChargesPerTurn)) .. " charges on turn start."
+    CustomLuminaDescriptions["Stance_DefensiveGradientCharges"] = "After the first turn, generate " .. string.format("%g", math.floor(config.VirtualMaxCharges * config.LuminaAdditionalChargesPerTurn)) .. " charges on turn start."
     CustomLuminaDescriptions["Stains_RandomGeneration"] = "Generate " .. config.LuminaAdditionalChargesPerFreeAim .. " additional charge(s) with Free Aim shots."
     CustomLuminaDescriptions["Stains_IncreaseDMGPerLightStain"] = "Generate " .. config.LuminaAdditionalChargesPerAnyCounterAttack .. " additional charge(s) on all types of counterattacks."
     CustomLuminaDescriptions["Foretell_ApplyBurnPerSunChargeOnConsume"] = "Skills that generate charges deal " .. string.format("%g", (config.LuminaIncreasedDamagePerChargePercentage) * 100) .. "% more damage per currently available charge."
@@ -43,7 +43,7 @@ local function CreateCustomLuminaDescriptions()
     CustomLuminaDescriptions["Foretell_OnlyJusticeChariot"] = "Skills that inflict Burn or Powerless also inflict Curse on non-boss enemies for " .. config.LuminaCurseDuration .. " turn(s)."
     CustomLuminaDescriptions["Foretell_OnlyFoolTower"] = "Skills that inflict Mark also inflict 1 Blight stack for " .. config.LuminaBlightDuration .. " turn(s)."
     CustomLuminaDescriptions["Stance_AOEOnSwitch"] = "Free Aim shots consume " .. config.LuminaFreeAimChargesConsumed .. " charges to give back 1 AP. But Free Aim shots no longer generate new charges."
-    CustomLuminaDescriptions["Perfection_SurvivorRankA"] = "Can't die and ignore damage if at least " .. string.format("%g", (config.VirtualMaxCharges * config.LuminaInvulnerabilityMinimumRequiredCharges)) .. " charges are currently available. But always lose " .. string.format("%g", (config.VirtualMaxCharges * config.LuminaInvulnerabilityChargesLostOnHitPercentage)) .. " charges when hit."
+    CustomLuminaDescriptions["Perfection_SurvivorRankA"] = "Can't die and ignore damage if at least " .. string.format("%g", math.floor(config.VirtualMaxCharges * config.LuminaInvulnerabilityMinimumRequiredCharges)) .. " charges are currently available. But always lose " .. string.format("%g", math.floor(config.VirtualMaxCharges * config.LuminaInvulnerabilityChargesLostOnHitPercentage)) .. " charges when hit."
     CustomLuminaDescriptions["Stance_DamageSelfSwitch"] = "After the first turn, increase the maximum charge cap by " .. string.format("%g", (config.LuminaAdditionalMaxChargesPercentage) * 100) .. "% on turn start."
     CustomLuminaDescriptions["Perfection_StartRankS"] = "Double all charge generation. But maximum charge cap is reduced to " .. string.format("%g", (config.LuminaReducedMaxChargesPercentage) * 100) .. "%."
     CustomLuminaDescriptions["Stains_EarthDMGUp"] = "Skills that generate charges deal " .. string.format("%g", (config.LuminaIncreasedDamageChargeGeneratingSkills) * 100) .. "% more damage."
@@ -51,7 +51,6 @@ local function CreateCustomLuminaDescriptions()
     CustomLuminaDescriptions["Stains_AdditionalFire"] = "Dark, Fire and Lightning skills inflict " .. config.LuminaBurnPerDarkFireLightningSkillHit .. " Burn per hit."
     CustomLuminaDescriptions["Stains_FireDMGUp"] = "Skills that inflict Mark also inflict Charm for " .. config.LuminaCharmDuration .. " turn(s). When hit by charmed enemies, ignore damage, apply Rage for 1 turn and inflict 10 Burn."
     CustomLuminaDescriptions["Stains_ICEDMGUp"] = "Skills that consume charges deal " .. string.format("%g", (config.LuminaIncreasedDamagePerConsumedChargePercentageWeaker) * 100) .. "% more damage per consumed charge."
-
     CustomLuminaDescriptions["Stance_DMG+Stanceless"] = "Generate " .. config.LuminaAdditionalChargesOnCriticals .. " additional charge(s) on Critical hits using skills, base attacks and counterattacks."
 end
 

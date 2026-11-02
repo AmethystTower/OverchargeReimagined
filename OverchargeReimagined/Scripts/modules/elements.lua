@@ -25,11 +25,16 @@ local ElementEnum =
 -- This holds a static array for our custom ability elemental types.
 -- Initialize the element table as empty first because Lua is trash and we can't just hand over the config.lua to this module from main.lua.
 local abilityElement = {}
+local Log
+local GetDynamicWeaponElement
 
 -- Initialize the table with all config settings now.
-local function Init(log, config)
+local function Init(log, config, getDynamicWeaponElement)
+    Log = log
+    GetDynamicWeaponElement = getDynamicWeaponElement
+
     if not config then
-        log("Failed to initialize abilityElement array because of missing config values.")
+        Log("Failed to initialize abilityElement array because of missing config values.")
     end
 
     abilityElement["UnleashCharge"] = config.OverchargeElement
@@ -57,7 +62,7 @@ local function Init(log, config)
     abilityElement["Sabotage"] = config.SabotageElement
     abilityElement["Gommage"] = config.GommageElement
 
-    log("Initialized abilityElement array in elements.lua successfully!")
+    Log("Initialized abilityElement array in elements.lua successfully!")
 end
 
 -- This function returns the requested entry from the static ability element table.
@@ -65,10 +70,31 @@ local function GetAbilityElement(abilityNameID)
     return abilityElement[abilityNameID]
 end
 
+-- This function gets our custom settings for elemental damage types of each ability from the elements.lua.
+local function GetAbilityOverrideElement(originalElementalType, abilityNameID)
+    local abilityElementalOverride = GetAbilityElement(abilityNameID)
+
+    if not abilityElementalOverride then
+        -- Don't Log this since we don't want to spam the console output.
+        --Log("Failed to call abilityElementalOverride() or no elemental value found for: " .. tostring(abilityNameID))
+        return originalElementalType
+    elseif abilityElementalOverride == 0 then
+        local dynamicWeaponElement = GetDynamicWeaponElement()
+        Log("Ability is using dynamic element, changing to value: " .. tostring(dynamicWeaponElement))
+        abilityElementalOverride = dynamicWeaponElement
+    end
+
+    Log("Ability elemental type before: " .. tostring(originalElementalType))
+    Log("Ability elemental type after: " .. tostring(abilityElementalOverride))
+
+    return abilityElementalOverride
+end
+
 -- Expose the functions to main.lua.
 return
 {
     Init = Init,
     GetAbilityElement = GetAbilityElement,
-    ElementEnum = ElementEnum
+    GetAbilityOverrideElement = GetAbilityOverrideElement,
+    ElementEnum = ElementEnum,
 }

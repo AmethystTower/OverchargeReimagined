@@ -62,6 +62,61 @@ local function Log(msg)
     print("[Overcharge Reimagined] " .. msg .. "\n")
 end
 
+-- Store the active charge component from our character during the battle so we can modify it from any of our hooks.
+local chargeComponent = nil
+
+-- Store the active portrait component during the battle that displays the number of charges along with the images of the arm.
+local chargePortrait = nil
+
+-- Store the charge counter for the mini UI displayed next to the character's portrait during battle.
+local miniUI_ChargePortrait = nil
+
+-- Store the audio manager component during battle, which will allow us to play battle lines for abilities that usually never play any (like Shatter or From Fire).
+local battleAudioManager = nil
+
+-- Cache the current character portrait of our character during battle, so that we display the lumina pop-ups for our custom passives.
+local characterPortrait = nil
+
+-- Caches the game's loading system component used to load and manage assets.
+-- It will effectively be used as a bool to see if it's valid between battles.
+local loadingSystemComponent = nil
+
+-- Allows us to temporarily cache a skillscript after using an ability so we can use it from one of our other hooks.
+local temp_SkillScript = nil
+
+-- Stores the dynamic elemental damage type of the character's currently equipped weapon.
+-- Initialize it with value physical (1).
+local dynamicWeaponElement = 1
+
+-- Helps us find out if our current charge component is still valid.
+local function IsValidChargeComponent()
+    return chargeComponent and chargeComponent:IsValid()
+end
+
+-- Helps us find out if the overcharge portrait component is still valid.
+local function IsValidChargePortraitProperties()
+    return chargePortrait and chargePortrait:IsValid()
+end
+
+local function IsValidMiniUIChargePortrait()
+    return miniUI_ChargePortrait and miniUI_ChargePortrait:IsValid()
+end
+
+-- Helps us find out if the audio manager component is still valid.
+local function IsValidAudioComponent()
+    return battleAudioManager and battleAudioManager:IsValid()
+end
+
+-- Helps us find out if the system loading component is still valid.
+local function IsValidLoadingComponent()
+    return loadingSystemComponent and loadingSystemComponent:IsValid()
+end
+
+-- Returns the dynamic weapon element to the ElementsHelper module.
+local function GetDynamicWeaponElement()
+    return dynamicWeaponElement
+end
+
 -- Load all custom functions.
 local customfunctionsOK, CustomFunctions = pcall(require, "modules.customfunctions")
 
@@ -116,7 +171,7 @@ if not elementsOK then
     Log("Failed to load modules/elements.lua, using empty list: " .. tostring(ElementsHelper))
 else
     Log("modules/elements.lua loaded successfully!")
-    ElementsHelper.Init(Log, config)
+    ElementsHelper.Init(Log, config, GetDynamicWeaponElement)
 end
 
 -- This loads all the patches that we need for Gustave to work properly.
@@ -155,43 +210,17 @@ else
     SkillsHelper.Init(Log, config, ElementsHelper.ElementEnum)
 end
 
--- Ability settings that we need in this module of the mod.
-local shatterChargesPercentage = config.ShatterChargesPercentage
-local overchargeChargesPercentage = config.OverchargeChargesPercentage
-local phantomStarsChargesPercentage = config.PhantomStarsChargesPercentage
-local overloadChargesPercentage = config.OverloadChargesPercentage
-local recoveryChargesPercentage = config.RecoveryChargesPercentage
+-- This gets our list of sound modifications responsible for playing battle lines on skill use.
+local soundsOK, SoundHelper = pcall(require, "modules.sounds")
 
-local overchargeMaxChargesBonus = config.OverchargeMaxChargesBonus
-local shatterMaxChargesBonus = config.ShatterMaxChargesBonus
-local markingShotMaxChargesBonus = config.MarkingShotMaxChargesBonus
-local markingShotMaxStunChance = config.MarkingShotMaxStunChance
-
-local lightHolderDamagePerHealthChunk = config.LightHolderDamagePerHealthChunk
-local lightHolderHealthChunkSize = config.LightHolderHealthChunkSize
-
-local lightHolderChargesPerCritical = config.LightHolderChargesPerCritical
-local lumiereAssaultChargesPerCritical = config.LumiereAssaultChargesPerCritical
-local strikeStormChargesPerCritical = config.StrikeStormChargesPerCritical
-local fromFireChargesPerCritical = config.FromFireChargesPerCritical
-local endbringerChargesPerStunnedHit = config.EndbringerChargesPerStunnedHit
-local speedBurstChargesPerHit = config.SpeedBurstChargesPerHit
-
-local fromFireHealPerCharge = config.FromFireHealPerCharge
-local paradigmShiftAPPerCharge = config.ParadigmShiftAPPerCharge
-
-local followUpAPReducedCost = config.FollowUpAPReducedCost
-local followUpChargesConsumed = config.FollowUpChargesConsumed
-
-local ascendingAssaultAPReducedCost = config.AscendingAssaultAPReducedCost
-local ascendingAssaultChargesConsumed = config.AscendingAssaultChargesConsumed
-local ascendingAssaultAdditionalChargesConsumed = config.AscendingAssaultAdditionalChargesConsumed
-
-local phantomStarsAPReducedCost = config.PhantomStarsAPReducedCost
-local phantomStarsChargesConsumed = config.PhantomStarsChargesConsumed
-
-local berserkScaleSize = config.BerserkScaleSize
-local berserkScaleTime = config.BerserkScaleTime
+if not soundsOK then
+    -- Create an empty list as fallback.
+    SoundHelper = {}
+    Log("Failed to load sounds.lua, using empty list: " .. tostring(SkillsHelper))
+else
+    Log("sounds.lua loaded successfully!")
+    SoundHelper.Init(Log, IsValidAudioComponent)
+end
 
 -- The values below SHOULD NOT BE MODIFIED.
 
@@ -222,9 +251,6 @@ end
 -- This array helps us track which ability descriptions we have modified so far.
 -- Since we can't read their descriptions directly due to an UE4SS bug causing a potential crash, we need to do it this way.
 local trackedAbilities = {}
-
--- This list stores a table of all skill voiceline audio assets.
-local voiceLinesList = {}
 
 -- These will cache and store some skill assets that we need to access later during battle in order to load some skill related voicelines.
 local cachedSkills = {}
@@ -271,6 +297,7 @@ local onReceivedDamageHookRegistered = false
 local changeChargeHookRegistered = false
 local updateCurrentValueHookRegistered = false
 local constructPortraitHookRegistered = false
+local contstructMiniUIPortraitHookRegistered = false
 
 -- These let us know if we need to refresh the patch functions incase someone loaded a new save.
 local patchedCharacterSample = nil
@@ -285,7 +312,6 @@ local overchargeCharacterTurn = false
 local fullChargeBonus = false
 local steeledStrikeExecuted = false
 local selectedFreyInMenu = false
-local voiceLinePlaying = false
 local loadingDependenciesGuard = false
 local patchSkillTreeGuard = false
 local updatedDynamicElement = false
@@ -336,29 +362,10 @@ local consumedChargesFromAbility = 0
 -- Tracks how many charges are being consumed during a battle in total.
 local totalConsumedChargesDuringBattle = 0
 
--- Store the active charge component from our character during the battle so we can modify it from any of our hooks.
-local chargeComponent = nil
-
--- Store the active portrait component during the battle that displays the number of charges along with the images of the arm.
-local chargePortrait = nil
-
--- Store the audio manager component during battle, which will allow us to play battle lines for abilities that usually never play any (like Shatter or From Fire).
-local battleAudioManager = nil
-
--- Cache the current character portrait of our character during battle, so that we display the lumina pop-ups for our custom passives.
-local characterPortrait = nil
-
--- Allows us to temporarily cache a skillscript after using an ability so we can use it from one of our other hooks.
-local temp_SkillScript = nil
-
 -- This boolean allows us to know if the current damage instance is caused by our custom bonus hits for an ability.
 -- With this we can prevent infinite damage instances, since each damage instance from our custom hit would trigger another instance.
 -- TODO: Unused for now as this feature is not fully finished and stable yet.
 --local addingAdditionalPellets = false
-
--- Restores the dynamic elemental damage type of the character's currently equipped weapon.
--- Initialize it with value physical (1).
-local dynamicWeaponElement = ElementsHelper.ElementEnum.Physical
 
 -- Stores the current weapon info used by the character, so that we can grab its weapon passives.
 local currentWeaponDefinitionInBattle = nil
@@ -368,30 +375,6 @@ local equippedCustomPassives = {}
 
 -- Used by the Overload skill to split its charges to the 2 times its effect triggers so it's cooler :D
 local overloadAddedCharges = 0
-
--- Caches the game's loading system component used to load and manage assets.
--- It will effectively be used as a bool to see if it's valid between battles.
-local loadingSystemComponent = nil
-
--- Helps us find out if our current charge component is still valid.
-local function IsValidChargeComponent()
-    return chargeComponent and chargeComponent:IsValid()
-end
-
--- Helps us find out if the overcharge portrait component is still valid.
-local function IsValidChargePortraitProperties()
-    return chargePortrait and chargePortrait:IsValid()
-end
-
--- Helps us find out if the audio manager component is still valid.
-local function IsValidAudioComponent()
-    return battleAudioManager and battleAudioManager:IsValid()
-end
-
--- Helps us find out if the system loading component is still valid.
-local function IsValidLoadingComponent()
-    return loadingSystemComponent and loadingSystemComponent:IsValid()
-end
 
 -- Update the CHARGE_MULTIPLIER which keeps the game's in-game charge counter within 10.
 -- If a lumina passive from a weapon modifies the max charge cap then this gets called to update the multiplier.
@@ -406,72 +389,6 @@ local function UpdateChargeMultiplier()
         -- Now we can't generate any charges anymore... hope you're happy! :D
         virtualMaxCharges = 0
     end
-end
-
-local function PlayOverchargeLines(audioManager, strengthStage)
-    if not IsValidAudioComponent() then
-        return
-    end
-
-    local soundAsset
-
-    if strengthStage == 3 then
-        soundAsset = voiceLinesList["overcharge4"]
-    elseif strengthStage == 2 then
-        soundAsset = voiceLinesList["overcharge3"]
-    elseif strengthStage == 1 then
-        soundAsset = voiceLinesList["overcharge2"]
-    else
-        soundAsset = voiceLinesList["overcharge1"]
-    end
-
-    if soundAsset and soundAsset:IsValid() then
-        voiceLinePlaying = true
-        audioManager:PlaySkillBattleLineInternal(soundAsset)
-        voiceLinePlaying = false
-    end
-end
-
-local function PlayVoiceLine(audioManager, keyString)
-    if not IsValidAudioComponent() then
-        return
-    end
-
-    local soundAsset = voiceLinesList[keyString]
-
-    if soundAsset and soundAsset:IsValid() then
-        voiceLinePlaying = true
-        audioManager:PlaySkillBattleLineInternal(soundAsset)
-        voiceLinePlaying = false
-    end
-end
-
--- This checks if we used an ability that we want to keep the original voiceline for.
-local function KeepOriginalVoiceline()
-    if usedOvercharge or usedStrikeStorm or usedRecovery then
-        return true
-    end
-
-    return false
-end
-
--- This function gets our custom settings for elemental damage types of each ability from the elements.lua.
-local function GetAbilityOverrideElement(originalElementalType, abilityNameID)
-    local abilityElementalOverride = ElementsHelper.GetAbilityElement(abilityNameID)
-
-    if not abilityElementalOverride then
-        -- Don't log this since we don't want to spam the console output.
-        --Log("Failed to call abilityElementalOverride() or no elemental value found for: " .. tostring(abilityNameID))
-        return originalElementalType
-    elseif abilityElementalOverride == 0 then
-        Log("Ability is using dynamic element, changing to value: " .. tostring(dynamicWeaponElement))
-        abilityElementalOverride = dynamicWeaponElement
-    end
-
-    Log("Ability elemental type before: " .. tostring(originalElementalType))
-    Log("Ability elemental type after: " .. tostring(abilityElementalOverride))
-
-    return abilityElementalOverride
 end
 
 -- This function gets all the custom settings such as APCost, ChargeConsumption and descriptions from the skills.lua file.
@@ -615,10 +532,10 @@ local function ModifyAbilityCostAndDescription(param, modifyAPCostOnly)
         -- Dynamically update Marking Shot's short description with the current stun chance we have based off the available amount of charges.
         -- Use the VirtualMaxCharges from the config incase we have luminas modifying the max charge cap.
         if abilityNameID == "MarkingShot_Gustave" then
-            assembledShortDescription = assembledShortDescription .. ("\nHas a " .. string.format("%g", math.min((virtualCurrentCharges / config.VirtualMaxCharges * markingShotMaxStunChance) * 100, 100)) .. " " .. abilityValues.OverchargeDynamicDescriptionPiece)
+            assembledShortDescription = assembledShortDescription .. ("\nHas a " .. string.format("%g", math.min((virtualCurrentCharges / config.VirtualMaxCharges * config.MarkingShotMaxStunChance) * 100, 100)) .. " " .. abilityValues.OverchargeDynamicDescriptionPiece)
         -- Dynamically update the current amount of consumed charges for Ascending Assault.
         elseif abilityNameID == "AscendingAssault" then
-            local consumedCharges = ascendingAssaultChargesConsumed + (ascendingAssaultCounter * ascendingAssaultAdditionalChargesConsumed)
+            local consumedCharges = config.AscendingAssaultChargesConsumed + (ascendingAssaultCounter * config.AscendingAssaultAdditionalChargesConsumed)
 
             if consumedCharges > virtualMaxCharges then
                 consumedCharges = virtualMaxCharges
@@ -642,20 +559,9 @@ local function ModifyAbilityCostAndDescription(param, modifyAPCostOnly)
     end
 end
 
--- Retrieve all skill data objects.
-local function GetAllSkillAssets()
-    local skill_assets = FindAllOf("BP_DataAsset_Skill_C")
-
-    if skill_assets then
-        return skill_assets
-    end
-
-    return nil
-end
-
 -- Modify all abilities so that they show their correct descriptions and AP cost immediately.
 local function ModifyAllDescriptionsAndCost()
-    local skill_assets = GetAllSkillAssets()
+    local skill_assets = CustomFunctions.GetAllSkillAssets()
     
     if skill_assets then
         -- Force this to true for the initialization of all abilities, so that light holder and radiant strike get their descriptions.
@@ -685,7 +591,7 @@ local function ModifyAllDescriptionsAndCost()
 end
 
 local function CacheOverchargeSkills()
-    local skill_assets = GetAllSkillAssets()
+    local skill_assets = CustomFunctions.GetAllSkillAssets()
 
     if skill_assets then
         -- Find all modifiable abilities and adjust their descriptions and AP cost for the skilltree or when entering a battle to avoid weird issues.
@@ -817,7 +723,7 @@ local function CalculateAmountOfConsumedCharges(abilityName, abilityNameLog)
 
     -- Check the amount of charges that Ascending Assault can consume right now and add them.
     if abilityName == "AscendingAssault" then
-        consumedCharges = consumedCharges + (ascendingAssaultCounter * ascendingAssaultAdditionalChargesConsumed)
+        consumedCharges = consumedCharges + (ascendingAssaultCounter * config.AscendingAssaultAdditionalChargesConsumed)
 
         if consumedCharges > virtualMaxCharges then
             consumedCharges = virtualMaxCharges
@@ -875,7 +781,7 @@ end
 
 -- Modifies the max charge cap for certain lumina effects.
 local function ModifyMaxChargeCap(luminaPassive, luminaPercentageModifier, isIncrement)
-    if not IsValidChargeComponent() or not IsValidChargePortraitProperties() then
+    if not IsValidChargeComponent() or not IsValidChargePortraitProperties() or not IsValidMiniUIChargePortrait() then
         return
     end
     
@@ -892,6 +798,7 @@ local function ModifyMaxChargeCap(luminaPassive, luminaPercentageModifier, isInc
     -- Update the CHARGE_MULTIPLIER and the arm portrait to use the new max charge cap.
     UpdateChargeMultiplier()
     chargePortrait.TextBlock_MaxValue:SetText(FText("/" .. tostring(virtualMaxCharges)))
+    miniUI_ChargePortrait.TextBlock_MaxValue:SetText(FText("/" .. tostring(virtualMaxCharges)))
     chargeComponent.ChangeCharge(0)
     WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, luminaPassive)
 end
@@ -936,32 +843,6 @@ local function ResetAbilityStates()
     -- Set these back to 0.
     consumedChargesFromAbility = 0
     skillHitCounter = 0
-end
-
--- This function caches a reference to all the sound objects for the voicelines.
-local function LoadSoundAssets()
-    -- Ability voicelines are dependent on the skill being loaded that they are tied to which we handle in our LOAD_DEPENDENCIES_FROM_OBJECT hook.
-    voiceLinesList["overcharge1"] = StaticFindObject("/Game/Audio/MetaSound/VO/Noah/SkillLines/VO_BL_Battle_Overcharge1_Gustave.VO_BL_Battle_Overcharge1_Gustave")
-    voiceLinesList["overcharge2"] = StaticFindObject("/Game/Audio/MetaSound/VO/Noah/SkillLines/VO_BL_Battle_Overcharge2_Gustave.VO_BL_Battle_Overcharge2_Gustave")
-    voiceLinesList["overcharge3"] = StaticFindObject("/Game/Audio/MetaSound/VO/Noah/SkillLines/VO_BL_Battle_Overcharge3_Gustave.VO_BL_Battle_Overcharge3_Gustave")
-    voiceLinesList["overcharge4"] = StaticFindObject("/Game/Audio/MetaSound/VO/Noah/SkillLines/VO_BL_Battle_Overcharge4_Gustave.VO_BL_Battle_Overcharge4_Gustave")
-    voiceLinesList["breakcycle"] = StaticFindObject("/Game/Audio/MetaSound/VO/Noah/SkillLines/VO_BL_Battle_Skill_Breakthecycle_Gustave.VO_BL_Battle_Skill_Breakthecycle_Gustave")
-    voiceLinesList["takethemdown"] = StaticFindObject("/Game/Audio/MetaSound/VO/Noah/SkillLines/VO_BL_Battle_Skill_Takethemdown_Gustave.VO_BL_Battle_Skill_Takethemdown_Gustave")
-    voiceLinesList["buffteam"] = StaticFindObject("/Game/Audio/MetaSound/VO/Noah/BattleLine/VO_BL_Battle_BuffTeam_Gustave.VO_BL_Battle_BuffTeam_Gustave")
-    voiceLinesList["buffself"] = StaticFindObject("/Game/Audio/MetaSound/VO/Noah/BattleLine/VO_BL_Battle_BuffSelf_Gustave.VO_BL_Battle_BuffSelf_Gustave")
-
-    -- These voicelines always load successfully but the "counter" ones are pretty quiet but also unique to this character.
-    -- For some reason the "battle won" voicelines use the "Death Lune" soundalias as a name while there are no actual voicelines for her death, quite weird.
-    voiceLinesList["counter"] = StaticFindObject("/Game/Audio/MetaSound/VO/Noah/BattleLine/VO_BL_Battle_Counter_Gustave.VO_BL_Battle_Counter_Gustave")
-    voiceLinesList["battlewon"] = StaticFindObject("/Game/Audio/MetaSound/VO/Noah/BattleLine/VO_BL_Battle_DeathLune_Gustave.VO_BL_Battle_DeathLune_Gustave")
-
-    -- Unused voiceline where Gustave reacts to Maelle's death during battle, will be used for the "Maelle's Homage" ability :)
-    voiceLinesList["maelle_concerned"] = StaticFindObject("/Game/Audio/MetaSound/VO/Noah/BattleLine/VO_BL_Battle_DeathMaelle_Gustave.VO_BL_Battle_DeathMaelle_Gustave")
-
-    -- Clear the cached loading system component, we no longer need it for this fight.
-    loadingSystemComponent = nil
-
-    Log("Initialized all sound assets and unloaded loading system component.")
 end
 
 -- The following hooks we need to be careful because they don't get registed if we don't have the needed character participating in the first battle.
@@ -1036,16 +917,16 @@ local function TryRegisterAbilityHooks()
                 if IsValidAudioComponent() then
                     -- 100%: Full Strength.
                     if fullChargeBonus then
-                        PlayOverchargeLines(battleAudioManager, 3)
+                        SoundHelper.PlayOverchargeLines(battleAudioManager, 3)
                     -- 70% - 99%: Strong.
                     elseif (virtualCurrentCharges / virtualMaxCharges) >= 0.7 then
-                        PlayOverchargeLines(battleAudioManager, 2)
+                        SoundHelper.PlayOverchargeLines(battleAudioManager, 2)
                     -- 40% - 69%: Medium.
                     elseif (virtualCurrentCharges / virtualMaxCharges) >= 0.4 then
-                        PlayOverchargeLines(battleAudioManager, 1)
+                        SoundHelper.PlayOverchargeLines(battleAudioManager, 1)
                     -- 0% - 39%: Weak.
                     else
-                        PlayOverchargeLines(battleAudioManager, 0)
+                        SoundHelper.PlayOverchargeLines(battleAudioManager, 0)
                     end
                 end
 
@@ -1083,16 +964,16 @@ local function TryRegisterAbilityHooks()
                 if IsValidAudioComponent() then
                     -- 100%: Full Strength.
                     if fullChargeBonus then
-                        PlayOverchargeLines(battleAudioManager, 3)
+                        SoundHelper.PlayOverchargeLines(battleAudioManager, 3)
                     -- 70% - 99%: Strong.
                     elseif (virtualCurrentCharges / virtualMaxCharges) >= 0.7 then
-                        PlayOverchargeLines(battleAudioManager, 2)
+                        SoundHelper.PlayOverchargeLines(battleAudioManager, 2)
                     -- 40% - 69%: Medium.
                     elseif (virtualCurrentCharges / virtualMaxCharges) >= 0.4 then
-                        PlayOverchargeLines(battleAudioManager, 1)
+                        SoundHelper.PlayOverchargeLines(battleAudioManager, 1)
                     -- 0% - 39%: Weak.
                     else
-                        PlayOverchargeLines(battleAudioManager, 0)
+                        SoundHelper.PlayOverchargeLines(battleAudioManager, 0)
                     end
                 end
 
@@ -1129,7 +1010,7 @@ local function TryRegisterAbilityHooks()
 
                 -- Plays voicelines that say "we lay the trail" or "we continue". 50% chance.
                 if math.random(1, 100) <= 50 then
-                    PlayVoiceLine(battleAudioManager, "battlewon")
+                    SoundHelper.PlayVoiceLine(battleAudioManager, "battlewon")
                 end
             end)
         end)
@@ -1188,7 +1069,7 @@ local function TryRegisterAbilityHooks()
 
                 -- 50% chance to play the voiceline.
                 if math.random(1, 100) <= 50 then
-                    PlayVoiceLine(battleAudioManager, "breakcycle")
+                    SoundHelper.PlayVoiceLine(battleAudioManager, "breakcycle")
                 end
             end)
         end)
@@ -1242,7 +1123,7 @@ local function TryRegisterAbilityHooks()
 
                 -- Calculate the charges that Recovery generates.
                 -- Only use the original max charge cap to keep it balanced with luminas that increase it.
-                local addedCharges = math.floor((config.VirtualMaxCharges * recoveryChargesPercentage))
+                local addedCharges = math.floor((config.VirtualMaxCharges * config.RecoveryChargesPercentage))
 
                 -- Multiply our added charges with the charge gain from the game's result object.
                 -- This way we can utilize the skillcheck and add more percentages.
@@ -1289,7 +1170,7 @@ local function TryRegisterAbilityHooks()
                 -- Powerful already says a voiceline halfway through casting it but let's put it to the start of the animation.
                 -- Sinde this voiceline is quite lengthy it covers the whole animation which makes it better if we play it earlier!
                 if math.random(1, 100) <= 50 then
-                    PlayVoiceLine(battleAudioManager, "overcharge3")
+                    SoundHelper.PlayVoiceLine(battleAudioManager, "overcharge3")
                 end
             end)
 
@@ -1490,7 +1371,7 @@ local function TryRegisterAbilityHooks()
 
                 -- 50% chance to play the voiceline.
                 if math.random(1, 100) <= 50 then
-                    PlayVoiceLine(battleAudioManager, "battlewon")
+                    SoundHelper.PlayVoiceLine(battleAudioManager, "battlewon")
                 end
             end)
         end)
@@ -1520,7 +1401,7 @@ local function TryRegisterAbilityHooks()
                 Log("Overload used this turn.")
 
                 -- Calculate amount of given charges based off % of missing charges and divide by 2 since Overload's effect triggers twice.
-                overloadAddedCharges = math.floor(((virtualMaxCharges - virtualCurrentCharges) * overloadChargesPercentage) / 2)
+                overloadAddedCharges = math.floor(((virtualMaxCharges - virtualCurrentCharges) * config.OverloadChargesPercentage) / 2)
             end)
 
             -- This hook runs whenever Overload's effects trigger.
@@ -1711,7 +1592,7 @@ local function TryRegisterAbilityHooks()
 
                 -- 50% chance to play the voiceline.
                 if math.random(1, 100) <= 50 then
-                    PlayVoiceLine(battleAudioManager, "takethemdown")
+                    SoundHelper.PlayVoiceLine(battleAudioManager, "takethemdown")
                 end
 
                 -- Wait for a frame before consuming charges and increasing the counter, otherwise the game won't use the reduced AP before consuming the points.
@@ -1733,7 +1614,7 @@ local function TryRegisterAbilityHooks()
 
                 -- Check if we have the required charge consumption amount for Follow Up.
                 -- If yes, override its usual AP cost to the new value.
-                if virtualCurrentCharges >= followUpChargesConsumed then
+                if virtualCurrentCharges >= config.FollowUpChargesConsumed then
                     local skillScript = CustomFunctions.unwrap(param)
 
                     if skillScript and skillScript.SkillState then
@@ -1741,7 +1622,7 @@ local function TryRegisterAbilityHooks()
                     end
 
                     override:set(true)
-                    newValue:set(followUpAPReducedCost)
+                    newValue:set(config.FollowUpAPReducedCost)
                 end
             end)
         end)
@@ -1772,7 +1653,7 @@ local function TryRegisterAbilityHooks()
 
                 -- 50% chance to play the voiceline.
                 if math.random(1, 100) <= 50 then
-                    PlayVoiceLine(battleAudioManager, "battlewon")
+                    SoundHelper.PlayVoiceLine(battleAudioManager, "battlewon")
                 end
 
                 -- Wait for a frame before consuming charges and increasing the counter, otherwise the game won't use the reduced AP before consuming the points.
@@ -1799,7 +1680,7 @@ local function TryRegisterAbilityHooks()
 
                 -- Check if we have the required charge consumption amount for Ascending Assault.
                 -- If yes, override its usual AP cost to the new value.
-                local consumedCharges = ascendingAssaultChargesConsumed + (ascendingAssaultCounter * ascendingAssaultAdditionalChargesConsumed)
+                local consumedCharges = config.AscendingAssaultChargesConsumed + (ascendingAssaultCounter * config.AscendingAssaultAdditionalChargesConsumed)
 
                 if consumedCharges > virtualMaxCharges then
                     consumedCharges = virtualMaxCharges
@@ -1814,7 +1695,7 @@ local function TryRegisterAbilityHooks()
                     end
 
                     override:set(true)
-                    newValue:set(ascendingAssaultAPReducedCost)
+                    newValue:set(config.AscendingAssaultAPReducedCost)
                 end
             end)
         end)
@@ -1845,7 +1726,7 @@ local function TryRegisterAbilityHooks()
 
                 -- 50% chance to play the voiceline.
                 if math.random(1, 100) <= 50 then
-                    PlayVoiceLine(battleAudioManager, "overcharge2")
+                    SoundHelper.PlayVoiceLine(battleAudioManager, "overcharge2")
                 end
             end)
         end)
@@ -1895,7 +1776,7 @@ local function TryRegisterAbilityHooks()
 
                 -- Check if we have the required charge consumption amount for Phantom Stars.
                 -- If yes, override its usual AP cost to the new value.
-                if virtualCurrentCharges >= phantomStarsChargesConsumed then
+                if virtualCurrentCharges >= config.PhantomStarsChargesConsumed then
                     local skillScript = CustomFunctions.unwrap(param)
 
                     if skillScript and skillScript.SkillState then
@@ -1903,7 +1784,7 @@ local function TryRegisterAbilityHooks()
                     end
 
                     override:set(true)
-                    newValue:set(phantomStarsAPReducedCost)
+                    newValue:set(config.PhantomStarsAPReducedCost)
                 end
             end)
         end)
@@ -1934,7 +1815,7 @@ local function TryRegisterAbilityHooks()
 
                 -- 50% chance to play the voiceline.
                 if math.random(1, 100) <= 50 then
-                    PlayVoiceLine(battleAudioManager, "overcharge1")
+                    SoundHelper.PlayVoiceLine(battleAudioManager, "overcharge1")
                 end
             end)
 
@@ -1977,7 +1858,7 @@ local function TryRegisterAbilityHooks()
 
                 -- Give us an AP value equal to the consumed charge amount with reason 1: AP restored through skill.
                 castingCharacterClass:GainAP(consumedChargesFromAbility, 1)
-                Log("Restored " .. paradigmShiftAPPerCharge .. " extra AP from consumed charges.")
+                Log("Restored " .. config.ParadigmShiftAPPerCharge .. " extra AP from consumed charges.")
             end)
         end)
 
@@ -2062,7 +1943,7 @@ local function TryRegisterAbilityHooks()
 
                 -- 50% chance to play the voiceline.
                 if math.random(1, 100) <= 50 then
-                    PlayVoiceLine(battleAudioManager, "buffteam")
+                    SoundHelper.PlayVoiceLine(battleAudioManager, "buffteam")
                 end
 
                 -- Calculate amount of consumed charges.
@@ -2181,7 +2062,7 @@ local function TryRegisterAbilityHooks()
 
                 -- 50% chance to play the voiceline.
                 if math.random(1, 100) <= 50 then
-                    PlayVoiceLine(battleAudioManager, "buffteam")
+                    SoundHelper.PlayVoiceLine(battleAudioManager, "buffteam")
                 end
             end)
 
@@ -2313,7 +2194,7 @@ local function TryRegisterAbilityHooks()
                 -- Reset the berserk character's size back to normal if it is the owner of the charge component.
                 -- We do not want to affect normal enemies with this and have them keep their size scaling.
                 if chargeComponent:IsCharacterOwner(berserkCharacter) then
-                    berserkCharacter:ChangeSize(berserkScaleSize, berserkScaleTime, nil)
+                    berserkCharacter:ChangeSize(config.BerserkScaleSize, config.BerserkScaleTime, nil)
                     Log("BERSERK_TURN_START: Set berserk character's size back to normal.")
                 end
             end)
@@ -2327,7 +2208,7 @@ local function TryRegisterAbilityHooks()
     end
 end
 
--- This allows ut o check if our charge component hooks were successful, a pretty ugly looking check though.
+-- This allows us to check if our charge component hooks were successful, a pretty ugly looking check though.
 local function AreAllChargeComponentHooksRegistered()
     return receiveBeginPlayHookRegistered
         and onTurnStartHookRegistered
@@ -2337,6 +2218,8 @@ local function AreAllChargeComponentHooksRegistered()
         and onBreakStunHookRegistered
         and onReceivedDamageHookRegistered
         and changeChargeHookRegistered
+        and contstructMiniUIPortraitHookRegistered
+        and constructPortraitHookRegistered
 end
 
 -- TODO: This requires more testing to make sure this is stable enough.
@@ -2398,6 +2281,34 @@ local function TryRegisterChargeComponentHooks()
         end
     end
 
+    -- This hook gets called when the game is constructing the mini UI for the Overcharge counter, responsible for drawing the current amount of charges next to the character portrait.
+    if not contstructMiniUIPortraitHookRegistered then
+        local ok = pcall(function()
+            RegisterHook(hooking.OVERCHARGE_MINIUI_CONSTRUCT, function(param)
+                -- This is the full widget object responsible for the UI.
+                local self = CustomFunctions.unwrap(param)
+
+                if self:IsValid() then
+                    -- Cache the portrait text property for the charge counter for this fight so that we can call it from any of our hooks.
+                    miniUI_ChargePortrait = self
+
+                    -- Modify the portrait's charge counter.
+                    -- Since we are using the game's native SetText() function which handles the writing into the property, using UE4SS' FText() function should be safe here.
+                    if self.TextBlock_MaxValue:IsValid() then
+                        Log("Modifying Overcharge's mini UI counter to " .. tostring(virtualMaxCharges) .. " max charges.")
+                        self.TextBlock_MaxValue:SetText(FText("/" .. tostring(virtualMaxCharges)))
+                    end
+                end
+            end)
+        end)
+
+        -- If it was successful, mark the hooks registrations as true.
+        if ok then
+            contstructMiniUIPortraitHookRegistered = true
+            Log("Successfully registered OVERCHARGE_MINIUI_CONSTRUCT execution hook.")
+        end
+    end
+
     -- This hook gets called when the game thinks we reached the maximum charge amount and slightly moves the text and plays the "fully charged" sound.
     -- It messes up our custom charge counter in the UI once we reach the maximum charges so we have to fix it here.
     if not updateCurrentValueHookRegistered then
@@ -2441,7 +2352,8 @@ local function TryRegisterChargeComponentHooks()
                     TryRegisterAbilityHooks()
 
                     -- This loads and initializes the skill voicelines, so we can use them in our Lua code during battle upon using specific skills.
-                    LoadSoundAssets()
+                    SoundHelper.LoadSoundAssets()
+                    loadingSystemComponent = nil
 
                     -- Reset all ability states incase some are left from our last fight.
                     ResetAbilityStates()
@@ -2722,16 +2634,16 @@ local function TryRegisterChargeComponentHooks()
                     -- Broken by Shatter.
                     if usedShatter then
                         -- We remove -10 from the calculated amount because Shatter is hardcoded to give 10 charges on a break.
-                        Log("Player caused break using the ability Shatter, instantly refilling charges by " .. (shatterChargesPercentage * 100) .. "% of " .. virtualMaxCharges .. " total charges.")
-                        chargeComponent.ChangeCharge(math.floor(virtualMaxCharges * shatterChargesPercentage) - 10)
+                        Log("Player caused break using the ability Shatter, instantly refilling charges by " .. (config.ShatterChargesPercentage * 100) .. "% of " .. virtualMaxCharges .. " total charges.")
+                        chargeComponent.ChangeCharge(math.floor(virtualMaxCharges * config.ShatterChargesPercentage) - 10)
                     -- Broken by Overcharge.
                     elseif usedOvercharge then
-                        Log("Player caused break using the ability Overcharge, instantly refilling charges by " .. (overchargeChargesPercentage * 100) .. "% of " .. virtualMaxCharges .. " total charges.")
-                        chargeComponent.ChangeCharge(math.floor(virtualMaxCharges * overchargeChargesPercentage))
+                        Log("Player caused break using the ability Overcharge, instantly refilling charges by " .. (config.OverchargeChargesPercentage * 100) .. "% of " .. virtualMaxCharges .. " total charges.")
+                        chargeComponent.ChangeCharge(math.floor(virtualMaxCharges * config.OverchargeChargesPercentage))
                     -- Broken by Phantom Stars.
                     elseif usedPhantomStars then
-                        Log("Player caused break using the ability Phantom Stars, instantly refilling charges by " .. (phantomStarsChargesPercentage * 100) .. "% of " .. virtualMaxCharges .. " total charges.")
-                        chargeComponent.ChangeCharge(math.floor(virtualMaxCharges * phantomStarsChargesPercentage))
+                        Log("Player caused break using the ability Phantom Stars, instantly refilling charges by " .. (config.PhantomStarsChargesPercentage * 100) .. "% of " .. virtualMaxCharges .. " total charges.")
+                        chargeComponent.ChangeCharge(math.floor(virtualMaxCharges * config.PhantomStarsChargesPercentage))
                     end
                 end
 
@@ -2768,6 +2680,10 @@ local function TryRegisterChargeComponentHooks()
 
                 local damageObject = CustomFunctions.unwrap(damageParam)
 
+                if not damageObject then
+                    return
+                end
+
                 local statsComponentSource = damageObject.SourceCharacter
                 local statsComponentTarget = damageObject.TargetCharacter
 
@@ -2775,8 +2691,17 @@ local function TryRegisterChargeComponentHooks()
                     return
                 end
 
-                local sourceOwner = statsComponentSource.GetOwner()
-                local targetOwner = statsComponentTarget.GetOwner()
+                -- Calling GetOwner() can throw a Lua error if an enemy takes burn damage from a non-existing character.
+                -- Usually happens when the character who applied burn was deleted or it was forcefully removed on the second phase of some bosses, such as the Lampmaster.
+                local success, sourceOwner, targetOwner = pcall(function()
+                    return statsComponentSource:GetOwner(), statsComponentTarget:GetOwner()
+                end)
+
+                -- Simply catch the thrown error from the pcall and return.
+                if not success then
+                    Log("Failed to get stats component owners: " .. tostring(sourceOwner) .. " and " .. tostring(targetOwner) .. "!")
+                    return
+                end
 
                 local isSourceOwner = sourceOwner:IsValid() and chargeComponent:IsCharacterOwner(sourceOwner)
                 local isTargetOwner = targetOwner:IsValid() and chargeComponent:IsCharacterOwner(targetOwner)
@@ -2813,6 +2738,15 @@ local function TryRegisterChargeComponentHooks()
                     -- Damage Reason 1: Skill damage.
                     -- Add or remove charges for damaging enemies with abilities if it is NOT from Overcharge, Shatter or Marking Shot, if enabled.
                     if damageReason == 1 then
+                        -- Give us full charges immediately if we're hitting the balloon dummy in Lumière tutorial fight.
+                        -- The balloon is resistant to physical attacks so using Gunslinger would require about ~60 charges to destroy it which takes a long time.
+                        -- Also give instant full charges when damaging Painted Renoir on the Stone Wave Cliffs, as a way to show Gustave's rage and anger towards him, which fuels his arm during his final fight.
+                        local fullName = targetOwner:GetFullName()
+                        if fullName and (fullName:find("BP_EnemyBattle_LumiereAct1_PunchingBall_C") or fullName:find("BP_EnemyBattle_MM_MirrorRenoir_SeaCliff_C")) then
+                            chargeComponent.ChangeCharge(virtualMaxCharges)
+                            Log("Attacking dummy balloon from Lumiere or Painted Renoir from Stone Wave Cliffs, fully charged Overcharge!")
+                        end
+
                         chargeComponent.ChangeCharge(config.ChargesFromSkillDamage - 1)
                         Log("Skill Damage: +" .. config.ChargesFromSkillDamage .. " charges added.")
 
@@ -2846,47 +2780,43 @@ local function TryRegisterChargeComponentHooks()
                         if damageObject.IsCriticalHit then
                             -- Light Holder.
                             if usedLightHolder then
-                                chargeComponent.ChangeCharge(lightHolderChargesPerCritical)
-                                Log("Light Holder Critical Damage: +" .. lightHolderChargesPerCritical .. " charges added.")
+                                chargeComponent.ChangeCharge(config.LightHolderChargesPerCritical)
+                                Log("Light Holder Critical Damage: +" .. config.LightHolderChargesPerCritical .. " charges added.")
 
                             -- From Fire.
                             elseif usedFromFire then
-                                chargeComponent.ChangeCharge(fromFireChargesPerCritical)
-                                Log("From Fire Critical Damage: +" .. fromFireChargesPerCritical .. " charges added.")
+                                chargeComponent.ChangeCharge(config.FromFireChargesPerCritical)
+                                Log("From Fire Critical Damage: +" .. config.FromFireChargesPerCritical .. " charges added.")
 
                             -- Lumiere Assault.
                             -- Remove 1 from our value since the base game adds 1 per critical hit naturally already.
                             elseif usedLumiereAssault then
-                                chargeComponent.ChangeCharge(lumiereAssaultChargesPerCritical - 1)
-                                Log("Lumiere Assault Critical Damage: +" .. lumiereAssaultChargesPerCritical .. " charges added.")
+                                chargeComponent.ChangeCharge(config.LumiereAssaultChargesPerCritical - 1)
+                                Log("Lumiere Assault Critical Damage: +" .. config.LumiereAssaultChargesPerCritical .. " charges added.")
 
                             -- Strike Storm.
                             -- Remove 2 from our value since the base game adds 2 per critical hit naturally already.
                             elseif usedStrikeStorm then
-                                chargeComponent.ChangeCharge(strikeStormChargesPerCritical - 2)
-                                Log("Strike Storm Critical Damage: +" .. strikeStormChargesPerCritical .. " charges added.")
+                                chargeComponent.ChangeCharge(config.StrikeStormChargesPerCritical - 2)
+                                Log("Strike Storm Critical Damage: +" .. config.StrikeStormChargesPerCritical .. " charges added.")
                             end
                         end
 
                         -- The base game still adds charges from Overcharge's, Shatter's and Marking Shot's hit, so remove these hits.
                         if usedShatter or usedOvercharge or usedMarkingShot then
                             -- Adjust for doubled charge generation if we have the corresponding lumina equipped.
-                            if equippedCustomPassives["Perfection_StartRankS"] then
-                                chargeComponent.ChangeCharge((-2) * config.ChargesFromSkillDamage)
-                            else
-                                chargeComponent.ChangeCharge((-1) * config.ChargesFromSkillDamage)
-                            end
+                            chargeComponent.ChangeCharge((-1) * virtualMaxCharges)
                         end
 
                         -- Monitor Endbringer's hits when the target is stunned for bonus charges.
                         if usedEndbringer and statsComponentTarget.IsStun then
-                            chargeComponent.ChangeCharge(endbringerChargesPerStunnedHit)
-                            Log("Endbringer Stun Damage: +" .. endbringerChargesPerStunnedHit .. " charges added.")
+                            chargeComponent.ChangeCharge(config.EndbringerChargesPerStunnedHit)
+                            Log("Endbringer Stun Damage: +" .. config.EndbringerChargesPerStunnedHit .. " charges added.")
 
                         -- Add additional charges per hit from Speed Burst.
                         elseif usedSpeedBurst then
-                            chargeComponent.ChangeCharge(speedBurstChargesPerHit)
-                            Log("Speed Burst Damage: +" .. speedBurstChargesPerHit .. " charges added.")
+                            chargeComponent.ChangeCharge(config.SpeedBurstChargesPerHit)
+                            Log("Speed Burst Damage: +" .. config.SpeedBurstChargesPerHit .. " charges added.")
                         
                         -- Marking Shot has a chance to stun an enemy.
                         elseif usedMarkingShot then
@@ -2894,7 +2824,7 @@ local function TryRegisterChargeComponentHooks()
                             -- This means the chance depends on current charges, so 33 / 100 = 0.33, which is a 33% chance to stun in this example.
                             -- Make sure we use the VirtualMaxCharges from the config so luminas that modify the max cap don't affect this.
                             local random = math.random(1, 100)
-                            local chance = ( (consumedChargesFromAbility / config.VirtualMaxCharges * markingShotMaxStunChance) * 100 )
+                            local chance = ( (consumedChargesFromAbility / config.VirtualMaxCharges * config.MarkingShotMaxStunChance) * 100 )
 
                             if random <= chance then
                                 -- Parameters: Character that gets broken and reason 1: Skill. This also resets break bar.
@@ -3306,6 +3236,11 @@ local function TryRegisterChargeComponentHooks()
                     chargePortrait.TextBlock_CurrentValue:SetText(FText(tostring(virtualCurrentCharges)))
                 end
 
+                if IsValidMiniUIChargePortrait() then
+                    Log("Update mini UI counter via CHANGE_CHARGE.")
+                    miniUI_ChargePortrait.TextBlock_CurrentValue:SetText(FText(tostring(virtualCurrentCharges)))
+                end
+
                 updatingNativeCharge = false
             end)
         end)
@@ -3345,7 +3280,7 @@ RegisterHook(hooking.CLIENT_RESTART, function(param)
     clientHookRegistered = true
 
     -- Try to load all charge component hooks upon loading a save because we prefer to have them as early as possible.
-    -- This will fail if we don't have the overcharge character in our class but we want to have them registered as early as possible.
+    -- This will fail if we don't have the overcharge character in our group but we want to have them registered as early as possible.
     TryRegisterChargeComponentHooks()
 
     -- Unfortunately we failed to register our charge component hooks.
@@ -3430,51 +3365,51 @@ RegisterHook(hooking.CLIENT_RESTART, function(param)
         -- Used Overcharge, this will let us further increase its damage per charge if so desired.
         if usedOvercharge then
             modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "UnleashCharge", consumedChargesFromAbility)
-            modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "UnleashCharge")
+            modifier.AttackElement = ElementsHelper.GetAbilityOverrideElement(modifier.AttackElement, "UnleashCharge")
 
             -- Overcharge is full, further increase Overcharge's bonus damage!
             if fullChargeBonus then
-                modifier.FinalDamageMultiplier = modifier.FinalDamageMultiplier + overchargeMaxChargesBonus
-                Log("Full charge bonus: Increasing Overcharge's damage by another +" .. overchargeMaxChargesBonus .. " to a total of " .. modifier.FinalDamageMultiplier .. ".")
+                modifier.FinalDamageMultiplier = modifier.FinalDamageMultiplier + config.OverchargeMaxChargesBonus
+                Log("Full charge bonus: Increasing Overcharge's damage by another +" .. config.OverchargeMaxChargesBonus .. " to a total of " .. modifier.FinalDamageMultiplier .. ".")
             end
 
         -- Used Shatter, it consumes ALL charges for increased damage!
         -- This is basically another version of Overcharge now, except it's slightly weaker but hits all enemies instead.
         elseif usedShatter then
             modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "PerfectBreak_Gustave", consumedChargesFromAbility)
-            modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "PerfectBreak_Gustave")
+            modifier.AttackElement = ElementsHelper.GetAbilityOverrideElement(modifier.AttackElement, "PerfectBreak_Gustave")
 
             -- Overcharge is full, further increase Shatter's bonus damage!
             if fullChargeBonus then
-                modifier.FinalDamageMultiplier = modifier.FinalDamageMultiplier + shatterMaxChargesBonus
-                Log("Full charge bonus: Increasing Shatter's damage by another +" .. shatterMaxChargesBonus .. " to a total of " .. modifier.FinalDamageMultiplier .. ".")
+                modifier.FinalDamageMultiplier = modifier.FinalDamageMultiplier + config.ShatterMaxChargesBonus
+                Log("Full charge bonus: Increasing Shatter's damage by another +" .. config.ShatterMaxChargesBonus .. " to a total of " .. modifier.FinalDamageMultiplier .. ".")
             end
 
         -- Used Marking Shot, it consumes ALL charges for increased damage and a chance to instantly break!
         -- This is the third Overcharge-like ability now, except it's the weakest in damage but has a chance to stun an enemy immediately.
         elseif usedMarkingShot then
             modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "MarkingShot_Gustave", consumedChargesFromAbility)
-            modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "MarkingShot_Gustave")
+            modifier.AttackElement = ElementsHelper.GetAbilityOverrideElement(modifier.AttackElement, "MarkingShot_Gustave")
 
             -- Overcharge is full, further increase Marking Shot's bonus damage!
             if fullChargeBonus then
-                modifier.FinalDamageMultiplier = modifier.FinalDamageMultiplier + markingShotMaxChargesBonus
-                Log("Full charge bonus: Increasing Marking Shot's damage by another +" .. markingShotMaxChargesBonus .. " to a total of " .. modifier.FinalDamageMultiplier .. ".")
+                modifier.FinalDamageMultiplier = modifier.FinalDamageMultiplier + config.MarkingShotMaxChargesBonus
+                Log("Full charge bonus: Increasing Marking Shot's damage by another +" .. config.MarkingShotMaxChargesBonus .. " to a total of " .. modifier.FinalDamageMultiplier .. ".")
             end
 
         -- Used Lumiere Assault.
         elseif usedLumiereAssault then
-            modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "Combo1_Gustave")
+            modifier.AttackElement = ElementsHelper.GetAbilityOverrideElement(modifier.AttackElement, "Combo1_Gustave")
             skillHitCounter = skillHitCounter + 1
 
         -- Used Strike Storm.
         elseif usedStrikeStorm then
-            modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "StrikeStorm_Gustave")
+            modifier.AttackElement = ElementsHelper.GetAbilityOverrideElement(modifier.AttackElement, "StrikeStorm_Gustave")
 
         -- Used From Fire.
         elseif usedFromFire then
             modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "FromFire_Gustave", consumedChargesFromAbility)
-            modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "FromFire_Gustave")
+            modifier.AttackElement = ElementsHelper.GetAbilityOverrideElement(modifier.AttackElement, "FromFire_Gustave")
 
             -- Heal our character based on the amount of charges we consumed.
             local result = {}
@@ -3483,7 +3418,7 @@ RegisterHook(hooking.CLIENT_RESTART, function(param)
             modifier.DamageSource:GetMaxHP(result)
 
             -- Formula: Max health x heal per charge x amount of charges.
-            local healAmount = (result.MaxHP * fromFireHealPerCharge) * consumedChargesFromAbility
+            local healAmount = (result.MaxHP * config.FromFireHealPerCharge) * consumedChargesFromAbility
 
             -- Heal based on amount of charges and max health.
             -- Params: Heal amount, character that healed us (ourselves in this case), play heal effect, self heal, debug string.
@@ -3495,19 +3430,19 @@ RegisterHook(hooking.CLIENT_RESTART, function(param)
         -- Used the unused version of Radiant Strike.
         elseif usedRadiantStrike then
             modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "RadiantStrike", consumedChargesFromAbility)
-            modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "RadiantStrike")
+            modifier.AttackElement = ElementsHelper.GetAbilityOverrideElement(modifier.AttackElement, "RadiantStrike")
 
         -- Used the unused version of Light Holder which says it scales with health, get the max HP!
         -- I decided to not go for current health since that is a bit lame really, makes low-health builds not good with it then.
         -- This ability does not consume charges, it generates bonus charges on criticals instead.
         elseif usedLightHolder then
-            modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "OldLightHolder")
+            modifier.AttackElement = ElementsHelper.GetAbilityOverrideElement(modifier.AttackElement, "OldLightHolder")
 
             local result = {}
             modifier.DamageSource:GetMaxHP(result)
 
             -- Formula: Every x amount of max. health adds +x to the multiplier.
-            local addedModifier = (result.MaxHP / lightHolderHealthChunkSize) * lightHolderDamagePerHealthChunk
+            local addedModifier = (result.MaxHP / config.LightHolderHealthChunkSize) * config.LightHolderDamagePerHealthChunk
 
             Log("FinalDamageMultiplier before: " .. tostring(modifier.FinalDamageMultiplier))
 
@@ -3518,70 +3453,70 @@ RegisterHook(hooking.CLIENT_RESTART, function(param)
 
         -- Used Endbringer.
         elseif usedEndbringer then
-            modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "EndBringer")
+            modifier.AttackElement = ElementsHelper.GetAbilityOverrideElement(modifier.AttackElement, "EndBringer")
 
         -- Used Berserk Slash.
         elseif usedBerserkSlash then
             modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "BerserkSlash", consumedChargesFromAbility)
-            modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "BerserkSlash")
+            modifier.AttackElement = ElementsHelper.GetAbilityOverrideElement(modifier.AttackElement, "BerserkSlash")
 
         -- Used Defiant Strike.
         elseif usedDefiantStrike then
-            modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "DefiantStrike")
+            modifier.AttackElement = ElementsHelper.GetAbilityOverrideElement(modifier.AttackElement, "DefiantStrike")
             skillHitCounter = skillHitCounter + 1
 
         -- Used Blitz.
         elseif usedBlitz then
             modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "Blitz", consumedChargesFromAbility)
-            modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "Blitz")
+            modifier.AttackElement = ElementsHelper.GetAbilityOverrideElement(modifier.AttackElement, "Blitz")
 
         -- Used Follow Up.
         elseif usedFollowUp then
             modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "FollowUp", consumedChargesFromAbility)
-            modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "FollowUp")
+            modifier.AttackElement = ElementsHelper.GetAbilityOverrideElement(modifier.AttackElement, "FollowUp")
 
         -- Used Ascending Assault.
         elseif usedAscendingAssault then
             modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "AscendingAssault", consumedChargesFromAbility)
-            modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "AscendingAssault")
+            modifier.AttackElement = ElementsHelper.GetAbilityOverrideElement(modifier.AttackElement, "AscendingAssault")
 
         -- Used Speed Burst.
         elseif usedSpeedBurst then
-            modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "SpeedBurst")
+            modifier.AttackElement = ElementsHelper.GetAbilityOverrideElement(modifier.AttackElement, "SpeedBurst")
 
         -- Used Phantom Stars.
         elseif usedPhantomStars then
             modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "PhantomStars", consumedChargesFromAbility)
-            modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "PhantomStars")
+            modifier.AttackElement = ElementsHelper.GetAbilityOverrideElement(modifier.AttackElement, "PhantomStars")
 
         -- Used Paradigm Shift.
         elseif usedParadigmShift then
-            modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "ParadigmShift")
+            modifier.AttackElement = ElementsHelper.GetAbilityOverrideElement(modifier.AttackElement, "ParadigmShift")
 
         -- Used Purification.
         elseif usedPurification then
             modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "Purification", consumedChargesFromAbility)
-            modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "Purification")
+            modifier.AttackElement = ElementsHelper.GetAbilityOverrideElement(modifier.AttackElement, "Purification")
             skillHitCounter = skillHitCounter + 1
 
         -- Used Gustave's Homage.
         elseif usedHomage then
             modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "GustavesMemoire", consumedChargesFromAbility)
-            modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "GustavesMemoire")
+            modifier.AttackElement = ElementsHelper.GetAbilityOverrideElement(modifier.AttackElement, "GustavesMemoire")
             skillHitCounter = skillHitCounter + 1
 
         -- Used Sabotage.
         elseif usedSabotage then
-            modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "Sabotage")
+            modifier.AttackElement = ElementsHelper.GetAbilityOverrideElement(modifier.AttackElement, "Sabotage")
 
         -- Used Gommage.
         elseif usedAngelsEyes then
-            modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "Gommage")
+            modifier.AttackElement = ElementsHelper.GetAbilityOverrideElement(modifier.AttackElement, "Gommage")
 
         -- Used Steeled strike.
         elseif usedSteeledStrike then
             modifier.FinalDamageMultiplier = IncreaseDamageMultiplierBasedOnCharges(modifier.FinalDamageMultiplier, "SteeledStrike", consumedChargesFromAbility)
-            modifier.AttackElement = GetAbilityOverrideElement(modifier.AttackElement, "SteeledStrike")
+            modifier.AttackElement = ElementsHelper.GetAbilityOverrideElement(modifier.AttackElement, "SteeledStrike")
         end
 
         -- Check if any charge generating abilities were used because they have a couple luminas affecting them.
@@ -3748,7 +3683,7 @@ RegisterHook(hooking.CLIENT_RESTART, function(param)
         -- Check if we are using Acending Assault and have enough charges for it.
         -- This ability is a bit special since it can consume more charges the more it gets used.
         if abilityValues.ChargesConsumed and abilityNameID == "AscendingAssault" then
-            local consumedCharges = abilityValues.ChargesConsumed + (ascendingAssaultCounter * ascendingAssaultAdditionalChargesConsumed)
+            local consumedCharges = abilityValues.ChargesConsumed + (ascendingAssaultCounter * config.AscendingAssaultAdditionalChargesConsumed)
 
             if consumedCharges > virtualMaxCharges then
                 consumedCharges = virtualMaxCharges
@@ -3805,12 +3740,6 @@ RegisterHook(hooking.CLIENT_RESTART, function(param)
             return
         end
 
-        -- We used an ability that we want to keep its original voiceline for, or we are calling this function with a custom voiceline right now.
-        -- In both cases do nothing.
-        if KeepOriginalVoiceline() or voiceLinePlaying then
-            return
-        end
-
         -- This is the current audio manager instance.
         local self = CustomFunctions.unwrap(param)
 
@@ -3819,55 +3748,8 @@ RegisterHook(hooking.CLIENT_RESTART, function(param)
             return
         end
 
-        -- Silence the original voicelines of this ability.
-        local interrupted = {}
-        self:TryInterruptActiveSkillBattleLine(interrupted)
-        Log("Silenced current battle line.")
-
-        -- 50% chance to play no voiceline still since this function seems to trigger all the time, even if nothing is said.
-        -- Otherwise we'd hear the voicelines with every cast.
-        if math.random(1, 100) <= 50 then
-            Log("50% RNG chance wasn't succcessful, not playing voiceline this time.")
-            return
-        end
-
-        local voiceLine
-
-        -- Check which ability we used and replace its original voiceline with a custom voiceline from our list.
-        if usedOverload then
-            voiceLine = voiceLinesList["counter"]
-        elseif usedSteeledStrike then
-            voiceLine = voiceLinesList["takethemdown"]
-        elseif usedEndbringer then
-            voiceLine = voiceLinesList["overcharge3"]
-        elseif usedPhantomStars then
-            voiceLine = voiceLinesList["takethemdown"]
-        elseif usedBerserkSlash then
-            voiceLine = voiceLinesList["breakcycle"]
-        elseif usedDefiantStrike then
-            voiceLine = voiceLinesList["battlewon"]
-        elseif usedBlitz then
-            voiceLine = voiceLinesList["buffteam"]
-        elseif usedPurification then
-            voiceLine = voiceLinesList["overcharge3"]
-        elseif usedLightHolder then
-            voiceLine = voiceLinesList["takethemdown"]
-        elseif usedHomage then
-            voiceLine = voiceLinesList["maelle_concerned"]
-        elseif usedSabotage then
-            voiceLine = voiceLinesList["battlewon"]
-        elseif usedAngelsEyes then
-            voiceLine = voiceLinesList["overcharge4"]
-        else
-            return
-        end
-        
-        if voiceLine and voiceLine:IsValid() then
-            voiceLinePlaying = true
-            self:PlaySkillBattleLineInternal(voiceLine)
-            Log("Replaced battle line with custom value.")
-            voiceLinePlaying = false
-        end
+        -- Replace the original battle line of the ability with a custom one.
+        SoundHelper.PlaySkillBattleLine(self, usedOvercharge, usedStrikeStorm, usedRecovery, usedOverload, usedSteeledStrike, usedEndbringer, usedPhantomStars, usedBerserkSlash, usedDefiantStrike, usedBlitz, usedPurification, usedLightHolder, usedHomage, usedSabotage, usedAngelsEyes)
     end)
 
     -- This hook runs at the start of a battle, registering all objects used by objects such as skills, luminas and actors (e.g. enemies).
@@ -3889,37 +3771,7 @@ RegisterHook(hooking.CLIENT_RESTART, function(param)
         -- Technically this guard isn't needed because we check if we cached the loading system component and then never enter this part of the code anymore.
         -- But you can never be safe enough.
         loadingDependenciesGuard = true
-
-        -- TODO: This works and since we use the game's proper way of loading dependencies, it will cause no issues and the game will handle everything else regarding lifetime and whatnot.
-        -- But if we don't have an overcharge component (character missing) then it would be nice to check if we really need to load them for the current fight.
-        -- Again, this would be a very small but nice optimization to respect the game's loading patterns, but this is something for a future clean-up update.
-        -- This causes no performance issues or much increased memory usage, it's just a few extra abilities that always get loaded so we can use their tied voicelines.
-        -- Comparing the fact that using 3 characters with 6 skills each loads 18 of them in a battle, this isn't a big deal.
-        if cachedSkills["UnleashCharge"] and cachedSkills["UnleashCharge"]:IsValid() then
-            self:LoadDependenciesFromObject(cachedSkills["UnleashCharge"])
-            Log("Loaded skill and sound dependencies for UnleashCharge skill.")
-        end
-
-        if cachedSkills["MarkingShot_Gustave"] and cachedSkills["MarkingShot_Gustave"]:IsValid() then
-            self:LoadDependenciesFromObject(cachedSkills["MarkingShot_Gustave"])
-            Log("Loaded skill and sound dependencies for MarkingShot_Gustave skill.")
-        end
-
-        if cachedSkills["StrikeStorm_Gustave"] and cachedSkills["StrikeStorm_Gustave"]:IsValid() then
-            self:LoadDependenciesFromObject(cachedSkills["StrikeStorm_Gustave"])
-            Log("Loaded skill and sound dependencies for StrikeStorm_Gustave skill.")
-        end
-
-        if cachedSkills["PerfectRecovery_Gustave"] and cachedSkills["PerfectRecovery_Gustave"]:IsValid() then
-            self:LoadDependenciesFromObject(cachedSkills["PerfectRecovery_Gustave"])
-            Log("Loaded skill and sound dependencies for PerfectRecovery_Gustave skill.")
-        end
-
-        if cachedSkills["Powerful_Gustave"] and cachedSkills["Powerful_Gustave"]:IsValid() then
-            self:LoadDependenciesFromObject(cachedSkills["Powerful_Gustave"])
-            Log("Loaded skill and sound dependencies for Powerful_Gustave skill.")
-        end
-
+        SoundHelper.LoadSoundDependencies(loadingSystemComponent, cachedSkills)
         loadingDependenciesGuard = false
     end)
 

@@ -27,6 +27,7 @@ return
     ON_RECEIVED_DAMAGE = "/Game/Gameplay/Battle/UniqueMechanics/Charge/BP_UniqueMechanic_Charge_Component.BP_UniqueMechanic_Charge_Component_C:OnCharacterReceivedDamage",
     ON_BREAK_STUN = "/Game/jRPGTemplate/Blueprints/Components/AC_jRPG_CharacterBattleStats.AC_jRPG_CharacterBattleStats_C:PerformBreakStun",
     OVERCHARGE_WIDGET_CONSTRUCT = "/Game/Gameplay/Battle/UniqueMechanics/Charge/WBP_UniqueMechanic_Charge.WBP_UniqueMechanic_Charge_C:Construct",
+    OVERCHARGE_MINIUI_CONSTRUCT = "/Game/UI/Widgets/HUD_Battle/SubWidget/Characters/UniqueMecanicsWBP/WBP_PortraitUniqueMechanic_Overcharge.WBP_PortraitUniqueMechanic_Overcharge_C:Construct",
     UPDATE_CURRENT_VALUE = "/Game/Gameplay/Battle/UniqueMechanics/Charge/WBP_UniqueMechanic_Charge.WBP_UniqueMechanic_Charge_C:UpdateCurrentValue",
 
     -- These are all ability hooks that we use so that they can have additional effects as well as consume and generate charges.
