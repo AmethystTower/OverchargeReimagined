@@ -4044,17 +4044,17 @@ NotifyOnNewObject(hooking.BP_NOAH_BATTLE, function(object)
 
     if versoGradientParry and versoGradientParry:IsValid() and object.AnimGradientParry ~= versoGradientParry then
         object.AnimGradientParry = versoGradientParry
-        Log("Patched Noah's gradient parry animation.")
+        --Log("Patched Noah's gradient parry animation.")
     end
 
     if versoGradientCounter and versoGradientCounter:IsValid() and object.GradientCounterSequence ~= versoGradientCounter then
         object.GradientCounterSequence = versoGradientCounter
-        Log("Patched Noah's gradient counter animation.")
+        --Log("Patched Noah's gradient counter animation.")
     end
 
     if versoGradientPoseCamera and versoGradientPoseCamera:IsValid() and object.BattleSequenceData.UltimateSelection_11_00E904274715D2FC287707AB64ED5557 ~= versoGradientPoseCamera then
         object.BattleSequenceData.UltimateSelection_11_00E904274715D2FC287707AB64ED5557 = versoGradientPoseCamera
-        Log("Patched Noah's gradient selection camera animation.")
+        --Log("Patched Noah's gradient selection camera animation.")
     end
 
     object.PPGradientCenter.X = 0.452
@@ -4073,18 +4073,18 @@ NotifyOnNewObject(hooking.ABP_NOAH_BATTLE, function(object)
 
     if versoGradientPoseIntro and versoGradientPoseIntro:IsValid() and object.CharaTurn_MainIdle_Ultimate_Intro ~= versoGradientPoseIntro then
         object.CharaTurn_MainIdle_Ultimate_Intro = versoGradientPoseIntro
-        Log("Patched Noah's gradient intro animation.")
+        --Log("Patched Noah's gradient intro animation.")
     end
 
     if versoGradientPoseIdle and versoGradientPoseIdle:IsValid() then
         if object.CharaTurn_MainIdle_Ultimate_Idle ~= versoGradientPoseIdle then
             object.CharaTurn_MainIdle_Ultimate_Idle = versoGradientPoseIdle
-            Log("Patched Noah's gradient idle animation.")
+            --Log("Patched Noah's gradient idle animation.")
         end
 
         if object.CharaTurn_MainIdle_Ultimate_Targeting ~= versoGradientPoseIdle then
             object.CharaTurn_MainIdle_Ultimate_Targeting = versoGradientPoseIdle
-            Log("Patched Noah's gradient targeting animation.")
+            --Log("Patched Noah's gradient targeting animation.")
         end
     end
 end)

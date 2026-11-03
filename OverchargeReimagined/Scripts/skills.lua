@@ -268,7 +268,7 @@ local function Init(log, config, elementalEnum)
     abilityValues["DefiantStrike"].OverchargeName = config.DefiantStrikeName
     abilityValues["DefiantStrike"].OverchargeBonusDescription = "Generates " .. string.format("%g", (config.VirtualMaxCharges * config.DefiantStrikeChargesPercentage)) .. " <keyword id=\"Gustave_Charges\">Charge(s)</> upon being used."
     abilityValues["DefiantStrike"].OverchargeLongDescription = "Deals high single target " .. GetElementString(config.DefiantStrikeElement, elementalEnum, false) .. " damage that applies <keyword id=\"StatusEffect_Mark\">Mark</> 2 hits.\n" .. "Costs 30% of current Health.\n" .. abilityValues["DefiantStrike"].OverchargeBonusDescription
-    abilityValues["DefiantStrike"].OverchargeShortDescription = "High " .. GetElementString(config.DefiantStrikeElement, elementalEnum, false) .. " damage. 2 hits. Applies <keyword id=\"StatusEffect_Mark\">Mark</>\n" .. "Costs 30% of current Health.\n" .. abilityValues["DefiantStrike"].OverchargeBonusDescription
+    abilityValues["DefiantStrike"].OverchargeShortDescription = "High " .. GetElementString(config.DefiantStrikeElement, elementalEnum, true) .. " damage. 2 hits. Applies <keyword id=\"StatusEffect_Mark\">Mark</>\n" .. "Costs 30% of current Health.\n" .. abilityValues["DefiantStrike"].OverchargeBonusDescription
     abilityValues["DefiantStrike"].PerfectionName = "Defiant Strike"
     abilityValues["DefiantStrike"].PerfectionBonusDescription = "<img id=\"Rank_B\"/>: Increased damage."
     abilityValues["DefiantStrike"].PerfectionLongDescription = "Deals high single target <keyword id=\"Element_Physical\">Physical</> damage that applies <keyword id=\"StatusEffect_Mark\">Mark</> 2 hits.\n" .. "Costs 30% of current Health.\n" .. abilityValues["DefiantStrike"].PerfectionBonusDescription
@@ -294,7 +294,7 @@ local function Init(log, config, elementalEnum)
     abilityValues["FollowUp"].ChargesConsumed = config.FollowUpChargesConsumed
     abilityValues["FollowUp"].ChargesMultiplier = config.FollowUpDamagePerCharge
     abilityValues["FollowUp"].OverchargeName = config.FollowUpAPName
-    abilityValues["FollowUp"].OverchargeBonusDescription = "Consumes up to " .. (config.FollowUpChargesConsumed) .. " <keyword id=\"Gustave_Charges\">Charge(s)</> for increased damage.\nCosts " .. (config.FollowUpAPReducedCost) .. " <keyword id=\"APShard\">AP</> if all charges are available."
+    abilityValues["FollowUp"].OverchargeBonusDescription = "Consumes up to " .. (config.FollowUpChargesConsumed) .. " <keyword id=\"Gustave_Charges\">Charge(s)</> for increased damage.\nIf all charges are available, costs " .. (config.FollowUpAPReducedCost) .. " <keyword id=\"APShard\">AP</>"
     abilityValues["FollowUp"].OverchargeLongDescription = "Deals medium single target " .. GetElementString(config.FollowUpElement, elementalEnum, false) .. " damage. 1 hit.\n" .. "Damage increased for each Free Aim shot this turn, up to 10 times.\n" .. abilityValues["FollowUp"].OverchargeBonusDescription
     abilityValues["FollowUp"].OverchargeShortDescription = "Medium " .. GetElementString(config.FollowUpElement, elementalEnum, true) .. " damage, increased for each Free Aim shot this turn, up to 10 times. 1 hit.\n" .. abilityValues["FollowUp"].OverchargeBonusDescription
     abilityValues["FollowUp"].PerfectionName = "Follow Up"
@@ -308,7 +308,7 @@ local function Init(log, config, elementalEnum)
     abilityValues["AscendingAssault"].ChargesConsumed = config.AscendingAssaultChargesConsumed
     abilityValues["AscendingAssault"].ChargesMultiplier = config.AscendingAssaultDamagePerCharge
     abilityValues["AscendingAssault"].OverchargeName = config.AscendingAssaultName
-    abilityValues["AscendingAssault"].OverchargeBonusDescription = "Costs " .. (config.AscendingAssaultAPReducedCost) .. " <keyword id=\"APShard\">AP</> if all charges are available."
+    abilityValues["AscendingAssault"].OverchargeBonusDescription = "If all charges are available, costs " .. (config.AscendingAssaultAPReducedCost) .. " <keyword id=\"APShard\">AP</>."
     abilityValues["AscendingAssault"].OverchargeLongDescription = "Deals low single target " .. GetElementString(config.AscendingAssaultElement, elementalEnum, false) .. " damage. 1 hit.\n" .. "Increased damage and consumed charges at each cast.\nInitially consumes up to " .. (config.AscendingAssaultChargesConsumed) .. " <keyword id=\"Gustave_Charges\">Charge(s)</> and consumes up to " .. (config.AscendingAssaultAdditionalChargesConsumed) .. " more <keyword id=\"Gustave_Charges\">Charge(s)</> after each cast.\n" .. abilityValues["AscendingAssault"].OverchargeBonusDescription
     abilityValues["AscendingAssault"].OverchargeDynamicDescriptionPiece = "for increased damage.\n" .. abilityValues["AscendingAssault"].OverchargeBonusDescription
     -- Do not add bonus description to short description here, this ability's short description is built dynamically to show the current amount of consumed charges in module main.lua in function ModifyAbilityCostAndDescription() during battle.
@@ -338,7 +338,7 @@ local function Init(log, config, elementalEnum)
     abilityValues["PhantomStars"].ChargesConsumed = config.PhantomStarsChargesConsumed
     abilityValues["PhantomStars"].ChargesMultiplier = config.PhantomStarsDamagePerCharge
     abilityValues["PhantomStars"].OverchargeName = config.PhantomStarsName
-    abilityValues["PhantomStars"].OverchargeBonusDescription = "Consumes up to " .. (config.PhantomStarsChargesConsumed) .. " <keyword id=\"Gustave_Charges\">Charge(s)</> for increased damage.\nCosts " .. (config.PhantomStarsAPReducedCost) .. " <keyword id=\"APShard\">AP</> if all charges are available.\n" .. "Can <keyword id=\"Break\">Break</> a target and refill " .. string.format("%g", (config.PhantomStarsChargesPercentage) * 100) .. "% of total <keyword id=\"Gustave_Charges\">Charges</> upon doing so."
+    abilityValues["PhantomStars"].OverchargeBonusDescription = "Consumes up to " .. (config.PhantomStarsChargesConsumed) .. " <keyword id=\"Gustave_Charges\">Charge(s)</> for increased damage.\nIf all charges are available, costs " .. (config.PhantomStarsAPReducedCost) .. " <keyword id=\"APShard\">AP</>\n" .. "Can <keyword id=\"Break\">Break</> a target and refill " .. string.format("%g", (config.PhantomStarsChargesPercentage) * 100) .. "% of total <keyword id=\"Gustave_Charges\">Charges</> upon doing so."
     abilityValues["PhantomStars"].OverchargeLongDescription = "Deals extreme " .. GetElementString(config.PhantomStarsElement, elementalEnum, false) .. " damage to all enemies. 5 hits.\n" .. abilityValues["PhantomStars"].OverchargeBonusDescription
     abilityValues["PhantomStars"].OverchargeShortDescription = "Extreme " .. GetElementString(config.PhantomStarsElement, elementalEnum, true) .. " damage to all enemies. 5 hits.\n" .. abilityValues["PhantomStars"].OverchargeBonusDescription
     abilityValues["PhantomStars"].PerfectionName = "Phantom Stars"
@@ -394,7 +394,7 @@ local function Init(log, config, elementalEnum)
     abilityValues["Egide"].ChargesConsumed = config.EgideChargesConsumed
     abilityValues["Egide"].ChargesMultiplier = nil
     abilityValues["Egide"].OverchargeName = config.EgideName
-    abilityValues["Egide"].OverchargeBonusDescription = "Consumes up to " .. (config.EgideChargesConsumed) .. " <keyword id=\"Gustave_Charges\">Charge(s)</> to <keyword id=\"Heal\">recover</> " .. string.format("%g", (config.EgideHealPerCharge) * 100) .. "% max health per charge.\nIf all charges are available, applies <keyword id=\"Buff_Regen\">Regen</> to self for 2 turns.\nDuration is extended by 1 on gaining <keyword id=\"Buff_Shell\">Shell</>"
+    abilityValues["Egide"].OverchargeBonusDescription = "Duration is extended by 1 on gaining <keyword id=\"Buff_Shell\">Shell</>\nConsumes up to " .. (config.EgideChargesConsumed) .. " <keyword id=\"Gustave_Charges\">Charge(s)</> to <keyword id=\"Heal\">recover</> " .. string.format("%g", (config.EgideHealPerCharge) * 100) .. "% max health per charge.\nIf all charges are available, applies <keyword id=\"Buff_Regen\">Regen</> to self for 2 turns."
     abilityValues["Egide"].OverchargeLongDescription = "Protects allies by taking damage in their place for 2 turns.\n" .. abilityValues["Egide"].OverchargeBonusDescription
     abilityValues["Egide"].OverchargeShortDescription = "Protects allies by taking damage in their place for 2 turns.\n" .. abilityValues["Egide"].OverchargeBonusDescription
     abilityValues["Egide"].PerfectionName = "Egide"
