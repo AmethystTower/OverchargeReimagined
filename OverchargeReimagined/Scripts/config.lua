@@ -11,7 +11,7 @@
         I do NOT recommend modifying the settings for the Berserk buff at the bottom of this file.
         Unless you want to see a gigantic or tiny Gustave for a laugh, leave them default for proper gameplay!
 
-        ALSO: It is recommended to modify this file using an editor like Visual Studio Code or notepad++ since they highlight the actual settings and gray out the descriptions.
+        ALSO: It is recommended to modify this file using an editor like Visual Studio Code or Notepad++ since they highlight the actual settings and gray out the descriptions.
 ]]--
 
 return
@@ -74,7 +74,7 @@ return
     ChargesPerTurn = 0,
 
     -- Charges per hit from lumina effects. Default: 0
-    -- NOTE: This affects additional hits from Simoso's ethereal sword passive.
+    -- NOTE: This affects hits from passives like ethereal sword, lightning strikes and additional free-aim shots on a random enemy.
     ChargesOnLuminaDamage = 0,
 
     -- Charges per free aim shot. Default: 1 / Default in Vanilla: 0
@@ -99,9 +99,9 @@ return
     ------------------------------------------------------------------------
     -- ABILITIES: These are the settings that define all abilities in regards of: AP cost, generated charges, consumed charges, bonus damage per charges and elemental damage type.
     -- The abilities Lumiere Assault and Strike Storm were adjusted to generate more charges to keep up with other abilities that do this.
-    -- Overcharge, Shatter and Marking Shot both cost 6 AP, From Fire, Radiant Strike, Light Holder and Powerful cost 1 more AP by default.
-    -- By default Overcharge and Shatter also do void damage now, while a lot of other abilities have their base element changed or use the weapon's element to offer more variety.
-    -- All the settings below are personal recommendations that fit the game's balance the best and make our character on par with the others.
+    -- Overcharge, Shatter and Marking Shot all cost 6 AP. From Fire, Radiant Strike, Light Holder and Powerful cost 1 more AP by default.
+    -- By default Overcharge and Shatter also do void damage now, while a lot of other abilities have their base element changed to Lightning and Dark or use the weapon's element to offer more variety.
+    -- All the settings below are personal recommendations that fit the game's balance the best and make our character on par with the others without being straight up overpowered.
     ------------------------------------------------------------------------
 
     -- Overcharge: These are the settings for Overcharge.
@@ -423,7 +423,7 @@ return
 
     -- The custom name for this ability displayed in-game.
     -- NOTE: Don't remove the quotes otherwise the config will fail to load. They don't get shown in-game.
-    BerserkSlashName = "Engineer's Wrath",
+    BerserkSlashName = "Last Stand",
 
     ------------------------------------------------------------------------
 
@@ -711,8 +711,8 @@ return
     PatchSeeram = true,
 
     ------------------------------------------------------------------------
-    -- Passive settings: These are the passive settings for all weapons.
-    -- Featuring a setting for the elemental type of the weapon and settings for certain values of their passives, as well weapon names.
+    -- Weapon Passive settings: These are the passive settings for all weapons.
+    -- Featuring settings for certain values of their passives. May include the elemental type and weapon names in the future.
     ------------------------------------------------------------------------
 
     ------------------------------------------------------------------------
@@ -856,8 +856,8 @@ return
     LuminaBurnPerDarkFireLightningSkillHit = 2,
 
     -- Turn duration of the Charm debuff. Default: 2
-    -- NOTE: Charm is a bit weird because it goes away on turn start and can't be reapplied while it's still active.
-    -- Trying to charm an already charmed enemy won't reset its duration like with other buffs/debuffs, so on his 3rd turn charm is gone and he is guaranteed to attack once before it can be reapplied.
+    -- NOTE: Charm is a bit weird because it goes away on turn-start instead of turn-end and can't be reapplied while it's still active on the enemy.
+    -- Trying to charm an already charmed enemy won't reset its duration like other buffs/debuffs do, so on the third turn charm is always gone and the enemy gets a chance to do damage before it can be reapplied.
     LuminaCharmDuration = 2,
 
     -- Percentage amount of bonus damage per consumed charge. Default: 0.50 (50%)
@@ -877,6 +877,7 @@ return
     -- Verso loses access to some unique weapon passives to Gustave since their weapons are separate now.
     -- This setting allows you to modify Verso's starting weapon into any of the weapons he lost.
     -- The elemental type and the passives will be added to Verleso, however the attribute scalings and base damage remain unmodified.
+    -- Verleso is already quite a strong starter weapon with very high base damage so it receiving passives makes it pretty much on par with most other weapons.
 
     -- Valid settings:
     -- 0 (Nothing)
@@ -912,9 +913,9 @@ return
         ["Postgame"] = 3,
     },
 
-    -- This allows you to enable switch between your characters while in the camp. Default: false
+    -- This allows you to enable switching between your characters while in the camp. Default: false
     -- VALUES: true = enabled, false = disabled.
-    AllowSwitchingCharactersInCamp = true,
+    AllowSwitchingCharactersInCamp = false,
 
     ------------------------------------------------------------------------
     -- Skilltree settings.
@@ -936,7 +937,7 @@ return
     FromFireUnlockCost = 2, -- Burning Hatred
     SpeedBurstUnlockCost = 2, -- Lightning Rush
     RecoveryUnlockCost = 1, -- Second Wind
-    BerserkSlashUnlockCost = 1, -- Engineer's Wrath
+    BerserkSlashUnlockCost = 1, -- Last Stand
     DefiantStrikeUnlockCost = 2, -- Shared Pain
     BlitzUnlockCost = 3, -- Sturm
     EgideUnlockCost = 3, -- Guardian
@@ -954,7 +955,7 @@ return
     OverchargeUnlockCost = 10, -- Fist of Lumière
 
     -- Decides where each skill is located on the skilltree.
-    -- Does NOT include hidden abilities and gradient abilities.
+    -- Does not include hidden abilities and gradient abilities.
     -- WARNING: The settings use their ID text names so if you do a single typo without the quotes, the whole skilltree can break or abilities can go missing!
     AbilityNode_1 = "Combo1_Gustave", -- Lumière Assault
     AbilityNode_2 = "MarkingShot_Gustave", -- Gunslinger of Lumière
@@ -963,7 +964,7 @@ return
     AbilityNode_5 = "FromFire_Gustave", -- Burning Hatred
     AbilityNode_6 = "SpeedBurst", -- Lightning Rush
     AbilityNode_7 = "PerfectRecovery_Gustave", -- Second Wind
-    AbilityNode_8 = "BerserkSlash", -- Engineer's Wrath
+    AbilityNode_8 = "BerserkSlash", -- Last Stand
     AbilityNode_9 = "DefiantStrike", -- Shared Pain
     AbilityNode_10 = "Blitz", -- Sturm
     AbilityNode_11 = "Egide", -- Guardian
@@ -974,7 +975,7 @@ return
     AbilityNode_16 = "StrikeStorm_Gustave", -- Blade Storm
     AbilityNode_17 = "OldLightHolder", -- Fading Hope
     AbilityNode_18 = "SteeledStrike", -- Rolling Thunder
-    AbilityNode_19 = "Overcharge", -- Overload
+    AbilityNode_19 = "Overcharge", -- Overclock
     AbilityNode_20 = "PhantomStars", -- Absolute Zero
     AbilityNode_21 = "EndBringer", -- Final Judgement
     AbilityNode_22 = "PerfectBreak_Gustave", -- Sword of Lumière

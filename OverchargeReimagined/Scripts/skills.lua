@@ -352,13 +352,13 @@ local function Init(log, config, elementalEnum)
     abilityValues["ParadigmShift"].ChargesConsumed = config.ParadigmShiftChargesConsumed
     abilityValues["ParadigmShift"].ChargesMultiplier = nil
     abilityValues["ParadigmShift"].OverchargeName = config.ParadigmShiftName
-    abilityValues["ParadigmShift"].OverchargeBonusDescription = "Consumes " .. (config.ParadigmShiftChargesConsumed) .. " <keyword id=\"Gustave_Charges\">Charge(s)</> per hit to give +" .. (config.ParadigmShiftAPPerCharge) .. " <keyword id=\"APShard\">AP</> per charge."
-    abilityValues["ParadigmShift"].OverchargeLongDescription = "Deals low single target " .. GetElementString(config.ParadigmShiftElement, elementalEnum, false) .. " damage and gives 1-3 <keyword id=\"APShard\">AP</> back. 3 hits.\n" .. abilityValues["ParadigmShift"].OverchargeBonusDescription
-    abilityValues["ParadigmShift"].OverchargeShortDescription = "Low " .. GetElementString(config.ParadigmShiftElement, elementalEnum, true) .. " damage and gives 1-3 <keyword id=\"APShard\">AP</> back. 3 hits.\n" .. abilityValues["ParadigmShift"].OverchargeBonusDescription
+    abilityValues["ParadigmShift"].OverchargeBonusDescription = "Consumes " .. (config.ParadigmShiftChargesConsumed) .. " <keyword id=\"Gustave_Charges\">Charge(s)</> per hit to give +" .. (config.ParadigmShiftAPPerCharge) .. " <keyword id=\"APShard\">AP</> back per charge."
+    abilityValues["ParadigmShift"].OverchargeLongDescription = "Deals low single target " .. GetElementString(config.ParadigmShiftElement, elementalEnum, false) .. " damage and gives 1-4 <keyword id=\"APShard\">AP</> back. 3 hits.\n" .. abilityValues["ParadigmShift"].OverchargeBonusDescription
+    abilityValues["ParadigmShift"].OverchargeShortDescription = "Low " .. GetElementString(config.ParadigmShiftElement, elementalEnum, true) .. " damage and gives 1-4 <keyword id=\"APShard\">AP</> back. 3 hits.\n" .. abilityValues["ParadigmShift"].OverchargeBonusDescription
     abilityValues["ParadigmShift"].PerfectionName = "Paradigm Shift"
     abilityValues["ParadigmShift"].PerfectionBonusDescription = "<img id=\"Rank_C\"/>: +1 <keyword id=\"APShard\">AP</>"
-    abilityValues["ParadigmShift"].PerfectionLongDescription = "Deals low single target <keyword id=\"Element_Physical\">Physical</> damage and gives 1-3 <keyword id=\"APShard\">AP</> back. 3 hits.\n" .. abilityValues["ParadigmShift"].PerfectionBonusDescription
-    abilityValues["ParadigmShift"].PerfectionShortDescription = "Low <keyword id=\"Element_Physical\">Physical</> damage and gives 1-3 <keyword id=\"APShard\">AP</> back. 3 hits.\n" .. abilityValues["ParadigmShift"].PerfectionBonusDescription
+    abilityValues["ParadigmShift"].PerfectionLongDescription = "Deals low single target <keyword id=\"Element_Physical\">Physical</> damage and gives 1-4 <keyword id=\"APShard\">AP</> back. 3 hits.\n" .. abilityValues["ParadigmShift"].PerfectionBonusDescription
+    abilityValues["ParadigmShift"].PerfectionShortDescription = "Low <keyword id=\"Element_Physical\">Physical</> damage and gives 1-4 <keyword id=\"APShard\">AP</> back. 3 hits.\n" .. abilityValues["ParadigmShift"].PerfectionBonusDescription
 
     -- Purification
     abilityValues["Purification"] = {}
