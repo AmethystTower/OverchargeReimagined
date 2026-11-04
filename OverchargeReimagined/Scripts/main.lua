@@ -1404,7 +1404,7 @@ local function TryRegisterAbilityHooks()
                 Log("Overload used this turn.")
 
                 -- Calculate amount of given charges based off % of missing charges and divide by 2 since Overload's effect triggers twice.
-                overloadAddedCharges = math.floor(((virtualMaxCharges - virtualCurrentCharges) * config.OverloadChargesPercentage) / 2)
+                overloadAddedCharges = math.floor(((config.VirtualMaxCharges - virtualCurrentCharges) * config.OverloadChargesPercentage) / 2)
             end)
 
             -- This hook runs whenever Overload's effects trigger.

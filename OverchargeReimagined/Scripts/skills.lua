@@ -210,7 +210,7 @@ local function Init(log, config, elementalEnum)
     abilityValues["Overcharge"].ChargesConsumed = nil
     abilityValues["Overcharge"].ChargesMultiplier = nil
     abilityValues["Overcharge"].OverchargeName = config.OverloadName
-    abilityValues["Overcharge"].OverchargeBonusDescription = "Refills " .. string.format("%g", (config.OverloadChargesPercentage) * 100) .. "% of missing <keyword id=\"Gustave_Charges\">Charges</>"
+    abilityValues["Overcharge"].OverchargeBonusDescription = "Refills " .. string.format("%g", (config.OverloadChargesPercentage) * 100) .. "% of missing <keyword id=\"Gustave_Charges\">Charges</> from " .. config.VirtualMaxCharges .. "."
     abilityValues["Overcharge"].OverchargeLongDescription = "Refills all <keyword id=\"APShard\">AP</> but sets self-Health to 1.\n" .. abilityValues["Overcharge"].OverchargeBonusDescription
     abilityValues["Overcharge"].OverchargeShortDescription = "Refills all <keyword id=\"APShard\">AP</> but sets self-Health to 1.\n" .. abilityValues["Overcharge"].OverchargeBonusDescription
     abilityValues["Overcharge"].PerfectionName = "Overload"

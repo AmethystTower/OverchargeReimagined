@@ -350,6 +350,7 @@ return
 
     -- Percentage amount of missing charges refilled when using the ability "Overload". Default: 0.50 (50%)
     -- NOTE: The more charges you have, the less this ability generates. If Overload is set to 50% and is used twice, you will end up with 75% charges (0% -> 50% -> 75%).
+    -- ALSO IMPORTANT: Luminas that increase the max charge cap are ignored by this ability, its percentage will always be based off the original max charge cap.
     OverloadChargesPercentage = 0.50,
 
     -- AP cost of this ability. Default: 6
