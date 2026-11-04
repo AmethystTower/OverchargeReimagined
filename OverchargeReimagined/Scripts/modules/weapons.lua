@@ -384,14 +384,21 @@ local function WeaponTooltipsHook(param, inWeaponInstance, inCharacterData)
         return
     end
 
-    local characterData = CustomFunctions.unwrap(inCharacterData)
     local panel = CustomFunctions.unwrap(param)
     local weapon = CustomFunctions.unwrap(inWeaponInstance)
+    local characterData = CustomFunctions.unwrap(inCharacterData)
 
     -- The currently selected character in the menu isn't Gustave, set flag to false and reload the weapon incase it still holds the custom descriptions.
     -- This is needed in merchant shop menus since all weapons appear in one menu and not in respective character menus.
     if not characterData or not characterData:IsValid() or characterData.CharacterDefinition.CharacterHardcodedName_36_FB9BA9294D02CFB5AD3668B0C4FD85A5:ToString() ~= "Frey" then
         selectedFrey = false
+
+        -- Reset all the moved UI elements back to their original positions for the other characters.
+        panel.WeaponName:SetRenderTranslation({ X = 0.0, Y = 0.0 })
+        panel.WBP_WeaponPower:SetRenderTranslation({ X = 0.0, Y = 0.0 })
+        panel.WBP_WeaponAttackType:SetRenderTranslation({ X = 0.0, Y = 0.0 })
+        panel.WeaponScalingList:SetRenderTranslation({ X = 0.0, Y = 0.0 })
+        panel.WeaponLuminaList:SetRenderTranslation({ X = 0.0, Y = 0.0 })
 
         loadWeaponGuard = true
         panel:LoadWeapon(weapon, characterData)
@@ -406,6 +413,17 @@ local function WeaponTooltipsHook(param, inWeaponInstance, inCharacterData)
         return
     end
 
+    -- Force enable the lumina tooltips to be visible in the menu for Gustave.
+    panel.WeaponLuminaList:SetVisibility(4)
+
+    -- Slightly move the text to the bottom because the game doesn't render the bigger tooltips box that it uses when weapon passives are enabled.
+    -- This way the weapon name doesn't overlap with the boxe's edge.
+    panel.WeaponName:SetRenderTranslation({ X = 0.0, Y = 20.0 })
+    panel.WBP_WeaponPower:SetRenderTranslation({ X = 0.0, Y = 20.0 })
+    panel.WBP_WeaponAttackType:SetRenderTranslation({ X = 0.0, Y = 20.0 })
+    panel.WeaponScalingList:SetRenderTranslation({ X = 0.0, Y = 20.0 })
+    panel.WeaponLuminaList:SetRenderTranslation({ X = 0.0, Y = 20.0 })
+
     -- Patch the weapon for the upgrade menu.
     inWeaponInstance:Set(ModifyWeapon(weapon))
 
@@ -415,26 +433,9 @@ local function WeaponTooltipsHook(param, inWeaponInstance, inCharacterData)
 
     -- Force the upgrade menu to load the luminas of the weapon.
     panel:LoadWeaponLuminas(weapon.WeaponDefinition, weaponRank.Quality)
+    Log("Patched Noah's tooltips successfully!")
 
-    -- Get a different character's data so that we can use them to show passives on Gustave's menu.
-    local characters = FindAllOf("BP_CharacterData_C")
-
-    if not characters then
-        return
-    end
-
-    -- Take the first best character that isn't Gustave.
-    for _, character in pairs(characters) do
-        if character and character:IsValid() and character.CharacterDefinition.CharacterHardcodedName_36_FB9BA9294D02CFB5AD3668B0C4FD85A5:ToString() ~= "Frey" then
-            -- Force the game to load our patched weapon instead of the vanilla asset.
-            loadWeaponGuard = true
-            panel:LoadWeapon(weapon, character)
-            loadWeaponGuard = false
-
-            Log("Patched Noah's tooltips successfully!")
-            return
-        end
-    end
+    --panel.WidgetTree.RootWidget.Slots[3].Content:SetMinDesiredHeight(400.0)
 end
 
 -- This function modifies the lumina descriptions for Gustave so that we can display the custom descriptions in our WeaponTooltipsHook function.

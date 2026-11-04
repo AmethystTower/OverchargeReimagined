@@ -227,6 +227,7 @@ local function PatchGustaveVerso(patchedCharacterSample)
     for _, character in pairs(characters) do
         -- Patch Gustave.
         if character and character:IsValid() and character.CharacterDefinition.CharacterHardcodedName_36_FB9BA9294D02CFB5AD3668B0C4FD85A5:ToString() == "Frey" then
+            -- Enable weapon passives for Gustave in active battles. This does not affect the menu showing them.
             character.CharacterDefinition.DisableWeaponPassiveEffects_209_0C54A5E74EB0A751C44708913AA9F775 = false
             Log("Successfully enabled weapon passives on Noah!")
 
