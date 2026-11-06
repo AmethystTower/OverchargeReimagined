@@ -1599,7 +1599,7 @@ local function TryRegisterAbilityHooks()
                 end
 
                 -- Wait for a frame before consuming charges and increasing the counter, otherwise the game won't use the reduced AP before consuming the points.
-                ExecuteWithDelay(50, function()
+                ExecuteInGameThread(function()
                     CalculateAmountOfConsumedCharges("FollowUp", "Follow Up")
                 end)
             end)
@@ -1660,7 +1660,7 @@ local function TryRegisterAbilityHooks()
                 end
 
                 -- Wait for a frame before consuming charges and increasing the counter, otherwise the game won't use the reduced AP before consuming the points.
-                ExecuteWithDelay(50, function()
+                ExecuteInGameThread(function()
                     CalculateAmountOfConsumedCharges("AscendingAssault", "Ascending Assault")
 
                     -- Increase Ascending Assault's usage counter by 1 so it can consume more charges next time.
@@ -1761,7 +1761,7 @@ local function TryRegisterAbilityHooks()
                 -- For some reason Phantom Stars seems to calculate the consumed AP after we already consumed our charges.
                 -- And because of the charges already being consumed, we might fall under the required amount and it would eat all AP no matter what.
                 -- Wait a frame before consuming the charges so it takes the reduced AP cost instead of the regular cost.
-                ExecuteWithDelay(50, function()
+                ExecuteInGameThread(function()
                     CalculateAmountOfConsumedCharges("PhantomStars", "Phantom Stars")
                 end)
             end)
@@ -2379,8 +2379,8 @@ local function TryRegisterChargeComponentHooks()
                     -- Also reset steeled strike incase it's true from our last fight.
                     usedSteeledStrike = false
 
-                    -- Add a 2 second delay before applying the starting charges.
-                    -- Otherwise we'd get an error and no charges due to calling this too early when the character is not fully initialized yet.
+                    -- Add a 3 second delay before applying the starting charges.
+                    -- Otherwise we'd get an error and no charges due to calling this too early when the character and the weapon passives are not fully initialized yet.
                     ExecuteWithDelay(3000, function()
                         -- This is another safety check to see if self still exists, since we are exceuting delayed code here.
                         if self:IsValid() then
@@ -2756,13 +2756,19 @@ local function TryRegisterChargeComponentHooks()
                     -- Damage Reason 1: Skill damage.
                     -- Add or remove charges for damaging enemies with abilities if it is NOT from Overcharge, Shatter or Marking Shot, if enabled.
                     if damageReason == 1 then
-                        -- Give us full charges immediately if we're hitting the balloon dummy in Lumière tutorial fight.
-                        -- The balloon is resistant to physical attacks so using Gunslinger would require about ~60 charges to destroy it which takes a long time.
-                        -- Also give instant full charges when damaging Painted Renoir on the Stone Wave Cliffs, as a way to show Gustave's rage and anger towards him, which fuels his arm during his final fight.
-                        local fullName = targetOwner:GetFullName()
-                        if fullName and (fullName:find("BP_EnemyBattle_LumiereAct1_PunchingBall_C") or fullName:find("BP_EnemyBattle_MM_MirrorRenoir_SeaCliff_C")) then
-                            chargeComponent.ChangeCharge(virtualMaxCharges)
-                            Log("Attacking dummy balloon from Lumiere or Painted Renoir from Stone Wave Cliffs, fully charged Overcharge!")
+                        -- The base game still adds charges from Overcharge's, Shatter's and Marking Shot's hit, so remove these hits.
+                        if usedShatter or usedOvercharge or usedMarkingShot then
+                            -- Adjust for doubled charge generation if we have the corresponding lumina equipped.
+                            chargeComponent.ChangeCharge((-1))
+                        else
+                            -- Give us full charges immediately if we're hitting the balloon dummy in Lumière tutorial fight and haven't used any of the ultimates.
+                            -- The balloon is resistant to physical attacks so using Gunslinger would require about ~60 charges to destroy it which takes a long time.
+                            -- Also give instant full charges when damaging Painted Renoir on the Stone Wave Cliffs, as a way to show Gustave's rage and anger towards him, which fuels his arm during his final fight.
+                            local fullName = targetOwner:GetFullName()
+                            if fullName and (fullName:find("BP_EnemyBattle_LumiereAct1_PunchingBall_C") or fullName:find("BP_EnemyBattle_MM_MirrorRenoir_SeaCliff_C")) then
+                                chargeComponent.ChangeCharge(virtualMaxCharges)
+                                Log("Attacking dummy balloon from Lumiere or Painted Renoir from Stone Wave Cliffs, fully charged Overcharge!")
+                            end
                         end
 
                         chargeComponent.ChangeCharge(config.ChargesFromSkillDamage - 1)
@@ -2818,12 +2824,6 @@ local function TryRegisterChargeComponentHooks()
                                 chargeComponent.ChangeCharge(config.StrikeStormChargesPerCritical - 2)
                                 Log("Strike Storm Critical Damage: +" .. config.StrikeStormChargesPerCritical .. " charges added.")
                             end
-                        end
-
-                        -- The base game still adds charges from Overcharge's, Shatter's and Marking Shot's hit, so remove these hits.
-                        if usedShatter or usedOvercharge or usedMarkingShot then
-                            -- Adjust for doubled charge generation if we have the corresponding lumina equipped.
-                            chargeComponent.ChangeCharge((-1) * virtualMaxCharges)
                         end
 
                         -- Monitor Endbringer's hits when the target is stunned for bonus charges.
