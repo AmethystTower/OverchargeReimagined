@@ -2107,7 +2107,6 @@ local function TryRegisterAbilityHooks()
                 end
 
                 local appliedBuff = {}
-                local aureoleClass = StaticFindObject("/Game/Gameplay/Buffs/UniqueBuffs/BP_LU_aureole.BP_LU_aureole_C")
 
                 -- Apply Berserk upon using this ability.
                 local berserkBuffClass = StaticFindObject("/Game/Gameplay/Buffs/GenericBuff/BP_BattleBuff_Berserk.BP_BattleBuff_Berserk_C")
@@ -2785,17 +2784,9 @@ local function TryRegisterChargeComponentHooks()
                         if equippedCustomPassives["Stains_AdditionalFire"] and (attackElement == ElementsHelper.ElementEnum.Dark or attackElement == ElementsHelper.ElementEnum.Fire or attackElement == ElementsHelper.ElementEnum.Lightning) then
                             Log("Lumina 'Stains_AdditionalFire' dark, fire or lightning skill damage: +" .. config.LuminaBurnPerDarkFireLightningSkillHit .. " burn on target.")
 
-                            -- Load the skillscript asset class so that we can apply the debuff.
-                            temp_SkillScript = LoadAsset("/Game/Gameplay/Battle/Skills/BP_Battle_SkillScript.BP_Battle_SkillScript_C")
-                            local appliedDebuff = {}
-                            
-                            -- Apply the debuff.
-                            local burnClass = StaticFindObject("/Game/Gameplay/Buffs/GenericBuff/BP_BattleBuff_Burn.BP_BattleBuff_Burn_C")
-
                             -- Apply x amount of stacks defined by the config.
-                            for _ = 1, config.LuminaBurnPerDarkFireLightningSkillHit do
-                                temp_SkillScript:ApplyBuff(burnClass, statsComponentTarget, 3, statsComponentSource, 4, appliedDebuff)
-                            end
+                            local burnClassPath = "/Game/Gameplay/Buffs/GenericBuff/BP_BattleBuff_Burn.BP_BattleBuff_Burn_C"
+                            local appliedBuff = CustomFunctions.ApplyBuffCustom(burnClassPath, statsComponentTarget, statsComponentSource, 3, config.LuminaBurnPerDarkFireLightningSkillHit, 4)
 
                             WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Stains_AdditionalFire"])
                         end
@@ -2947,16 +2938,12 @@ local function TryRegisterChargeComponentHooks()
                                 if equippedCustomPassives["Foretell_OnlyFoolTower"] and config.LuminaBlightDuration > 0 then
                                     Log("Lumina 'Foretell_OnlyFoolTower' applying 1 Blight for " .. config.LuminaBlightDuration .. " turn.")
 
-                                    -- Load the skillscript asset class so that we can apply the debuff.
-                                    temp_SkillScript = LoadAsset("/Game/Gameplay/Battle/Skills/BP_Battle_SkillScript.BP_Battle_SkillScript_C")
-                                    local appliedDebuff = {}
-
                                     --Apply 1 Blight stack for 1 turn.
-                                    local blightClass = StaticFindObject("/Game/Gameplay/Buffs/GenericBuff/BP_BattleBuff_Blight.BP_BattleBuff_Blight_C")
-                                    temp_SkillScript:ApplyBuff(blightClass, statsComponentTarget, config.LuminaBlightDuration, statsComponentSource, 4, appliedDebuff)
+                                    local blightClassPath = "/Game/Gameplay/Buffs/GenericBuff/BP_BattleBuff_Blight.BP_BattleBuff_Blight_C"
+                                    local appliedBuff = CustomFunctions.ApplyBuffCustom(blightClassPath, statsComponentTarget, statsComponentSource, config.LuminaBlightDuration, 1, 4)
 
                                     -- Blight is hardcoded to be permanent, set this to false.
-                                    appliedDebuff.CreatedBuffInstance.IsPermanent = false
+                                    appliedBuff.CreatedBuffInstance.IsPermanent = false
 
                                     WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Foretell_OnlyFoolTower"])
                                 end
@@ -2965,13 +2952,9 @@ local function TryRegisterChargeComponentHooks()
                                 if equippedCustomPassives["Stains_FireDMGUp"] and config.LuminaCharmDuration > 0 then
                                     Log("Lumina 'Stains_FireDMGUp' applying Charm for " .. config.LuminaCharmDuration .. " turn.")
 
-                                    -- Load the skillscript asset class so that we can apply the debuff.
-                                    temp_SkillScript = LoadAsset("/Game/Gameplay/Battle/Skills/BP_Battle_SkillScript.BP_Battle_SkillScript_C")
-                                    local appliedDebuff = {}
-
                                     --Apply Charm for 1 turn. Add +1 to the duration because for some weird reason charm immediately goes away if it only has 1 turn left.
-                                    local blightClass = StaticFindObject("/Game/Gameplay/Buffs/GenericBuff/BP_BattleBuff_Charmed.BP_BattleBuff_Charmed_C")
-                                    temp_SkillScript:ApplyBuff(blightClass, statsComponentTarget, config.LuminaCharmDuration + 1, statsComponentSource, 4, appliedDebuff)
+                                    local charmClassPath = "/Game/Gameplay/Buffs/GenericBuff/BP_BattleBuff_Charmed.BP_BattleBuff_Charmed_C"
+                                    local appliedBuff = CustomFunctions.ApplyBuffCustom(charmClassPath, statsComponentTarget, statsComponentSource, (config.LuminaCharmDuration + 1), 1, 4)
 
                                     WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Stains_FireDMGUp"])
                                 end
@@ -3013,18 +2996,14 @@ local function TryRegisterChargeComponentHooks()
                                 WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Stains_RandomGeneration"])
                             end
 
-                            -- Lumina Passive: Stance_VirtuoseDoubleBurn" has a chance to inflict freeze for 1 turn.
+                            -- Lumina Passive: Stance_VirtuoseDoubleBurn" has a chance to inflict Frozen for 1 turn.
                             if equippedCustomPassives["Stance_VirtuoseDoubleBurn"] and math.random(1, 100) <= (config.LuminaFreezeChance * 100 ) then
                                 Log("Lumina 'Stance_VirtuoseDoubleBurn' froze an enemy.")
 
-                                -- Load the skillscript asset class so that we can apply the debuff.
-                                temp_SkillScript = LoadAsset("/Game/Gameplay/Battle/Skills/BP_Battle_SkillScript.BP_Battle_SkillScript_C")
-                                local appliedDebuff = {}
+                                -- Apply Frozen for 1 turn.
+                                local frozenClassPath = "/Game/Gameplay/Buffs/GenericBuff/BP_BattleBuff_Frozen.BP_BattleBuff_Frozen_C"
+                                local appliedBuff = CustomFunctions.ApplyBuffCustom(frozenClassPath, statsComponentTarget, statsComponentSource, config.LuminaFreezeDuration, 1, 4)
 
-                                -- Apply the debuff.
-                                local freezeClass = StaticFindObject("/Game/Gameplay/Buffs/GenericBuff/BP_BattleBuff_Frozen.BP_BattleBuff_Frozen_C")
-                                
-                                temp_SkillScript:ApplyBuff(freezeClass, statsComponentTarget, 1, statsComponentSource, 4, appliedDebuff)
                                 WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Stance_VirtuoseDoubleBurn"])
                             end
                         end
@@ -3108,18 +3087,13 @@ local function TryRegisterChargeComponentHooks()
                         end
 
                         -- Apply Rage for 1 turn.
-                        temp_SkillScript = LoadAsset("/Game/Gameplay/Battle/Skills/BP_Battle_SkillScript.BP_Battle_SkillScript_C")
-                        local appliedBuff = {}
-
-                        local enragedBuffClass = StaticFindObject("/Game/Gameplay/Buffs/GenericBuff/BP_BattleBuff_Enraged.BP_BattleBuff_Enraged_C")
-                        temp_SkillScript:ApplyBuff(enragedBuffClass, statsComponentTarget, 2, statsComponentTarget, 4, appliedBuff)
+                        local rageClassPath = "/Game/Gameplay/Buffs/GenericBuff/BP_BattleBuff_Enraged.BP_BattleBuff_Enraged_C"
+                        local appliedBuff = CustomFunctions.ApplyBuffCustom(rageClassPath, statsComponentTarget, statsComponentTarget, 2, 1, 4)
                         appliedBuff.CreatedBuffInstance.Type = 1
 
-                        local burnClass = StaticFindObject("/Game/Gameplay/Buffs/GenericBuff/BP_BattleBuff_Burn.BP_BattleBuff_Burn_C")
                         -- Apply 10 burn stacks.
-                        for _ = 1, 10 do
-                            temp_SkillScript:ApplyBuff(burnClass, statsComponentSource, 3, statsComponentTarget, 4, appliedBuff)
-                        end
+                        local burnClassPath = "/Game/Gameplay/Buffs/GenericBuff/BP_BattleBuff_Burn.BP_BattleBuff_Burn_C"
+                        local appliedBuff = CustomFunctions.ApplyBuffCustom(burnClassPath, statsComponentSource, statsComponentTarget, 3, config.LuminaCharmBurnAmount, 4)
                     end
 
                     -- Lumina Passive: "Perfection_SurvivorRankA" makes the character ignore any kind of damage while above a certain amount of charges.

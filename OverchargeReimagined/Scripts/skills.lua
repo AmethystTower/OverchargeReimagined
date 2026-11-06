@@ -407,7 +407,7 @@ local function Init(log, config, elementalEnum)
     abilityValues["Sabotage"].APCost = 1 -- This is the gradient cost, modifiying this is not recommended.
     abilityValues["Sabotage"].ChargesConsumed = nil
     abilityValues["Sabotage"].ChargesMultiplier = nil
-    abilityValues["Sabotage"].OverchargeName = "Thundergun"
+    abilityValues["Sabotage"].OverchargeName = config.SabotageName
     abilityValues["Sabotage"].OverchargeBonusDescription = ""
     abilityValues["Sabotage"].OverchargeLongDescription = "Deals medium " .. GetElementString(config.SabotageElement, elementalEnum, false) .. " damage to all enemies. 1 hit.\nApplies <keyword id=\"StatusEffect_Mark\">Mark</>" .. abilityValues["Sabotage"].OverchargeBonusDescription
     abilityValues["Sabotage"].OverchargeShortDescription = "Medium " .. GetElementString(config.SabotageElement, elementalEnum, true) .. " damage to all enemies. 1 hit.\nApplies <keyword id=\"StatusEffect_Mark\">Mark</>" .. abilityValues["Sabotage"].OverchargeBonusDescription
@@ -421,7 +421,7 @@ local function Init(log, config, elementalEnum)
     abilityValues["PhoenixFlame"].APCost = 2 -- This is the gradient cost, modifiying this is not recommended.
     abilityValues["PhoenixFlame"].ChargesConsumed = nil
     abilityValues["PhoenixFlame"].ChargesMultiplier = nil
-    abilityValues["PhoenixFlame"].OverchargeName = "Redemption"
+    abilityValues["PhoenixFlame"].OverchargeName = config.PhoenixFlameName
     abilityValues["PhoenixFlame"].OverchargeBonusDescription = "Applies <keyword id=\"StatusEffect_Berserk_Left\">Berserk</> to Gustave for " .. (config.PhoenixFlameBerserkDuration) .. " turns."
     abilityValues["PhoenixFlame"].OverchargeLongDescription = "Inflicts 10 <keyword id=\"StatusEffect_Burn\">Burn</> to all enemies and revives all allies with 50% - 70% Health.\n" .. abilityValues["PhoenixFlame"].OverchargeBonusDescription
     abilityValues["PhoenixFlame"].OverchargeShortDescription = "Inflicts 10 <keyword id=\"StatusEffect_Burn\">Burn</> to all enemies and revives all allies with 50% - 70% Health.\n" .. abilityValues["PhoenixFlame"].OverchargeBonusDescription
@@ -435,7 +435,7 @@ local function Init(log, config, elementalEnum)
     abilityValues["Gommage"].APCost = 3 -- This is the gradient cost, modifiying this is not recommended.
     abilityValues["Gommage"].ChargesConsumed = nil
     abilityValues["Gommage"].ChargesMultiplier = nil
-    abilityValues["Gommage"].OverchargeName = "Sophie's Homage"
+    abilityValues["Gommage"].OverchargeName = config.GommageName
     abilityValues["Gommage"].OverchargeBonusDescription = "Refills " .. string.format("%g", (config.GommageChargesPercentage) * 100) .. "% of total <keyword id=\"Gustave_Charges\">Charges</>"
     abilityValues["Gommage"].OverchargeLongDescription = "Kills weak targets.\nOtherwise deals extreme " .. GetElementString(config.GommageElement, elementalEnum, false) .. " damage. 1 hit.\n" .. abilityValues["Gommage"].OverchargeBonusDescription
     abilityValues["Gommage"].OverchargeShortDescription = "Kills weak targets.\nOtherwise deals extreme " .. GetElementString(config.GommageElement, elementalEnum, true) .. " damage. 1 hit.\n" .. abilityValues["Gommage"].OverchargeBonusDescription

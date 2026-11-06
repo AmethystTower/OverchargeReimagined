@@ -500,8 +500,8 @@ return
     -- Maximum amount of charges this ability can consume for bonus damage. Default: 5
     AscendingAssaultChargesConsumed = 5,
 
-    -- Additional damage multiplier per consumed charge. Default: 0.30 (30%)
-    AscendingAssaultDamagePerCharge = 0.30,
+    -- Additional damage multiplier per consumed charge. Default: 0.50 (50%)
+    AscendingAssaultDamagePerCharge = 0.50,
 
     -- AP cost of this ability. Default: 5
     -- NOTE: This setting affects the Perfection character as well!
@@ -670,12 +670,20 @@ return
     -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
     SabotageElement = 4,
 
+    -- The custom name for this ability displayed in-game.
+    -- NOTE: Don't remove the quotes otherwise the config will fail to load. They don't get shown in-game.
+    SabotageName = "Thundergun",
+
     ------------------------------------------------------------------------
 
     -- Phoenix Flame: These are the settings for Phoenix Flame.
 
     -- Turn duration of the Berserk buff. Default: 6.
     PhoenixFlameBerserkDuration = 6,
+
+    -- The custom name for this ability displayed in-game.
+    -- NOTE: Don't remove the quotes otherwise the config will fail to load. They don't get shown in-game.
+    PhoenixFlameName = "Redemption",
 
     ------------------------------------------------------------------------
 
@@ -687,6 +695,10 @@ return
     -- The elemental damage type of this ability. Default: 8 (Void)
     -- Valid Settings: 0 (Weapon's Element), 1 (Physical), 2 (Fire), 3 (Ice), 4 (Lightning), 5 (Earth), 6 (Dark), 7 (Light), 8 (Void)
     GommageElement = 8,
+
+    -- The custom name for this ability displayed in-game.
+    -- NOTE: Don't remove the quotes otherwise the config will fail to load. They don't get shown in-game.
+    GommageName = "Sophie's Homage",
 
     ------------------------------------------------------------------------
     -- Weapon settings: These settings decide if a weapon should get patched and receive its custom passives and new elemental type or not.
@@ -731,6 +743,11 @@ return
     -- Percentage chance to freeze an enemy with a free-aim shot. Default: 0.10 (10%)
     -- NOTE: The value works like this: 0.10 = 10% of chance, 0.33 = 33% of chance, 1.00 = 100% chance aka every shot freezes.
     LuminaFreezeChance = 0.10,
+
+    -- Turn duration of the Frozen debuff. Default: 1
+    -- NOTE: Frozen immediately goes away when damaging an enemy, including Burn.
+    -- If an enemy is burning and takes damage at the start of his turn, the ice breaks and he still gets to attack on his turn.
+    LuminaFreezeDuration = 1,
 
     -- Additional charges per hit using ice skills. Default: 2
     LuminaAdditionalChargesPerIceSkillHit = 2,
@@ -860,6 +877,10 @@ return
     -- NOTE: Charm is a bit weird because it goes away on turn-start instead of turn-end and can't be reapplied while it's still active on the enemy.
     -- Trying to charm an already charmed enemy won't reset its duration like other buffs/debuffs do, so on the third turn charm is always gone and the enemy gets a chance to do damage before it can be reapplied.
     LuminaCharmDuration = 2,
+
+    -- Amount of Burn applied for each hit received by a charmed enemy. Default: 10
+    -- NOTE: The burn lasts for 3 turns by default.
+    LuminaCharmBurnAmount = 10,
 
     -- Percentage amount of bonus damage per consumed charge. Default: 0.50 (50%)
     LuminaIncreasedDamagePerConsumedChargePercentageWeaker = 0.50,

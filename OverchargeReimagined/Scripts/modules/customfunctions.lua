@@ -139,6 +139,44 @@ local function GetAllSkillAssets()
     return nil
 end
 
+local function ApplyBuffCustom(buffClassPath, target, source, duration, stacks, applicationType)
+    -- 0 or less stacks, do nothing.
+    if stacks <= 0 then
+        return nil
+    end
+
+    local newSkillScript = LoadAsset("/Game/Gameplay/Battle/Skills/BP_Battle_SkillScript.BP_Battle_SkillScript_C")
+    local buffClass = StaticFindObject(buffClassPath)
+    local appliedBuff = {}
+
+    if not newSkillScript or not newSkillScript:IsValid() or not buffClass then
+        Log("Skill script or buff class were null, not applying buff: Skill script: " .. tostring(newSkillScript) .. " / Buff class: " .. tostring(buffClassPath))
+        return nil
+    end
+
+    local success, result = pcall(function()
+        for _ = 1, stacks do
+            newSkillScript:ApplyBuff(buffClass, target, duration, source, applicationType, appliedBuff)
+        end
+    end)
+
+    if not success then
+        Log("ApplyBuff call failed! Using direct UFunction invocation. PLEASE UPDATE YOUR UE4SS VERSION! Error:\n" .. tostring(result))
+
+        local applyBuffFunction = StaticFindObject("/Game/Gameplay/Battle/Skills/BP_Battle_SkillScript.BP_Battle_SkillScript_C:ApplyBuff")
+
+        if not applyBuffFunction or not applyBuffFunction:IsValid() then
+            return nil
+        end
+
+        for _ = 1, stacks do
+            applyBuffFunction(newSkillScript, buffClass, target, duration, source, applicationType, appliedBuff)
+        end
+    end
+
+    return appliedBuff
+end
+
 -- Expose the functions to main.lua.
 return
 {
@@ -149,4 +187,5 @@ return
     EscapeStringCharacters = EscapeStringCharacters,
     UsedChargeGeneratingAbility = UsedChargeGeneratingAbility,
     GetAllSkillAssets = GetAllSkillAssets,
+    ApplyBuffCustom = ApplyBuffCustom,
 }
