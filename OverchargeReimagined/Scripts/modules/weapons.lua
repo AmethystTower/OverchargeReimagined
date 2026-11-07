@@ -1,5 +1,5 @@
 --[[
-------- Overcharge Reimagined v4.0 - By Killera -------
+------- Overcharge Reimagined v4.1 - By Killera -------
 
         This module modifies all weapons and changes their attack type, attributes, base damage and passives.
         Also contains custom descriptions for custom effects.

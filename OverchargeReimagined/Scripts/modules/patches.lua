@@ -1,5 +1,5 @@
 --[[
-------- Overcharge Reimagined v4.0 - By Killera -------
+------- Overcharge Reimagined v4.1 - By Killera -------
 
         This module loads patches for weapons, character data and other objects upon loading a save.
         Examples include enabling weapon passives on Gustave, showing passive tooltips for him and patching the stats of his weapons.

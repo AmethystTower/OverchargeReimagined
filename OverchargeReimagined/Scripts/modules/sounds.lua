@@ -1,5 +1,5 @@
 --[[
-------- Overcharge Reimagined v4.0 - By Killera -------
+------- Overcharge Reimagined v4.1 - By Killera -------
 
         This module handles sound assets and patches for combat lines.
 

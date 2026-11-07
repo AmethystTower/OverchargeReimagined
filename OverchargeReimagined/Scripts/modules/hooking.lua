@@ -1,6 +1,6 @@
 
 --[[
-------- Overcharge Reimagined v4.0 - By Killera -------
+------- Overcharge Reimagined v4.1 - By Killera -------
 
         This module holds strings of all the hook paths that we need to modify the game's functionality.
 

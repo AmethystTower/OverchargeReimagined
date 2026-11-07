@@ -1,6 +1,6 @@
 
 --[[
-------- Overcharge Reimagined v4.0 - By Killera -------
+------- Overcharge Reimagined v4.1 - By Killera -------
 
     DO NOT MODIFY THIS MODULE IF YOU SIMPLY WANT TO CUSTOMIZE THIS MOD.
     If you just want to customize this mod and simply change gameplay values then use the config.lua instead!
@@ -64,6 +64,8 @@ local function Log(msg)
 
     print("[Overcharge Reimagined] " .. msg .. "\n")
 end
+
+Log("Initializing v4.1 ...")
 
 -- Store the active charge component from our character during the battle so we can modify it from any of our hooks.
 local chargeComponent = nil

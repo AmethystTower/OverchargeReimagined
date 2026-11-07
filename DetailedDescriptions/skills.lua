@@ -1,6 +1,6 @@
 
 --[[
-------- Overcharge Reimagined v4.0 - By Killera -------
+------- Overcharge Reimagined v4.1 - By Killera -------
 
         This module handles all the ability descriptions and settings like AP cost, consumed charges and damage per charge.
         The descriptions are quite difficult to read because of all the variables and the formatting needed.

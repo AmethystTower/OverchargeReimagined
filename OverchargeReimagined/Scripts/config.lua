@@ -1,6 +1,6 @@
 
 --[[
-------- Overcharge Reimagined v4.0 - By Killera -------
+------- Overcharge Reimagined v4.1 - By Killera -------
 
         Overcharge Reimagined configuration file.
 
