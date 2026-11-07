@@ -328,6 +328,7 @@ local patchSkillGraph = false
 -- Ints that we need to monitor states.
 local ascendingAssaultCounter = 0
 local skillHitCounter = 0
+local totalChargesOnBreak = 0
 
 -- Booleans that we use to monitor when a specific skill was used or triggers.
 -- Even more stuff we must monitor!
@@ -846,6 +847,7 @@ local function ResetAbilityStates()
     -- Set these back to 0.
     consumedChargesFromAbility = 0
     skillHitCounter = 0
+    totalChargesOnBreak = 0
 end
 
 -- The following hooks we need to be careful because they don't get registed if we don't have the needed character participating in the first battle.
@@ -2653,14 +2655,17 @@ local function TryRegisterChargeComponentHooks()
                         -- We remove -10 from the calculated amount because Shatter is hardcoded to give 10 charges on a break.
                         Log("Player caused break using the ability Shatter, instantly refilling charges by " .. (config.ShatterChargesPercentage * 100) .. "% of " .. virtualMaxCharges .. " total charges.")
                         chargeComponent.ChangeCharge(math.floor(virtualMaxCharges * config.ShatterChargesPercentage) - 10)
+                        totalChargesOnBreak = totalChargesOnBreak + (virtualMaxCharges * config.ShatterChargesPercentage)
                     -- Broken by Overcharge.
                     elseif usedOvercharge then
                         Log("Player caused break using the ability Overcharge, instantly refilling charges by " .. (config.OverchargeChargesPercentage * 100) .. "% of " .. virtualMaxCharges .. " total charges.")
                         chargeComponent.ChangeCharge(math.floor(virtualMaxCharges * config.OverchargeChargesPercentage))
+                        totalChargesOnBreak = totalChargesOnBreak + (virtualMaxCharges * config.OverchargeChargesPercentage)
                     -- Broken by Phantom Stars.
                     elseif usedPhantomStars then
                         Log("Player caused break using the ability Phantom Stars, instantly refilling charges by " .. (config.PhantomStarsChargesPercentage * 100) .. "% of " .. virtualMaxCharges .. " total charges.")
                         chargeComponent.ChangeCharge(math.floor(virtualMaxCharges * config.PhantomStarsChargesPercentage))
+                        totalChargesOnBreak = totalChargesOnBreak + (virtualMaxCharges * config.PhantomStarsChargesPercentage)
                     end
                 end
 
@@ -2668,6 +2673,7 @@ local function TryRegisterChargeComponentHooks()
                 if equippedCustomPassives["Perfection_HealRankDownMedium"] then
                     Log("Lumina 'Perfection_HealRankDownMedium': +" .. math.floor(virtualMaxCharges * config.LuminaAdditionalChargesOnBreakPercentage) .. " additional charges added.")
                     chargeComponent.ChangeCharge(math.floor(virtualMaxCharges * config.LuminaAdditionalChargesOnBreakPercentage))
+                    totalChargesOnBreak = totalChargesOnBreak + (virtualMaxCharges * config.LuminaAdditionalChargesOnBreakPercentage)
                     WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Perfection_HealRankDownMedium"])
                 end
 
@@ -2675,6 +2681,7 @@ local function TryRegisterChargeComponentHooks()
                 if equippedCustomPassives["Perfection_SwitchRankSOnBreak"] then
                     Log("Lumina 'Perfection_SwitchRankSOnBreak': +" .. math.floor(virtualMaxCharges * config.LuminaMoreChargesOnBreakPercentage) .. " additional charges added.")
                     chargeComponent.ChangeCharge(math.floor(virtualMaxCharges * config.LuminaMoreChargesOnBreakPercentage))
+                    totalChargesOnBreak = totalChargesOnBreak + (virtualMaxCharges * config.LuminaMoreChargesOnBreakPercentage)
                     WeaponHelper.DisplayCustomLuminaNotification(characterPortrait, currentWeaponDefinitionInBattle, equippedCustomPassives["Perfection_SwitchRankSOnBreak"])
                 end
             end)
@@ -2756,8 +2763,8 @@ local function TryRegisterChargeComponentHooks()
                     -- Add or remove charges for damaging enemies with abilities if it is NOT from Overcharge, Shatter or Marking Shot, if enabled.
                     if damageReason == 1 then
                         -- The base game still adds charges from Overcharge's, Shatter's and Marking Shot's hit, so remove these hits.
-                        if usedShatter or usedOvercharge or usedMarkingShot then
-                            -- Adjust for doubled charge generation if we have the corresponding lumina equipped.
+                        -- Also check if we broke an enemy and gained enough charges from that alone to reach the max, if yes then don't take away the charge.
+                        if usedShatter or usedOvercharge or usedMarkingShot and (totalChargesOnBreak + virtualCurrentCharges) - virtualMaxCharges < 0 then
                             chargeComponent.ChangeCharge((-1))
                         else
                             -- Give us full charges immediately if we're hitting the balloon dummy in Lumière tutorial fight and haven't used any of the ultimates.
@@ -4044,6 +4051,7 @@ NotifyOnNewObject(hooking.ABP_NOAH_BATTLE, function(object)
 
     local versoGradientPoseIntro = StaticFindObject("/Game/Characters/Heros/Verso/Animations/Battle/BattleTurn/Verso_Base_to_Ultimate.Verso_Base_to_Ultimate")
     local versoGradientPoseIdle = StaticFindObject("/Game/Characters/Heros/Verso/Animations/Battle/BattleTurn/Verso_Idle_Ultimate.Verso_Idle_Ultimate")
+    local versoSteeledStrikeIdle = StaticFindObject("/Game/Characters/Heros/Verso/Animations/Battle/Skills/Verso_Skill_SteeledStrikeIdle.Verso_Skill_SteeledStrikeIdle")
 
     if versoGradientPoseIntro and versoGradientPoseIntro:IsValid() and object.CharaTurn_MainIdle_Ultimate_Intro ~= versoGradientPoseIntro then
         object.CharaTurn_MainIdle_Ultimate_Intro = versoGradientPoseIntro
@@ -4060,6 +4068,27 @@ NotifyOnNewObject(hooking.ABP_NOAH_BATTLE, function(object)
             object.CharaTurn_MainIdle_Ultimate_Targeting = versoGradientPoseIdle
             --Log("Patched Noah's gradient targeting animation.")
         end
+    end
+
+    -- Steeled Strike has an exclusive idle animation, give it to Gustave so that he doesn't T-Pose while he's awaiting his turn.
+    if versoSteeledStrikeIdle and versoSteeledStrikeIdle:IsValid() then
+        object.CharaTurn_IdleAlt1_Items_Intro = versoSteeledStrikeIdle
+        object.CharaTurn_IdleAlt1_Items_Idle = versoSteeledStrikeIdle
+        object.CharaTurn_IdleAlt1_Items_Back = versoSteeledStrikeIdle
+        object.CharaTurn_IdleAlt1_Items_Targeting = versoSteeledStrikeIdle
+        object.CharaTurn_IdleAlt1_Skill_Intro = versoSteeledStrikeIdle
+        object.CharaTurn_IdleAlt1_Skill_Idle = versoSteeledStrikeIdle
+        object.CharaTurn_IdleAlt1_Skill_Back = versoSteeledStrikeIdle
+        object.CharaTurn_IdleAlt1_Skill_Targeting = versoSteeledStrikeIdle
+        object.CharaTurn_IdleAlt1_Ultimate_Intro = versoSteeledStrikeIdle
+        object.CharaTurn_IdleAlt1_Ultimate_Idle = versoSteeledStrikeIdle
+        object.CharaTurn_IdleAlt1_Ultimate_Back = versoSteeledStrikeIdle
+        object.CharaTurn_IdleAlt1_Ultimate_Targeting = versoSteeledStrikeIdle
+        object.CharaTurn_Anim_IdleAlt1_Defending = versoSteeledStrikeIdle
+        object.CharaTurn_IdleAlt1_FreeAim_Idle = versoSteeledStrikeIdle
+        object.Anim_Idle_Alternate1 = versoSteeledStrikeIdle
+        object.CharaTurn_IdleAlternate1_Idle = versoSteeledStrikeIdle
+        --Log("Patched Noah'steeled strike idle animation.")
     end
 end)
 
