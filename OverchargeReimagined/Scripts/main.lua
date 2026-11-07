@@ -2764,7 +2764,7 @@ local function TryRegisterChargeComponentHooks()
                     if damageReason == 1 then
                         -- The base game still adds charges from Overcharge's, Shatter's and Marking Shot's hit, so remove these hits.
                         -- Also check if we broke an enemy and gained enough charges from that alone to reach the max, if yes then don't take away the charge.
-                        if usedShatter or usedOvercharge or usedMarkingShot and (totalChargesOnBreak + virtualCurrentCharges) - virtualMaxCharges < 0 then
+                        if (usedShatter or usedOvercharge or usedMarkingShot) and ((totalChargesOnBreak + virtualCurrentCharges) - virtualMaxCharges) < 0 then
                             chargeComponent.ChangeCharge((-1))
                         else
                             -- Give us full charges immediately if we're hitting the balloon dummy in Lumière tutorial fight and haven't used any of the ultimates.
